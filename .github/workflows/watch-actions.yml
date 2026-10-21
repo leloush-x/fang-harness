@@ -33,8 +33,9 @@ jobs:
             const { owner, repo } = context.repo;
             const PREFIX = "CI failed: ";
             // The marker names the workflow the report is about, so a report is closed by that workflow's own
-            // next result and not by another's.
-            const MARKER = /<!--\s*watched:([0-9]+)\s*-->/;
+            // next result and not by another's. A report from an older watcher carries the commit as well, and
+            // is closed just the same.
+            const MARKER = /<!--\s*watched:([0-9]+)(?::[0-9a-f]{7,40})?\s*-->/;
 
             // The runs on main, newest first.
             const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
