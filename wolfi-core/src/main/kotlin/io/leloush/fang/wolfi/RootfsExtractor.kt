@@ -128,11 +128,12 @@ object RootfsExtractor {
 
             when (type) {
                 TYPE_DIRECTORY -> {
+                    if (isSymlink(dest) || (dest.exists() && !dest.isDirectory)) deleteIfExists(dest)
                     dest.mkdirs()
                     chmod(dest, mode)
                     skip(input, size)
                 }
-                TYPE_REGULAR -> {
+                TYPE_REGULAR, '\u0000', '7' -> {
                     dest.parentFile?.mkdirs()
                     deleteIfExists(dest)
                     dest.outputStream().use { out -> copyExactly(input, out, size) }
@@ -145,9 +146,14 @@ object RootfsExtractor {
                     skip(input, size)
                 }
                 TYPE_HARDLINK -> {
+                    val source = File(target, linkName.removePrefix("./").trimStart('/'))
+                    if (!isInside(root, source.parentFile) || !source.exists()) {
+                        skip(input, size)
+                        skipPadding(input, size)
+                        continue
+                    }
                     dest.parentFile?.mkdirs()
                     deleteIfExists(dest)
-                    val source = File(target, linkName.removePrefix("./").trimStart('/'))
                     hardlink(source, dest)
                     skip(input, size)
                 }

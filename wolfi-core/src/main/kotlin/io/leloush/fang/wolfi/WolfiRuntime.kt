@@ -202,7 +202,7 @@ class WolfiRuntime(context: Context) {
       listOf(apk, "add", "--no-cache", "--upgrade", "bash", "busybox", "git", "nodejs-24", "npm", "script"),
       onLine,
     )
-    if (code != 0 || !node.canExecute()) throw IOException("Wolfi OS could not install Node.js")
+    if (code != 0 || !toolsReady()) throw IOException("Wolfi OS could not install its tools")
     if (!nodeVersionAtLeastMinimum()) throw IOException("Wolfi OS installed an old Node.js")
   }
 

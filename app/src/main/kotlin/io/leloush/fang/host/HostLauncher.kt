@@ -44,6 +44,7 @@ internal object HostLauncher {
       val started = try {
         runtime.startHost(mode, server.port, token)
       } catch (failure: IOException) {
+        Log.e(TAG, "Could not start the Wolfi host: ${failure.message}", failure)
         throw if (failure.message?.contains("denied", ignoreCase = true) == true) {
           HostFailure.Permission()
         } else {
