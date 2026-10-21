@@ -46,9 +46,9 @@ internal object HostLauncher {
       } catch (failure: IOException) {
         Log.e(TAG, "Could not start the Wolfi host: ${failure.message}", failure)
         throw if (failure.message?.contains("denied", ignoreCase = true) == true) {
-          HostFailure.Permission()
+          HostFailure.Permission(failure)
         } else {
-          HostFailure.Runtime()
+          HostFailure.Runtime(failure)
         }
       } catch (_: SecurityException) {
         throw HostFailure.Permission()

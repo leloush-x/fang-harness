@@ -34,10 +34,10 @@ internal sealed class HostFailure(
   val fixedBySetup: Boolean get() = needsSetup
 
   /** Wolfi OS is not installed or its files are incomplete. */
-  class Runtime : HostFailure(Kind.Runtime, R.string.host_failure_runtime)
+  class Runtime(cause: Throwable? = null) : HostFailure(Kind.Runtime, R.string.host_failure_runtime, cause = cause)
 
   /** Android refused to execute PRoot, usually because the runtime files were removed. */
-  class Permission : HostFailure(Kind.Permission, R.string.host_failure_permission)
+  class Permission(cause: Throwable? = null) : HostFailure(Kind.Permission, R.string.host_failure_permission, cause = cause)
 
   class NodeMissing : HostFailure(Kind.NodeMissing, R.string.host_failure_node_missing)
 
