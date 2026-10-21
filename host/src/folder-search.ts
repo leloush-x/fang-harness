@@ -230,8 +230,33 @@ function staysInsideRoot(folder: Folder, resolvedRoot: string): boolean {
   return !folder.viaSymlink || isInside(resolvedRoot, folder.resolvedPath);
 }
 
+/**
+ * The folders a search never walks: the virtual filesystems, which hold kernel plumbing, and Android's system images,
+ * which the launcher binds in. Neither can hold a project, and both are large enough that a walk into one would spend
+ * the search's whole budget doing it — and under PRoot, which intercepts every syscall, take seconds over it.
+ *
+ * Matched on the resolved path rather than a folder's name: a project may still keep a folder called `dev`, and a
+ * repository one called `vendor`.
+ */
+const UNSEARCHABLE_PATHS = new Set([
+  "/proc",
+  "/sys",
+  "/dev",
+  "/apex",
+  "/odm",
+  "/product",
+  "/system",
+  "/system_ext",
+  "/vendor",
+]);
+
+/** Whether a folder that resolved to [resolvedPath] may be walked. */
+export function isSearchablePath(resolvedPath: string): boolean {
+  return !UNSEARCHABLE_PATHS.has(resolvedPath);
+}
+
 function isDiscoverable(folder: Folder): boolean {
-  return !folder.name.startsWith(".") && !IGNORED_FOLDER_NAMES.has(folder.name);
+  return isSearchablePath(folder.resolvedPath) && !folder.name.startsWith(".") && !IGNORED_FOLDER_NAMES.has(folder.name);
 }
 
 function rank(folder: Walked, search: Search): Ranked {
