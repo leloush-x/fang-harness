@@ -17,7 +17,6 @@ import org.json.JSONObject
 /**
  * Loopback listener every `host.mjs` process connects back to. Any app on the device can reach
  * 127.0.0.1, so a connection is only routed after its hello presents a registered single-use token.
- * A connection opening with `GET ` is a setup download from Termux instead, answered by [PlaySetup].
  */
 internal class HostServer(private val scope: CoroutineScope) : AutoCloseable {
   private val server = ServerSocket(0, BACKLOG, InetAddress.getByName("127.0.0.1"))
@@ -61,11 +60,11 @@ internal class HostServer(private val scope: CoroutineScope) : AutoCloseable {
     } catch (_: IOException) {
       null
     }
-    when {
-      firstLine == null -> socket.close()
-      firstLine.startsWith("GET ") -> serveSetup(socket, reader, firstLine)
-      else -> handshake(socket, reader, firstLine)
+    if (firstLine == null) {
+      socket.close()
+      return
     }
+    handshake(socket, reader, firstLine)
   }
 
   private fun handshake(socket: Socket, reader: LineReader, firstLine: String) {
@@ -92,25 +91,6 @@ internal class HostServer(private val scope: CoroutineScope) : AutoCloseable {
     if (!deferred.complete(channel)) channel.close()
   }
 
-  /** One request per connection: the headers are read and ignored, then the answer closes the connection. */
-  private fun serveSetup(socket: Socket, reader: LineReader, requestLine: String) = socket.use {
-    try {
-      socket.soTimeout = HTTP_TIMEOUT_MILLIS
-      var budget = MAX_HTTP_HEADER_BYTES
-      while (true) {
-        val header = reader.readLine(budget) ?: return@use
-        if (header.isEmpty()) break
-        budget -= header.length + 2
-        if (budget <= 0) return@use
-      }
-      val parts = requestLine.split(' ')
-      val target = if (parts.size == 3) parts[1] else ""
-      PlaySetup.respond(target).write(socket.getOutputStream())
-    } catch (_: IOException) {
-      // Slow, oversized or abandoned request; the connection just closes.
-    }
-  }
-
   /** Compares against every registered token in constant time per comparison. */
   private fun claim(token: String): CompletableDeferred<HostChannel>? {
     val presented = token.toByteArray(Charsets.UTF_8)
@@ -121,8 +101,6 @@ internal class HostServer(private val scope: CoroutineScope) : AutoCloseable {
   companion object {
     private const val BACKLOG = 50
     private const val HELLO_TIMEOUT_MILLIS = 10_000
-    private const val HTTP_TIMEOUT_MILLIS = 3_000
-    private const val MAX_HTTP_HEADER_BYTES = 16 * 1024
 
     /** Process-wide instance, bound on first use and kept for the process lifetime. */
     val shared: HostServer by lazy { HostServer(CoroutineScope(SupervisorJob() + Dispatchers.IO)) }

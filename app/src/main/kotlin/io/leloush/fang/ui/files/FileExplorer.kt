@@ -78,7 +78,7 @@ internal fun ExplorerToggle(onClick: () -> Unit) {
  * on it and whenever the panel switches to it, by a tap or because Changes went away, since Pi or git may have changed
  * the files meanwhile; failures other than the top folder's show on [snackbar].
  *
- * Changes is there only while the workspace root is a git repository and Termux has git, which is detected when the
+ * Changes is there only while the workspace root is a git repository and Wolfi OS has git, which is detected when the
  * panel opens or moves to another workspace and on either tab's refresh; nothing polls. The tab last chosen in each
  * workspace is remembered, Changes until one is; while Changes isn't there Files shows without forgetting it. When
  * Changes goes away while the panel is open, [snackbar] says why. Tapping a commit in Changes calls [onOpenCommit].

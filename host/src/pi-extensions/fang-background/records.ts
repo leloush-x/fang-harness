@@ -1,6 +1,6 @@
 /**
  * What Fang Harness keeps on disk about each background task, so that a later Pi can tell the agent what became of tasks
- * whose Pi stopped without passing on their results, as when Android ends Termux. A record holds only what its Pi saw:
+ * whose Pi stopped without passing on their results, as when Android stops Fang Harness. A record holds only what its Pi saw:
  * that the task started, a stop it began and the exit it got. A later Pi adds what it checks itself, that the task's
  * process group still ran and was stopped; whatever no record shows is reported as unknown.
  */

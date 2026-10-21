@@ -34,7 +34,6 @@ import io.leloush.fang.data.BundledExtension
 import io.leloush.fang.data.PiExtensionUpdate
 import io.leloush.fang.data.PiExtensionUpdateOutcome
 import io.leloush.fang.data.Preferences
-import io.leloush.fang.ui.auth.LoginSheet
 import io.leloush.fang.ui.chat.ConfirmDialog
 import io.leloush.fang.ui.components.HeaderBar
 import io.leloush.fang.ui.components.IconButton28
@@ -47,7 +46,7 @@ import io.leloush.fang.ui.theme.ThemeMode
 import io.leloush.fang.ui.theme.fangColors
 import kotlinx.coroutines.launch
 
-/** Paseo-style settings: providers, agent, appearance, notifications, Termux, advanced and about cards under a header. */
+/** Paseo-style settings: providers, agent, appearance, notifications, Wolfi OS, advanced and about cards under a header. */
 @Composable
 internal fun SettingsScreen(
   onBack: () -> Unit,
@@ -116,7 +115,7 @@ private fun SettingsContent(
       ExtensionsSection(graph = graph)
       AppearanceSection(preferences = graph.preferences)
       NotificationsSection(preferences = graph.preferences)
-      TermuxSection(graph = graph, onOpenPermissions = onOpenPermissions)
+      RuntimeSection(graph = graph, onOpenPermissions = onOpenPermissions)
       AdvancedSection(onOpenAdvanced = onOpenAdvanced)
       AboutSection(onOpenLicenses = onOpenLicenses)
     }

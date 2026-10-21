@@ -11,7 +11,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -21,13 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.R
 import io.leloush.fang.appGraph
-import io.leloush.fang.host.TermuxWaker
 import io.leloush.fang.ui.components.StatusDot
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
-import kotlinx.coroutines.launch
 
-/** Termux/Pi health (tap fixes what needs attention), Add workspace, Archive and Settings. */
+/** Wolfi/Pi health (tap fixes what needs attention), Add workspace, Archive and Settings. */
 @Composable
 internal fun SidebarFooter(
   onAddWorkspace: () -> Unit,
@@ -67,14 +64,12 @@ internal fun SidebarFooter(
 }
 
 /**
- * Termux/Pi health. Tapping it opens onboarding when setup needs attention, or opens Termux when the Play build's
- * helper isn't running there.
+ * Wolfi/Pi health. Tapping it opens onboarding when setup needs attention.
  */
 @Composable
 private fun HostStatus(onOpenOnboarding: () -> Unit, modifier: Modifier) {
   val colors = fangColors
   val context = LocalContext.current
-  val scope = rememberCoroutineScope()
   val hostClient = context.appGraph.hostClient
   val hello by hostClient.lastHello.collectAsStateWithLifecycle()
   val failure by hostClient.lastFailure.collectAsStateWithLifecycle()
@@ -82,7 +77,6 @@ private fun HostStatus(onOpenOnboarding: () -> Unit, modifier: Modifier) {
   val onClick: (() -> Unit)? = when {
     installing -> null
     failure?.needsSetup == true -> onOpenOnboarding
-    failure?.needsTermuxOpen == true -> { -> scope.launch { TermuxWaker.wake(context, asked = true) } }
     else -> null
   }
   val dot = when {
@@ -93,11 +87,10 @@ private fun HostStatus(onOpenOnboarding: () -> Unit, modifier: Modifier) {
   }
   val label = when {
     installing -> null
-    failure?.needsSetup == true -> stringResource(R.string.shell_termux_attention)
-    failure?.needsTermuxOpen == true -> stringResource(R.string.shell_termux_open)
+    failure?.needsSetup == true -> stringResource(R.string.shell_runtime_attention)
     else -> null
-  } ?: hello?.piVersion?.let { stringResource(R.string.shell_termux_status, it) }
-    ?: stringResource(R.string.shell_termux_status_unknown)
+  } ?: hello?.piVersion?.let { stringResource(R.string.shell_runtime_status, it) }
+    ?: stringResource(R.string.shell_runtime_status_unknown)
   Row(
     modifier = modifier
       .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)

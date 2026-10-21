@@ -1,6 +1,6 @@
 /**
  * The POSIX tar (pax) format, written and read without a dependency: Node has gzip built in but no tar, and a tar
- * package would nearly double the host script, which travels to Termux as a command-line argument. Only what config
+ * package would nearly double the host script, which ships in the app asset. Only what config
  * backups need is supported: files, folders and symlinks, with paths and link targets of any length in pax headers.
  */
 

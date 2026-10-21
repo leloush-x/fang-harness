@@ -14,7 +14,7 @@ internal enum class GitDiffMode(val wire: String) {
   Base("base"),
 }
 
-/** Whether a workspace root holds a repository ([repo]) and Termux has git ([git]). */
+/** Whether a workspace root holds a repository ([repo]) and Wolfi OS has git ([git]). */
 internal data class GitDetection(val repo: Boolean, val git: Boolean) {
   val available: Boolean get() = repo && git
 }
@@ -68,7 +68,7 @@ internal sealed interface GitReply<out T> {
 
 /**
  * The workspaces' repositories through one long-lived `git` host shared by every workspace, so each reload doesn't
- * pay for starting Termux. Replies are parsed off the main thread. Requests throw [HostFailure] or
+ * pay for starting the runtime. Replies are parsed off the main thread. Requests throw [HostFailure] or
  * [HostRejected] when the host can't run them; git's own failures come back as [GitReply.Failed]. Main-thread
  * confined.
  */

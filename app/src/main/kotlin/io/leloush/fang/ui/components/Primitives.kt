@@ -79,7 +79,7 @@ fun IconButton28(
   }
 }
 
-/** The height of [HeaderBar]'s row below its top padding, which overlays such as Termux's waking pill stay under. */
+/** The height of [HeaderBar]'s row below its top padding, which overlays such as the setup progress pill stay under. */
 val HeaderBarHeight = 56.dp
 
 /**

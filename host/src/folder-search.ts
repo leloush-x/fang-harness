@@ -4,7 +4,7 @@
  * packages/protocol/src/search/text-match.ts. Copyright (c) 2025-present Mohamed Boudra,
  * licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * Changed for Fang Harness: folders only, as Paseo's add-project picker asks for; several roots (Termux
+ * Changed for Fang Harness: folders only, as Paseo's add-project picker asks for; several roots (Wolfi OS
  * home and each storage volume) instead of one; results keep each root's own spelling; no Git
  * ignore rules, file matches, suffix mode or shared filesystem-call limiter; a search stops early
  * once a newer one starts.

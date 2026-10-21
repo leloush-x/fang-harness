@@ -43,7 +43,7 @@ internal interface WorkspaceFolders {
 
 /**
  * Workspace files through one long-lived `files` host shared by every workspace, so expanding a folder or opening a
- * file doesn't pay for starting Termux each time. The host starts with the first request and ends once none has come
+ * file doesn't pay for starting the runtime each time. The host starts with the first request and ends once none has come
  * for [IDLE_MILLIS]. Requests run concurrently, matched to their replies by id. Main-thread confined.
  */
 internal class FileHost(hostClient: HostClient, scope: CoroutineScope) : WorkspaceFolders {
@@ -90,7 +90,7 @@ internal class FileHost(hostClient: HostClient, scope: CoroutineScope) : Workspa
     const val MKDIR = "fang_files_mkdir"
     const val LIST_TIMEOUT_MILLIS = 15_000L
 
-    /** A 2 MiB text file or 8 MiB image crosses Termux's socket as one JSON line. */
+    /** A 2 MiB text file or 8 MiB image crosses the host socket as one JSON line. */
     const val READ_TIMEOUT_MILLIS = 30_000L
 
     /** Long enough that browsing and reading files in a sitting reuses one host. */

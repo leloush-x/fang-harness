@@ -9,11 +9,11 @@ import { positiveIntParam, stringParam } from "../params.js";
 
 /**
  * Runs in the shell `script` starts on its new pseudo-terminal: sizes the terminal, then records its device path so
- * later resizes can reach it (after the first size, so none of them is overwritten), and replaces itself with
- * Termux's `login`, which starts the user's login shell the way a Termux session does.
+ * later resizes can reach it (after the first size, so none of them is overwritten), and replaces itself with Wolfi's
+ * Bash login shell.
  */
 const SHELL_COMMAND =
-  'stty rows "$FANG_ROWS" cols "$FANG_COLS" && tty > "$FANG_TTY" && unset FANG_ROWS FANG_COLS FANG_TTY && exec login';
+  'stty rows "$FANG_ROWS" cols "$FANG_COLS" && tty > "$FANG_TTY" && unset FANG_ROWS FANG_COLS FANG_TTY && exec /bin/bash -l';
 /** Output the host holds while Fang Harness is not reading; above it the shell waits until Fang Harness reads again. */
 const OUTPUT_BACKLOG_LIMIT = 4 * 1024 * 1024;
 const STDERR_TAIL = 16 * 1024;
@@ -68,8 +68,8 @@ export function parseProcStat(text: string): ProcStat | undefined {
 const COMM_LENGTH = 15;
 
 /**
- * Shells that may lead the session while it waits for commands, besides the login shell: `sh` running `login` as the
- * session starts, and shells an rc file or the user `exec`s in place of the login shell.
+ * Shells that may lead the session while it waits for commands, besides the login shell: `sh` before Bash starts, and
+ * shells an rc file or the user `exec`s in place of the login shell.
  */
 const SHELLS: Record<string, true> = {
   sh: true,
@@ -86,7 +86,7 @@ const SHELLS: Record<string, true> = {
   yash: true,
 };
 
-/** The `comm` of the login shell Termux's `login` started with the environment [environ] (`/proc/<pid>/environ`). */
+/** The `comm` of the login shell the session runs with the environment [environ] (`/proc/<pid>/environ`). */
 export function loginShellComm(environ: string): string | undefined {
   const shell = environ
     .split("\0")
@@ -207,7 +207,7 @@ class Resizer {
 }
 
 /**
- * Runs the user's login shell on a pseudo-terminal in `cwd`, through util-linux's `script` from Termux's bootstrap.
+ * Runs the user's login shell on a pseudo-terminal in `cwd`, through BusyBox's `script` in Wolfi OS.
  * After the request the connection stays JSONL both ways: Fang Harness sends `input` (base64 bytes) and `resize`
  * (`rows`, `cols`); the host sends `output` (base64 bytes), `busy` (`busy`) whenever work starts or stops running in
  * the shell, and, once the shell has gone, one `fang_exit`. Closing the connection ends the shell.

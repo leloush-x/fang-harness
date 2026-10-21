@@ -181,7 +181,7 @@ describe("git mode", () => {
       expect(await changes()).toEqual({
         type: "fang_git_changes_result",
         id: nextId,
-        error: "git isn't installed in Termux.",
+        error: "git isn't installed in Wolfi OS.",
         code: "no_git",
         errorI18n: { key: "git_missing" },
       });

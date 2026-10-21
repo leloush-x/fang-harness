@@ -11,13 +11,13 @@ sealed interface Destination {
 
   data object Settings : Destination
 
-  /** Termux setup and Fang Harness's Android permissions, reached from Settings. */
+  /** Wolfi OS setup and Fang Harness's Android permissions, reached from Settings. */
   data object Permissions : Destination
 
   /** Settings most people leave alone, such as how many chats keep Pi running, reached from Settings. */
   data object Advanced : Destination
 
-  /** Backups of Pi's configuration in Termux, reached from Settings. */
+  /** Backups of Pi's configuration in Wolfi OS, reached from Settings. */
   data object Backups : Destination
 
   /** The third-party licences the app ships, reached from Settings › About. */

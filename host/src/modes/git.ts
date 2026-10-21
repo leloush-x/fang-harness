@@ -166,7 +166,7 @@ function run(repo: Repo, args: string[], options: RunOptions = {}): Promise<RunR
   child.on("error", (error) => {
     settle();
     const missing = "code" in error && (error.code === "ENOENT" || error.code === "EACCES");
-    reject(missing ? new GitError("no_git", "git isn't installed in Termux.", { key: "git_missing" }) : error);
+    reject(missing ? new GitError("no_git", "git isn't installed in Wolfi OS.", { key: "git_missing" }) : error);
   });
   child.on("close", (exitCode) => {
     settle();
@@ -197,7 +197,7 @@ async function hasDotGit(root: string): Promise<boolean> {
 
 async function openRepo(ctx: ModeContext, root: string): Promise<Repo> {
   const binary = join(ctx.env.prefix, "bin", "git");
-  if (!(await isExecutable(binary))) throw new GitError("no_git", "git isn't installed in Termux.", { key: "git_missing" });
+  if (!(await isExecutable(binary))) throw new GitError("no_git", "git isn't installed in Wolfi OS.", { key: "git_missing" });
   let realRoot: string;
   try {
     if (!isAbsolute(root)) throw new Error();

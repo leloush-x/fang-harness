@@ -48,7 +48,7 @@ describe("browse mode", () => {
     }
   }
 
-  it("starts with Termux home and shared storage", async () => {
+  it("starts with the app home and shared storage", async () => {
     expect(await run.next()).toEqual({
       type: "fang_places",
       places: [
@@ -58,7 +58,7 @@ describe("browse mode", () => {
     });
   });
 
-  it("leaves out shared storage that Termux can't write to", async () => {
+  it("leaves out shared storage that Wolfi OS can't write to", async () => {
     await chmod(shared, 0o555);
     const { run: denied } = await startHost("browse", dirs);
     try {
@@ -88,7 +88,7 @@ describe("browse mode", () => {
     expect(await list(path.join(dirs.base, "to-alpha"))).toMatchObject({ path: path.join(dirs.home, "alpha") });
   });
 
-  it("keeps Termux home's own spelling when home lies under a link", async () => {
+  it("keeps the app home's own spelling when home lies under a link", async () => {
     const linkedHome = path.join(dirs.base, "linked-home");
     await symlink(dirs.home, linkedHome);
     const { run: linked } = await startHost("browse", { ...dirs, home: linkedHome });
@@ -108,7 +108,7 @@ describe("browse mode", () => {
     expect(await list("/")).toMatchObject({ path: "/", parent: null });
   });
 
-  it("offers no parent that Termux can pass through but not list", async () => {
+  it("offers no parent that Wolfi OS can pass through but not list", async () => {
     const locked = path.join(dirs.home, "locked");
     await mkdir(path.join(locked, "inner"), { recursive: true });
     await chmod(locked, 0o311);

@@ -113,7 +113,7 @@ internal class ChatController(
   }
 
   /**
-   * Files are first copied into Termux and listed by path, since Pi's `prompt` only carries images. A
+   * Files are first copied into Wolfi OS and listed by path, since Pi's `prompt` only carries images. A
    * failed send puts the draft back.
    */
   private fun sendPrompt(): Boolean {
@@ -213,7 +213,7 @@ internal class ChatController(
     return if (text.isEmpty()) block else "$text\n\n$block"
   }
 
-  /** The Termux home from the last host hello, for `~`-relative paths. */
+  /** The app home from the last host hello, for `~`-relative paths. */
   val home: String? get() = graph.hostClient.lastHello.value?.home?.takeIf { it.isNotEmpty() }
 
   fun copy(text: String) {

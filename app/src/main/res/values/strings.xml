@@ -4,12 +4,12 @@
 
     <string name="agent_notification_channel">Agent activity</string>
     <string name="agent_notification_title">Fang Harness agent is working</string>
-    <string name="agent_notification_text">Running in Termux. Progress continues if you leave the app.</string>
+    <string name="agent_notification_text">Running in Wolfi OS. Progress continues if you leave the app.</string>
     <string name="agent_notification_stop">Stop</string>
     <string name="agent_notification_background_title">A background task is running</string>
-    <string name="agent_notification_background_text">Running in Termux. The agent picks up its result, even if you leave the app.</string>
+    <string name="agent_notification_background_text">Running in Wolfi OS. The agent picks up its result, even if you leave the app.</string>
     <string name="agent_notification_terminal_title">A terminal command is running</string>
-    <string name="agent_notification_terminal_text">Running in Termux. It continues if you leave the app.</string>
+    <string name="agent_notification_terminal_text">Running in Wolfi OS. It continues if you leave the app.</string>
 
     <string name="turn_notification_channel">Finished chats</string>
     <string name="turn_notification_finished">Agent finished</string>
@@ -22,9 +22,6 @@
 
     <!-- A chat notification's headline, such as Agent finished, then the chat's title. -->
     <string name="chat_notification_title">%1$s: %2$s</string>
-
-    <!-- Shown over every screen while Fang Harness waits for its helper in Termux's Google Play build. -->
-    <string name="termux_waking">Starting Fang Harness\'s helper in Termux…</string>
 
     <!-- Why a request to the agent failed. %1$s is the agent's command name, such as get_state, kept as is. -->
     <string name="agent_rpc_rejected">The agent rejected <xliff:g id="command" example="set_model">%1$s</xliff:g>.</string>

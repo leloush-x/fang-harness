@@ -21,7 +21,7 @@
         <item quantity="one">The workspace leaves the sidebar and its chat is archived. Adding the folder back won\'t restore it.</item>
         <item quantity="other">The workspace leaves the sidebar and its %1$d chats are archived. Adding the folder back won\'t restore them.</item>
     </plurals>
-    <string name="archive_remove_text_empty">The workspace leaves the sidebar. Its folder stays in Termux.</string>
+    <string name="archive_remove_text_empty">The workspace leaves the sidebar. Its folder stays in Wolfi OS.</string>
     <string name="archive_remove_working_single">Fang Harness is working in a chat there or running its background tasks; they stop.</string>
     <plurals name="archive_remove_working">
         <item quantity="one">One of them is working or running background tasks; they stop.</item>

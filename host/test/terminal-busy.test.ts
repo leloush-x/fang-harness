@@ -33,7 +33,7 @@ describe("parseProcStat", () => {
 });
 
 describe("loginShellComm", () => {
-  const prefix = "/data/data/com.termux/files/usr/bin";
+  const prefix = "/usr/bin";
 
   it("names the program SHELL points to", () => {
     expect(loginShellComm(`HOME=/home\0SHELL=${prefix}/nu\0TERM=xterm-256color\0`)).toBe("nu");
@@ -43,7 +43,7 @@ describe("loginShellComm", () => {
     expect(loginShellComm(`SHELL=${prefix}/a-very-long-shell-name\0`)).toBe("a-very-long-she");
   });
 
-  it("is undefined without SHELL, as before Termux's login exports it", () => {
+  it("is undefined without SHELL, as before a login shell exports it", () => {
     expect(loginShellComm("HOME=/home\0SHELLS=/etc/shells\0")).toBeUndefined();
     expect(loginShellComm("")).toBeUndefined();
   });
@@ -78,8 +78,8 @@ describe("sessionHasWork", () => {
 
   it("ignores processes in other sessions, including one a command detached with setsid", () => {
     const detached = { pid: 500, comm: "sleep", ppid: 200, session: 500 };
-    const termux = { pid: 600, comm: "bash", ppid: 1, session: 600 };
-    expect(sessionHasWork([shell, detached, termux], shell, "bash")).toBe(false);
+    const outer = { pid: 600, comm: "bash", ppid: 1, session: 600 };
+    expect(sessionHasWork([shell, detached, outer], shell, "bash")).toBe(false);
   });
 
   it("counts a program exec'd in place of the shell", () => {
@@ -97,7 +97,7 @@ describe("sessionHasWork", () => {
     expect(sessionHasWork([nu], nu, "nu")).toBe(false);
   });
 
-  it("is idle while sh runs Termux's login as the session starts, before SHELL is set", () => {
+  it("is idle while sh starts the login shell and before SHELL is set", () => {
     expect(sessionHasWork([{ ...shell, comm: "sh" }], { ...shell, comm: "sh" }, undefined)).toBe(false);
     expect(sessionHasWork([{ ...shell, comm: "login" }], { ...shell, comm: "login" }, undefined)).toBe(false);
   });

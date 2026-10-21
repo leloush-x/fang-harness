@@ -28,7 +28,6 @@ import io.leloush.fang.data.ConfigBackups
 import io.leloush.fang.host.BackupInfo
 import io.leloush.fang.host.Backups
 import io.leloush.fang.host.HostRejected
-import io.leloush.fang.host.TermuxBuild
 import io.leloush.fang.ui.chat.ConfirmDialog
 import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.SimmeringPot
@@ -38,7 +37,7 @@ import io.leloush.fang.ui.theme.fangColors
 import java.io.IOException
 import kotlinx.coroutines.launch
 
-/** The backups list in Termux, as loaded, or why it could not be. */
+/** The backups list in Wolfi OS, as loaded, or why it could not be. */
 private sealed interface BackupList {
   data object Loading : BackupList
 
@@ -48,7 +47,7 @@ private sealed interface BackupList {
 }
 
 /**
- * Backs up Pi's configuration into Termux and restores or deletes those backups. The list reloads after every backup,
+ * Backs up Pi's configuration into Wolfi OS and restores or deletes those backups. The list reloads after every backup,
  * restore and deletion.
  */
 @Composable
@@ -210,8 +209,7 @@ private fun SavedSection(
       }
     }
   }
-  val dir = (list as? BackupList.Loaded)?.backups?.dir
-  SettingsCaption(text = stringResource(R.string.backups_caption, dir ?: "~/.${TermuxBuild.NAME}/backups"))
+  SettingsCaption(text = stringResource(R.string.backups_caption))
 }
 
 /** One backup: when it was made, its size and Pi version, or why it can't be read; restorable only when readable. */

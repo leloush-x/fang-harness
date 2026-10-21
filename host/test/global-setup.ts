@@ -11,7 +11,7 @@ declare module "vitest" {
   }
 }
 
-/** Tests run the production bundle (`pnpm run build`) as a child process, as Termux would. */
+/** Tests run the production bundle (`pnpm run build`) as a child process, as Wolfi OS would. */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "fang-host-bundle-"));
   await promisify(execFile)("pnpm", ["run", "--silent", "build"], {

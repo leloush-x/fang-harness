@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
@@ -50,7 +49,7 @@ internal sealed interface AgentProcessState {
   data class Exited(val code: Int?, val signal: String?, val stderr: String) : AgentProcessState
 
   /**
-   * Pi could not start. [failure] is set when Termux could not run the host (onboarding may fix it);
+   * Pi could not start. [failure] is set when the Wolfi runtime could not run the host (onboarding may fix it);
    * [code] is the host's refusal code (`cwd_missing`, `pi_version`, …) when it refused.
    */
   data class Failed(val message: String, val failure: HostFailure? = null, val code: String? = null) :
@@ -528,7 +527,7 @@ internal class AgentProcess(
 
   /**
    * The connection ended unasked. Without the host's `fang_exit` the connection dropped rather than Pi exiting,
-   * which the chat notes: what ended it, Termux or the host alone, isn't known. A connection that was working
+   * which the chat notes: what ended it, the runtime or the host alone, isn't known. A connection that was working
    * reconnects and reloads the history; Pi stopped with it, so no run survives. Otherwise, or on a second drop within
    * [AUTO_RECONNECT_INTERVAL_MILLIS] (so a failing host cannot loop), the timeline shows an exit banner.
    */

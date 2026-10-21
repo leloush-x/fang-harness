@@ -10,13 +10,13 @@ const STORAGE = "/storage";
 
 /** What the folder browser shows for Node's error codes, with the key of its string resource. */
 const MESSAGES: Record<string, { error: string; key: string }> = {
-  EACCES: { error: "Termux can't open this folder.", key: "browse_no_access" },
-  EPERM: { error: "Termux can't open this folder.", key: "browse_no_access" },
+  EACCES: { error: "Wolfi OS can't open this folder.", key: "browse_no_access" },
+  EPERM: { error: "Wolfi OS can't open this folder.", key: "browse_no_access" },
   ENOENT: { error: "This folder doesn't exist.", key: "browse_folder_missing" },
   ENOTDIR: { error: "This isn't a folder.", key: "not_a_folder" },
 };
 
-/** `~` and `~/…` are Termux home; anything else must be absolute. `..` segments are normalised. */
+/** `~` and `~/…` are the app home; anything else must be absolute. `..` segments are normalised. */
 function resolveBrowsePath(raw: string, home: string): string | undefined {
   if (raw === "~") return home;
   if (raw.startsWith("~/")) return resolve(home, raw.slice(2));
@@ -31,7 +31,7 @@ async function isDirectory(path: string): Promise<boolean> {
   }
 }
 
-/** Subfolder names, following symlinks (Termux's `~/storage/*` are links); dot folders last. */
+/** Subfolder names, following symlinks; dot folders last. */
 async function subfolders(path: string): Promise<string[]> {
   const entries = await readdir(path, { withFileTypes: true });
   const names: string[] = [];
@@ -45,9 +45,9 @@ async function subfolders(path: string): Promise<string[]> {
 }
 
 /**
- * [path] with links resolved, so a folder reached through one (Termux's `~/storage/*`) has a single
- * spelling and can't become two workspaces. Termux home keeps the spelling Termux reports, since on
- * Android it lies under the `/data/data` link. Unreadable paths stay as given; their listing says why.
+ * [path] with links resolved, so a folder reached through one has a single spelling and can't become two
+ * workspaces. The app home keeps the spelling it reports, since on Android it may lie under a link. Unreadable
+ * paths stay as given; their listing says why.
  */
 async function canonical(path: string, home: string): Promise<string> {
   try {
@@ -79,7 +79,7 @@ async function listing(raw: string, home: string): Promise<JsonObject> {
   }
 }
 
-/** [parent] when Termux can list it, so the browser never offers a step up into a refusal. */
+/** [parent] when Wolfi OS can list it, so the browser never offers a step up into a refusal. */
 async function openableParent(parent: string): Promise<string | null> {
   try {
     await (await opendir(parent)).close();
@@ -91,11 +91,12 @@ async function openableParent(parent: string): Promise<string | null> {
 
 type Place = { kind: "home" | "shared" | "volume"; path: string; name?: string };
 
-/** Termux home, phone storage when Termux may read it, and any other mounted volume. */
+/** The app home, phone storage when the runtime may write it, and any other mounted volume. */
 async function places(env: HostEnv): Promise<Place[]> {
   const found: Place[] = [{ kind: "home", path: env.home }];
   const shared = await grantedSharedStorage(env);
-  if (shared !== null) found.push({ kind: "shared", path: shared });
+  // `/sdcard` and its real path differ; the home and shared tabs must not show the same folder twice.
+  if (shared !== null && (await canonical(shared, env.home)) !== env.home) found.push({ kind: "shared", path: shared });
   try {
     for (const name of await readdir(STORAGE)) {
       const path = join(STORAGE, name);

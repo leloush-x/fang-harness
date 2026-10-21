@@ -21,14 +21,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcess
@@ -256,7 +252,7 @@ private fun SlashMenuHost(controller: ChatController, ready: Boolean, modifier: 
 }
 
 /**
- * Session name (or the first message) over the project path, with `~` for the Termux home, or over the statuses
+ * Session name (or the first message) over the project path, with `~` for the app home, or over the statuses
  * extensions set while there are any; the tab button with the number of tabs in the workspace sits before the actions
  * button, and the file explorer's toggle ends the row, before the second pane's button that closes split screen.
  */

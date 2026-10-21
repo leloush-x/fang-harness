@@ -3,7 +3,7 @@ import { withConfigLock } from "../config-lock.js";
 import { HostError, installedPiVersion, piEntry } from "../env.js";
 import type { JsonObject } from "../framing.js";
 import type { ModeContext } from "../mode.js";
-import { termuxSessionEnv } from "../termux-session.js";
+import { sessionEnv } from "../session.js";
 import { commandFailed, forwardLines, isNpmNetworkError } from "./ensure.js";
 
 /** The line `pi update` prints last when it fails. */
@@ -32,7 +32,7 @@ export async function updateExtensions(ctx: ModeContext): Promise<JsonObject> {
       piError = PI_ERROR.exec(line)?.[1] ?? piError;
       ctx.conn.send({ type: "fang_progress", line });
     };
-    const env = { ...(await termuxSessionEnv(ctx.env)), NPM_CONFIG_UPDATE_NOTIFIER: "false" };
+    const env = { ...(await sessionEnv(ctx.env)), NPM_CONFIG_UPDATE_NOTIFIER: "false" };
     const child = spawn(process.execPath, [await piEntry(ctx.env.root), "update", "--extensions"], {
       cwd: ctx.env.home,
       env,

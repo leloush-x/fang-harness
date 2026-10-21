@@ -51,8 +51,8 @@ internal class ShellActions(private val graph: AppGraph) {
 
   val notices: Flow<ShellNotice> = noticeChannel.receiveAsFlow()
 
-  /** Termux's home from the last host hello; upstream Termux always uses [TERMUX_HOME] before any host ran. */
-  val home: String get() = graph.hostClient.lastHello.value?.home?.takeIf { it.isNotEmpty() } ?: TERMUX_HOME
+  /** The shell's home from the last host hello; shared storage before any host ran. */
+  val home: String get() = graph.hostClient.lastHello.value?.home?.takeIf { it.isNotEmpty() } ?: DEFAULT_HOME
 
   /**
    * Shows the chat in session file [sessionPath] in [pane]; false (with a notice) when every running chat is working.
@@ -315,9 +315,9 @@ internal class ShellActions(private val graph: AppGraph) {
   }
 
   private companion object {
-    // Termux's own fixed home, not a path in Fang Harness's storage.
+    // The folder the user's projects live in; the Wolfi shell's own home is /root inside the rootfs.
     @SuppressLint("SdCardPath")
-    const val TERMUX_HOME = "/data/data/com.termux/files/home"
+    const val DEFAULT_HOME = "/sdcard"
     const val START_TIMEOUT_MILLIS = 60_000L
   }
 }

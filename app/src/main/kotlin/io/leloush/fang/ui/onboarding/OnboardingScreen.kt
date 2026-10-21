@@ -12,29 +12,15 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,19 +31,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.leloush.fang.R
 import io.leloush.fang.appGraph
 import io.leloush.fang.ui.auth.LoginSheet
-import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.SimmeringPot
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
@@ -66,17 +49,16 @@ import kotlinx.coroutines.delay
 /**
  * First-run setup, one step per page: welcome, then every [SetupStep] that still needs the user, then a closing page.
  * Steps that are already done are passed over, and finishing one moves on by itself, so the wizard reacts to what the
- * user did elsewhere (installed Termux, ran the setup command, granted a permission). Skipped optional steps and the
- * welcome are remembered, so reopening Fang Harness resumes at the first step still open. Opened again after setup (a
- * "needs attention" tap), it starts at the broken step and [onClose] leaves it.
+ * user did elsewhere (granted a permission, came back from settings). Skipped optional steps and the welcome are
+ * remembered, so reopening Fang Harness resumes at the first step still open. Opened again after setup (a "needs
+ * attention" tap), it starts at the broken step and [onClose] leaves it.
  */
 @Composable
 internal fun OnboardingScreen(onFinished: () -> Unit, onAddProvider: () -> Unit, onClose: (() -> Unit)?) {
   val context = LocalContext.current
   val graph = remember(context) { context.appGraph }
   var loginProvider by rememberSaveable { mutableStateOf<String?>(null) }
-  var poll by remember { mutableStateOf(false) }
-  val checks = rememberDeviceChecks(poll)
+  val checks = rememberDeviceChecks()
   val state = rememberOnboardingState(graph, checks.value)
   val onAction = rememberSetupActions(
     state = state,
@@ -84,14 +66,10 @@ internal fun OnboardingScreen(onFinished: () -> Unit, onAddProvider: () -> Unit,
     onLogin = { loginProvider = it },
     onAddProvider = onAddProvider,
   )
-  AutoInstall(graph, state)
+  AutoInstall(graph, state, checks::refresh)
   val history = rememberSaveable(saver = HistorySaver) { mutableStateListOf(firstPage(state)) }
   val page = history.last()
   val step = stepOf(page)
-  // Installing Termux or running its setup finishes in another app, which may not bring Fang Harness back.
-  SideEffect {
-    poll = (step == SetupStep.Termux || step == SetupStep.TermuxSetup) && state.status(step) != StepStatus.Done
-  }
 
   fun goTo(next: String) {
     if (next != history.last()) history.add(next)
@@ -114,7 +92,7 @@ internal fun OnboardingScreen(onFinished: () -> Unit, onAddProvider: () -> Unit,
   }
 
   AdvanceWhenDone(page, step, state) { advance(it) }
-  // A failure pinned to another step, such as an install that finds Termux's setup broken, shows on that step.
+  // A failure pinned to another step, such as an install that finds the runtime broken, shows on that step.
   val failedStep = state.currentError?.step?.takeIf { it in state.visibleSteps }
   LaunchedEffect(failedStep) { failedStep?.let { goTo(it.name) } }
   BackHandler(enabled = history.size > 1 || onClose != null) { back() }
@@ -160,7 +138,7 @@ internal fun OnboardingScreen(onFinished: () -> Unit, onAddProvider: () -> Unit,
 /**
  * Moves on once the shown [step] gets done while it's on screen, after a beat that lets its check settle; a step that
  * was already done when the user came back to it waits for Continue. A step this phone or build no longer shows
- * (Termux swapped between builds) moves on right away.
+ * (a permission the phone does not need) moves on right away.
  */
 @Composable
 private fun AdvanceWhenDone(
@@ -256,16 +234,14 @@ private fun StepPage(spec: StepSpec, onContinue: () -> Unit, onSkip: () -> Unit)
 }
 
 /**
- * The setup command shows how to paste it until it has run; the agent install simmers while it runs; the rest show
+ * The runtime install simmers while it runs; the rest show
  * their icon.
  */
 @Composable
 private fun StepIllustration(spec: StepSpec) {
   val done = spec.status == StepStatus.Done
   when {
-    spec.step == SetupStep.TermuxSetup && !done -> PasteDemo()
-
-    spec.step == SetupStep.InstallPi && spec.status == StepStatus.Running ->
+    spec.step == SetupStep.Runtime && spec.status == StepStatus.Running ->
       SimmeringPot(size = POT_SIZE, tint = fangColors.foreground)
 
     else -> IconTile(icon = spec.icon, done = done)

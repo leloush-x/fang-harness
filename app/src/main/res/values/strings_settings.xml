@@ -8,7 +8,7 @@
     <string name="settings_section_extensions">Fang Harness extensions</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_notifications">Notifications</string>
-    <string name="settings_section_termux">Termux</string>
+    <string name="settings_section_runtime">Wolfi OS</string>
     <string name="settings_section_about">About</string>
 
     <string name="settings_claude">Claude</string>
@@ -44,7 +44,7 @@
     <string name="settings_update_extensions_confirm">Update</string>
     <string name="settings_update_extensions_done">Pi extensions updated</string>
     <string name="settings_config_folder">Config folder</string>
-    <string name="settings_config_folder_unknown">Known once Termux connects</string>
+    <string name="settings_config_folder_unknown">Known once the runtime connects</string>
 
     <string name="backups_title">Backups</string>
     <string name="backups_create">Back up now</string>
@@ -59,9 +59,9 @@
     <string name="backups_unreadable">%1$s can\'t be restored: %2$s</string>
     <string name="backups_restore">Restore</string>
     <string name="backups_delete">Delete</string>
-    <string name="backups_caption">A backup holds Pi\'s configuration: settings, sign-ins, models, extensions, skills, prompts and themes. Chats aren\'t part of it, and a restore leaves them as they are. Backups are kept in Termux at %1$s, where the Files app can reach them under Termux. Uninstalling Termux or clearing its data deletes them too.</string>
+    <string name="backups_caption">A backup holds Pi\'s configuration: settings, sign-ins, models, extensions, skills, prompts and themes. Chats aren\'t part of it, and a restore leaves them as they are. Backups are kept in Fang Harness\'s private Wolfi storage, so uninstalling Fang Harness or clearing its data deletes them too.</string>
     <string name="backups_restore_title">Restore this backup?</string>
-    <string name="backups_restore_text">Pi\'s configuration will be replaced by the backup from %1$s, and anything changed since is lost. Chats stay. Running chats stop first, so a reply in progress ends. Quit any pi you started yourself in a Termux terminal before restoring.</string>
+    <string name="backups_restore_text">Pi\'s configuration will be replaced by the backup from %1$s, and anything changed since is lost. Chats stay. Running chats stop first, so a reply in progress ends. Quit any pi you started yourself in the Wolfi terminal before restoring.</string>
     <string name="backups_delete_title">Delete this backup?</string>
     <string name="backups_delete_text">The backup from %1$s will be deleted for good.</string>
     <string name="backups_delete_file_text">%1$s will be deleted for good.</string>
@@ -78,8 +78,8 @@
     <string name="settings_running_chats_fewer">Fewer running chats</string>
     <string name="settings_running_chats_more">More running chats</string>
     <plurals name="settings_running_chats_caption">
-        <item quantity="one">How many chats can keep their agent running at once. Each one runs a few processes in Termux, more while it works. Android stops apps\' processes once there are more than 32 in all, so with more than %1$d chat running, any of them may be stopped mid-run unless Disable child process restrictions is on in Developer options (Android 14 and later).</item>
-        <item quantity="other">How many chats can keep their agent running at once. Each one runs a few processes in Termux, more while it works. Android stops apps\' processes once there are more than 32 in all, so with more than %1$d chats running, any of them may be stopped mid-run unless Disable child process restrictions is on in Developer options (Android 14 and later).</item>
+        <item quantity="one">How many chats can keep their agent running at once. Each one runs a few processes in Wolfi OS, more while it works. Android stops apps\' processes once there are more than 32 in all, so with more than %1$d chat running, any of them may be stopped mid-run unless Disable child process restrictions is on in Developer options (Android 14 and later).</item>
+        <item quantity="other">How many chats can keep their agent running at once. Each one runs a few processes in Wolfi OS, more while it works. Android stops apps\' processes once there are more than 32 in all, so with more than %1$d chats running, any of them may be stopped mid-run unless Disable child process restrictions is on in Developer options (Android 14 and later).</item>
     </plurals>
     <string name="settings_idle_stop">Stop idle chats after</string>
     <string name="settings_idle_stop_1_minute">1 minute</string>
@@ -97,8 +97,9 @@
     <string name="settings_in_app_notifications">In-app notifications</string>
     <string name="settings_in_app_notifications_summary">Show a pill when another chat finishes or needs your answer</string>
 
-    <string name="settings_termux">Termux</string>
-    <string name="settings_termux_not_installed">Not installed</string>
+    <string name="settings_runtime">Wolfi OS</string>
+    <string name="settings_runtime_not_installed">Not installed</string>
+    <string name="settings_pi_agent">Agent</string>
     <string name="settings_pi_version">Agent %1$s</string>
     <string name="settings_pi_missing">Agent not installed</string>
     <string name="settings_permissions">Permissions</string>
@@ -238,5 +239,5 @@
     <string name="provider_remove_title">Remove %1$s?</string>
     <string name="provider_remove_text">Fang Harness forgets this provider, its models and its API key.</string>
     <string name="provider_cancel">Cancel</string>
-    <string name="provider_failed">The Termux helper failed.</string>
+    <string name="provider_failed">The Wolfi runtime failed.</string>
 </resources>

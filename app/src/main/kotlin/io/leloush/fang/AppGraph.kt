@@ -30,6 +30,7 @@ import io.leloush.fang.host.GitHost
 import io.leloush.fang.host.HostClient
 import io.leloush.fang.terminal.TerminalRegistry
 import io.leloush.fang.ui.chat.ChatViews
+import io.leloush.fang.wolfi.WolfiRuntime
 import io.leloush.fang.workspace.OpenTabs
 import io.leloush.fang.workspace.Panes
 import io.leloush.fang.workspace.WorkspaceLayout
@@ -54,6 +55,7 @@ internal class AppGraph(private val application: Application) {
     foreground = ProcessLifecycleOwner.get().lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.STARTED) },
   )
   val keepAlive = KeepAlive(application)
+  val wolfi = WolfiRuntime(application)
   val preferences = Preferences(application)
   val sessionRepository = SessionRepository(hostClient, NoticeStore(File(application.filesDir, "notices")), scope)
   val sessionArchive = SessionArchive(sessionRepository, preferences, scope)
@@ -92,7 +94,7 @@ internal class AppGraph(private val application: Application) {
 
   init {
     holdWhileWorking()
-    restartChatsOnceTermuxWorks()
+    restartChatsOnceSetupWorks()
     feedChatInbox()
     val dialogNotifications = DialogNotifications(application, registry, chatsOnScreen, visibility, chatInbox) {
       hostClient.lastHello.value?.home
@@ -101,7 +103,7 @@ internal class AppGraph(private val application: Application) {
     ProcessLifecycleOwner.get().lifecycle.addObserver(
       object : DefaultLifecycleObserver {
         override fun onStart(owner: LifecycleOwner) {
-          // Before setup, Termux may not be able to run the host yet.
+          // Before setup, the Wolfi runtime may not be able to run the host yet.
           if (preferences.setupComplete.value) sessionRepository.refresh()
           // Events may have gone missing while Fang Harness was in the background.
           for (process in registry.processes.value.values) scope.launch { process.resync() }
@@ -132,22 +134,22 @@ internal class AppGraph(private val application: Application) {
   }
 
   /**
-   * A host that connects after a failure fixed in Termux (a setup step, or a helper that wasn't running) proves the
-   * fix, so chats that failed on it start again instead of waiting on Retry.
+   * A host that connects after a failure fixed by setup proves the fix, so chats that failed on it start again instead
+   * of waiting on Retry.
    */
-  private fun restartChatsOnceTermuxWorks() {
+  private fun restartChatsOnceSetupWorks() {
     scope.launch {
-      var termuxBroken = false
+      var setupBroken = false
       hostClient.lastFailure.collect { failure ->
         if (failure != null) {
-          termuxBroken = termuxBroken || failure.fixedInTermux
+          setupBroken = setupBroken || failure.fixedBySetup
           return@collect
         }
-        if (!termuxBroken) return@collect
-        termuxBroken = false
+        if (!setupBroken) return@collect
+        setupBroken = false
         for (process in registry.processes.value.values) {
           val state = process.state.value
-          if (state is AgentProcessState.Failed && state.failure?.fixedInTermux == true) process.restart()
+          if (state is AgentProcessState.Failed && state.failure?.fixedBySetup == true) process.restart()
         }
       }
     }
