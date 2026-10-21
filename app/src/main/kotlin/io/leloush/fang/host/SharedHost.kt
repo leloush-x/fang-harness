@@ -29,8 +29,10 @@ internal class SharedHost(
 
   /** Sends [message] with a fresh id and returns the reply carrying that id. */
   suspend fun request(message: JSONObject, timeoutMillis: Long): JSONObject {
-    idleClose?.cancel()
+    // Counted before the idle close is cancelled: a cancel that arrives after the delay has run does nothing, so
+    // the count is what tells the idle close a request came.
     inFlight++
+    idleClose?.cancel()
     try {
       return connection().request(message.put("id", ++nextId), timeoutMillis)
     } finally {
@@ -38,6 +40,9 @@ internal class SharedHost(
       if (inFlight == 0) {
         idleClose = scope.launch {
           delay(idleMillis)
+          // A request that came while the delay ran keeps the host: the request that follows this one counts
+          // itself in and cancels this job, but a cancel after the delay does nothing, so the count decides.
+          if (inFlight > 0) return@launch
           connection?.close()
           connection = null
         }
