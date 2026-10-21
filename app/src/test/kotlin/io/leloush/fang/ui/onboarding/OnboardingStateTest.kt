@@ -21,14 +21,23 @@ class OnboardingStateTest {
   @Test
   fun setupResumesAtTheFirstStepStillOpen() {
     assertEquals(SetupStep.Runtime, state(checks(runtime = false)).nextOpenStep())
-    assertEquals(SetupStep.InstallPi, state(checks(notifications = true, background = true, storage = true)).nextOpenStep())
-    assertEquals(SetupStep.SignIn, state(checks(notifications = true, background = true, storage = true), hello = READY).nextOpenStep())
+    assertEquals(
+      SetupStep.InstallPi,
+      state(checks(notifications = true, background = true, storage = true)).nextOpenStep(),
+    )
+    assertEquals(
+      SetupStep.SignIn,
+      state(checks(notifications = true, background = true, storage = true), hello = READY).nextOpenStep(),
+    )
   }
 
   @Test
   fun skippedStepsStaySkippedButRequiredOnesComeBackWhenTheyBreak() {
     val passed = setOf(SetupStep.Notifications.name, SetupStep.Background.name, SetupStep.Storage.name)
-    assertEquals(SetupStep.SignIn, state(checks(background = true, storage = true), passed = passed, hello = READY).nextOpenStep())
+    assertEquals(
+      SetupStep.SignIn,
+      state(checks(background = true, storage = true), passed = passed, hello = READY).nextOpenStep(),
+    )
     // Removing the runtime reopens its required step even though later steps were skipped.
     assertEquals(SetupStep.Runtime, state(checks(runtime = false), passed = passed, hello = READY).nextOpenStep())
     assertNull(
@@ -89,7 +98,8 @@ class OnboardingStateTest {
   @Test
   fun aRuntimeFailureOpensItsStepEvenAfterSetupFinished() {
     val missing = HostFailure.Runtime().toSetupError()
-    val state = state(checks(runtime = false), passed = setOf(SetupStep.Notifications.name), complete = true, error = missing)
+    val state =
+      state(checks(runtime = false), passed = setOf(SetupStep.Notifications.name), complete = true, error = missing)
     assertEquals(StepStatus.Failed, state.status(SetupStep.Runtime))
     assertEquals(SetupStep.Runtime, state.nextOpenStep())
   }
