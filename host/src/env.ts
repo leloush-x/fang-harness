@@ -17,7 +17,7 @@ export interface HostEnv {
   root: string;
   /** `PI_CODING_AGENT_DIR`: Pi's config, sessions and user-installed packages. */
   configDir: string;
-  /** The folder the app treats as home (`/sdcard`), for `~` expansion and the folder picker. */
+  /** The folder the app treats as home (`/` — the root of Wolfi OS), for `~` expansion and the folder picker. */
   home: string;
   /** The root of Wolfi's packages, `/usr`. */
   prefix: string;

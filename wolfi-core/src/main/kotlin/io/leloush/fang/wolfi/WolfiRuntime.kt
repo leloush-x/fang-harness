@@ -1,5 +1,6 @@
 package io.leloush.fang.wolfi
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.system.Os
@@ -102,7 +103,13 @@ class WolfiRuntime(context: Context) {
     return args
   }
 
-  /** The environment for a process in the rootfs; includes the host's [token] and paths when given. */
+  /**
+   * The environment for a process in the rootfs; includes the host's [token] and paths when given.
+   *
+   * [FANG_HOME] is the Wolfi OS root: the folder the app opens a chat in, expands `~` with and shows as home. It is
+   * the runtime's own filesystem, which is native storage, rather than Android's shared storage, which is a slow
+   * FUSE mount; shared storage is still reachable, at [SHARED_STORAGE], and the folder browser offers it.
+   */
   fun environment(token: String? = null): Map<String, String> {
     val libraryDir = app.applicationInfo.nativeLibraryDir
     return buildMap {
@@ -113,8 +120,8 @@ class WolfiRuntime(context: Context) {
       put("COLORTERM", "truecolor")
       put("LANG", "C.UTF-8")
       put("PREFIX", "/usr")
-      put("EXTERNAL_STORAGE", "/sdcard")
-      put("FANG_HOME", "/sdcard")
+      put("EXTERNAL_STORAGE", SHARED_STORAGE)
+      put("FANG_HOME", WOLFI_ROOT)
       put("TMPDIR", "/tmp")
       put("PROOT_TMP_DIR", File(baseDir, "proot-tmp").apply { mkdirs() }.absolutePath)
       put("PROOT_LOADER", File(libraryDir, "libloader.so").absolutePath)
@@ -292,9 +299,21 @@ class WolfiRuntime(context: Context) {
     }
   }
 
-  private companion object {
+  companion object {
     const val ROOTFS_REPO = "https://github.com/leloush-x/wolfi-os-rootfs"
-    val SYSTEM_MOUNTS = listOf("/apex", "/odm", "/product", "/system", "/system_ext", "/vendor")
-    val SHARED_MOUNTS = listOf("/sdcard", "/storage", "/data", "/dev", "/proc", "/sys")
+
+    /**
+     * The root of the Wolfi OS the runtime runs: the folder a chat opens in, what `~` means, and the home the
+     * folder browser offers. It is the runtime's own filesystem, which is native storage, rather than Android's
+     * shared storage, which is a slow FUSE mount.
+     */
+    const val WOLFI_ROOT = "/"
+
+    /** Android's shared storage, which the runtime reaches only with All files access. */
+    @SuppressLint("SdCardPath")
+    const val SHARED_STORAGE = "/sdcard"
+
+    private val SYSTEM_MOUNTS = listOf("/apex", "/odm", "/product", "/system", "/system_ext", "/vendor")
+    private val SHARED_MOUNTS = listOf(SHARED_STORAGE, "/storage", "/data", "/dev", "/proc", "/sys")
   }
 }

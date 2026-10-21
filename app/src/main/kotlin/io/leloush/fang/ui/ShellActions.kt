@@ -1,6 +1,5 @@
 package io.leloush.fang.ui
 
-import android.annotation.SuppressLint
 import io.leloush.fang.AppGraph
 import io.leloush.fang.agent.AgentProcess
 import io.leloush.fang.agent.AgentProcessState
@@ -14,6 +13,7 @@ import io.leloush.fang.host.SessionInfo
 import io.leloush.fang.workspace.Pane
 import io.leloush.fang.workspace.PaneItem
 import io.leloush.fang.workspace.WorkspaceTab
+import io.leloush.fang.wolfi.WolfiRuntime
 import java.io.IOException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -51,8 +51,8 @@ internal class ShellActions(private val graph: AppGraph) {
 
   val notices: Flow<ShellNotice> = noticeChannel.receiveAsFlow()
 
-  /** The shell's home from the last host hello; shared storage before any host ran. */
-  val home: String get() = graph.hostClient.lastHello.value?.home?.takeIf { it.isNotEmpty() } ?: DEFAULT_HOME
+  /** The shell's home from the last host hello; the Wolfi OS root before any host ran. */
+  val home: String get() = graph.hostClient.lastHello.value?.home?.takeIf { it.isNotEmpty() } ?: WolfiRuntime.WOLFI_ROOT
 
   /**
    * Shows the chat in session file [sessionPath] in [pane]; false (with a notice) when every running chat is working.
@@ -315,9 +315,6 @@ internal class ShellActions(private val graph: AppGraph) {
   }
 
   private companion object {
-    // The folder the user's projects live in; the Wolfi shell's own home is /root inside the rootfs.
-    @SuppressLint("SdCardPath")
-    const val DEFAULT_HOME = "/sdcard"
     const val START_TIMEOUT_MILLIS = 60_000L
   }
 }

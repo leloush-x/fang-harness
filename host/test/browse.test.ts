@@ -58,6 +58,36 @@ describe("browse mode", () => {
     });
   });
 
+  it("offers the runtime's root as home, and shared storage beside it", async () => {
+    const { run: rooted } = await startHost("browse", dirs, { FANG_HOME: "/" });
+    try {
+      await rooted.next();
+      rooted.send({ type: "fang_request", params: {} });
+      expect(await rooted.next()).toEqual({
+        type: "fang_places",
+        places: [
+          { kind: "home", path: "/" },
+          { kind: "shared", path: shared },
+        ],
+      });
+    } finally {
+      rooted.socket.destroy();
+    }
+  });
+
+  it("lists the runtime's root when it is home", async () => {
+    const { run: rooted } = await startHost("browse", dirs, { FANG_HOME: "/" });
+    try {
+      await rooted.next();
+      rooted.send({ type: "fang_request", params: {} });
+      await rooted.next();
+      rooted.send({ type: "fang_list", id: 1, path: "~" });
+      expect(await rooted.next()).toMatchObject({ type: "fang_listing", path: "/", parent: null });
+    } finally {
+      rooted.socket.destroy();
+    }
+  });
+
   it("leaves out shared storage that Wolfi OS can't write to", async () => {
     await chmod(shared, 0o555);
     const { run: denied } = await startHost("browse", dirs);

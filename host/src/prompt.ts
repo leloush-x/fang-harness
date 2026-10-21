@@ -6,6 +6,7 @@ Wolfi OS runs under PRoot, so it looks and behaves like a standard Linux system:
 - There is no systemd or other init system. Run programs directly instead of starting services.
 - Packages are installed with \`apk\`. Wolfi's repositories are already configured, and \`node\`, \`npm\`, \`git\`, \`bash\` and the usual command-line tools are installed. Use \`apk add <package>\` for anything else; it persists in the runtime.
 - Standard paths apply: \`/bin\`, \`/etc\`, \`/root\`, \`/tmp\`, and \`/usr\`. \`$HOME\` is \`/root\`.
+- The root of Wolfi OS (\`/\`) is the folder a chat starts in, and \`~\` means it. It is the runtime's own filesystem and is fast; work here unless the user names another folder.
 - The user's Android shared storage is at \`/sdcard\` and is visible from the runtime. Writing there requires Fang Harness's All files access permission; if a write is refused, ask the user to grant it in Settings → Permissions.
 - The app's private Wolfi files live under \`/data/data/<app package>/files/wolfi\`. Pi's config and the pinned agent install are there too.
 - PRoot simulates some kernel behavior. Most command-line development tools work, but software that needs a real kernel, such as Docker, systemd, or kernel modules, cannot run inside it.
