@@ -8,8 +8,7 @@ import java.io.IOException
 /**
  * Why a Wolfi-side operation could not run. [message] is user-presentable, in the app's language when it is read.
  */
-internal sealed class HostFailure(
-  val kind: Kind,
+internal sealed class HostFailure(val kind: Kind,
   @StringRes protected val messageRes: Int,
   cause: Throwable? = null,
 ) : IOException(null, cause) {
@@ -34,12 +33,18 @@ internal sealed class HostFailure(
   val fixedBySetup: Boolean get() = needsSetup
 
   /** Wolfi OS is not installed or its files are incomplete. */
-  class Runtime(cause: Throwable? = null) :
-    HostFailure(Kind.Runtime, R.string.host_failure_runtime, cause = cause)
+  class Runtime(cause: Throwable? = null) : HostFailure(
+    Kind.Runtime,
+    R.string.host_failure_runtime,
+    cause = cause,
+  )
 
   /** Android refused to execute PRoot, usually because the runtime files were removed. */
-  class Permission(cause: Throwable? = null) :
-    HostFailure(Kind.Permission, R.string.host_failure_permission, cause = cause)
+  class Permission(cause: Throwable? = null) : HostFailure(
+    Kind.Permission,
+    R.string.host_failure_permission,
+    cause = cause,
+  )
 
   class NodeMissing : HostFailure(Kind.NodeMissing, R.string.host_failure_node_missing)
 

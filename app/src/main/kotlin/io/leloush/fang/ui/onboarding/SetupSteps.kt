@@ -129,10 +129,13 @@ private fun runtimeSpec(state: OnboardingState, onAction: (SetupAction) -> Unit)
     status = status,
     buttons = when (status) {
       StepStatus.Done -> emptyList()
+
       StepStatus.Running -> emptyList()
+
       StepStatus.Failed -> listOf(
         StepButton(stringResource(R.string.onboarding_retry)) { onAction(SetupAction.PrepareRuntime) },
       )
+
       StepStatus.Pending -> listOf(
         StepButton(stringResource(R.string.onboarding_runtime_action)) { onAction(SetupAction.PrepareRuntime) },
       )

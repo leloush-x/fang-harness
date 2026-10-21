@@ -73,7 +73,6 @@ internal fun rememberSetupActions(
   val requestPermission = rememberPermissionRequest(state.blockedPermissions, onPermissionResult)
   return { action ->
     when (action) {
-
       SetupAction.PrepareRuntime -> SetupProgress.prepareRuntime(graph)
 
       SetupAction.AllowNotifications -> requestPermission(Manifest.permission.POST_NOTIFICATIONS)
