@@ -5,7 +5,7 @@
     "Pi" and "pi" are the agent program and its command; neither is translated.
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- Shown when the helper refused an operation without saying why. -->
+    <!-- Shown when the Wolfi host refused an operation without saying why. -->
     <string name="host_rejected_without_reason">The Wolfi runtime failed.</string>
 
     <!-- Configuration changes -->

@@ -242,8 +242,8 @@ export function defaultLabel(command: string): string {
 }
 
 /**
- * Where tasks' logs and records go: `background` beside Pi's config folder, `~/.fang/background` for the release and
- * `~/.fang-dev/background` for the debug build, so neither build's Pi reports on or cleans up the other's tasks. Not
+ * Where tasks' logs and records go: `background` beside Pi's config folder, inside the app's private Wolfi
+ * files, so a later Pi reports on or cleans up the tasks it recorded. Not
  * `$TMPDIR`: `/tmp` is shared by everything in the runtime and may be cleared by the system, which would take the
  * logs of the very tasks a later Pi reports on.
  */
