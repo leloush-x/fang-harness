@@ -58,7 +58,8 @@ export function vmstatText(): string {
  * two counts are the task count a tool shows, and Android hides other apps' processes, so they count this app's.
  */
 export function loadavgText(processes: { running: number; total: number }, lastPid: number = process.pid): string {
-  const [one, five, fifteen] = os.loadavg();
+  // Defaults, because the array's length is not part of its type: a kernel always gives three, a test one may not.
+  const [one = 0, five = 0, fifteen = 0] = os.loadavg();
   return `${one.toFixed(2)} ${five.toFixed(2)} ${fifteen.toFixed(2)} ${processes.running}/${processes.total} ${lastPid}\n`;
 }
 
