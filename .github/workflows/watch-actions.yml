@@ -1,8 +1,8 @@
 name: Watch actions
 
-# A cron job that watches the repository's other workflows. A run that failed on main is reported in an issue, so a
-# broken build is noticed without watching the Actions page, and the report closes itself once that workflow is redone
-# and passes. It reads the runs and writes issues; it never touches the code, and it never builds anything.
+# A cron job that watches the repository's other workflows. A workflow that is red on main is reported in an issue, so
+# a broken build is noticed without watching the Actions page, and the report closes itself once that workflow passes
+# again. It reads the runs and writes issues; it never touches the code, and it never builds anything.
 on:
   schedule:
     # Every half hour, off the hour and off the half: GitHub delays a scheduled run when the repository is busy, and
@@ -32,25 +32,25 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const PREFIX = "CI failed: ";
-            // The marker names the workflow as well as the commit: two workflows run on one push, and one of them
-            // passing says nothing about the other.
-            const MARKER = /<!--\s*watched:([0-9]+):([0-9a-f]{7,40})\s*-->/;
-            const LOOKBACK_MS = 24 * 60 * 60 * 1000;
+            // The marker names the workflow the report is about, so a report is closed by that workflow's own
+            // next result and not by another's.
+            const MARKER = /<!--\s*watched:([0-9]+)\s*-->/;
 
-            // The runs of the last day, so a report is about something that just happened rather than about
-            // whatever failed last month.
+            // The runs on main, newest first.
             const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
               owner,
               repo,
               branch: "main",
-              created: `>=${new Date(Date.now() - LOOKBACK_MS).toISOString()}`,
               per_page: 100,
             });
-            // A run is identified by its workflow and its commit, not by the commit alone.
-            const id = (run) => `${run.workflow_id}:${run.head_sha}`;
-            // A failing run whose workflow was redone on the same commit and passed needs no report.
-            const passed = new Set(runs.filter((run) => run.conclusion === "success").map(id));
-            const failed = runs.filter((run) => run.conclusion === "failure" && run.name !== "Watch actions");
+            // The latest run of each workflow is the one that says how it stands now. A run still going says
+            // nothing yet, so it is left out and the previous result stands.
+            const latest = new Map();
+            for (const run of runs) {
+              if (run.status !== "completed") continue;
+              if (run.name === "Watch actions") continue;
+              if (!latest.has(run.workflow_id)) latest.set(run.workflow_id, run);
+            }
 
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
@@ -59,36 +59,40 @@ jobs:
               per_page: 100,
             });
             const ours = issues.filter((issue) => issue.title.startsWith(PREFIX));
-
-            // The report of a run that passed when its workflow was redone.
+            // The report of each workflow, by the workflow it is about.
+            const reports = new Map();
             for (const issue of ours) {
-              if (issue.state !== "open") continue;
               const marker = MARKER.exec(issue.body ?? "");
-              if (marker === null || !passed.has(`${marker[1]}:${marker[2]}`)) continue;
-              await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: "closed" });
-              core.info(`Closed the report for ${marker[2].slice(0, 7)}, which passed.`);
+              if (marker === null) continue;
+              const open = reports.get(marker[1]);
+              if (open === undefined || (issue.state === "open" && open.state !== "open")) reports.set(marker[1], issue);
             }
 
-            // The report of a run that failed and has none yet. A run is reported once: a report that was closed
-            // is not reopened, so a still-red build stays one issue rather than one per run.
-            const reported = new Set(
-              ours.map((issue) => MARKER.exec(issue.body ?? "")).filter((marker) => marker !== null).map((marker) => `${marker[1]}:${marker[2]}`),
-            );
-            for (const run of failed) {
-              if (reported.has(id(run)) || passed.has(id(run))) continue;
-              reported.add(id(run));
-              const sha = run.head_sha;
-              const title = `${PREFIX}${run.name} (${sha.slice(0, 7)})`;
+            // A workflow that passes again closes its report: the build is green now.
+            for (const [workflow, issue] of reports) {
+              if (issue.state !== "open") continue;
+              const run = latest.get(workflow);
+              if (run === undefined || run.conclusion !== "success") continue;
+              await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: "closed" });
+              core.info(`Closed the report for ${run.name}, which passed.`);
+            }
+
+            // A workflow that is red now has one report, whichever commit it failed on.
+            for (const [workflow, run] of latest) {
+              if (run.conclusion !== "failure") continue;
+              const open = reports.get(workflow);
+              if (open !== undefined && open.state === "open") continue;
+              const title = `${PREFIX}${run.name} (${run.head_sha.slice(0, 7)})`;
               const body = [
-                `<!-- watched:${run.workflow_id}:${sha} -->`,
-                `The **${run.name}** workflow failed on \`main\`.`,
+                `<!-- watched:${workflow} -->`,
+                `The **${run.name}** workflow is failing on \`main\`.`,
                 "",
-                `- Commit: ${sha}`,
+                `- Commit: ${run.head_sha}`,
                 `- Run: ${run.html_url}`,
                 `- Failed at: ${run.updated_at}`,
                 "",
                 "Pushing to `main` runs the workflow again; this report closes itself when that run passes.",
               ].join("\n");
               await github.rest.issues.create({ owner, repo, title, body });
-              core.info(`Reported ${run.name} (${sha.slice(0, 7)}).`);
+              core.info(`Reported ${run.name} (${run.head_sha.slice(0, 7)}).`);
             }
