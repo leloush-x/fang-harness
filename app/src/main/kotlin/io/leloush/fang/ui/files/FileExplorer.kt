@@ -39,7 +39,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.R
@@ -55,10 +54,8 @@ import io.leloush.fang.ui.git.GitWorkspace
 import io.leloush.fang.ui.git.GitWorkspaces
 import io.leloush.fang.ui.git.TrustPrompt
 import io.leloush.fang.ui.git.shownExplorerTab
-import io.leloush.fang.ui.sidebar.tildePath
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
-import io.leloush.fang.wolfi.WolfiRuntime
 import kotlinx.coroutines.launch
 
 /** Paseo's mobile explorer toggle: Lucide `panel-right`, muted, at the end of a workspace header. */
@@ -103,8 +100,7 @@ internal fun ExplorerPanel(
   val graph = LocalContext.current.appGraph
   val trees = rememberSaveable(saver = ExplorerTrees.saver(graph.fileHost)) { ExplorerTrees(graph.fileHost) }
   val repositories = remember(graph) { GitWorkspaces(graph.gitHost) }
-  val hello by graph.hostClient.lastHello.collectAsStateWithLifecycle()
-  val home = hello?.home?.takeIf { it.isNotEmpty() } ?: WolfiRuntime.WOLFI_ROOT
+  val home = rememberHome()
   // The workspace it opened on, or a place the user switched to, which Back returns from.
   val roots = remember(cwd, home) { ExplorerRoots(cwd ?: home) }
   val folder = folderKey(roots.shown)
@@ -135,8 +131,6 @@ internal fun ExplorerPanel(
       onSelect = { tab -> graph.preferences.setExplorerTab(folder, tab) },
       onClose = onClose,
       roots = roots,
-      places = remember { explorerPlaces() },
-      home = home,
     )
     val content = Modifier.weight(1f)
     val refreshFiles = {
@@ -239,8 +233,8 @@ private fun FilesPane(
 }
 
 /**
- * Paseo's explorer tabs and close button, and where the panel is rooted: Back and Forward over the places it has
- * shown, then one button per place, with the folder shown last so a pane rooted elsewhere still says where it is.
+ * Paseo's explorer tabs and close button, and where the panel is rooted: the place bar over them says where it is and
+ * moves between the roots it has shown.
  */
 @Composable
 private fun ExplorerHeader(
@@ -249,8 +243,6 @@ private fun ExplorerHeader(
   onSelect: (ExplorerTab) -> Unit,
   onClose: () -> Unit,
   roots: ExplorerRoots,
-  places: List<ExplorerPlace>,
-  home: String,
 ) {
   val colors = fangColors
   Column {
@@ -272,46 +264,7 @@ private fun ExplorerHeader(
         tint = colors.foregroundMuted,
       )
     }
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(start = FangTokens.Spacing.s4, end = FangTokens.Spacing.s12, bottom = FangTokens.Spacing.s4),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s4),
-    ) {
-      IconButton28(
-        icon = R.drawable.ic_lucide_chevron_left,
-        contentDescription = stringResource(R.string.files_navigate_back),
-        onClick = roots::goBack,
-        enabled = roots.canGoBack,
-        tint = colors.foregroundMuted,
-        iconSize = FangTokens.IconSize.sm,
-      )
-      IconButton28(
-        icon = R.drawable.ic_lucide_chevron_right,
-        contentDescription = stringResource(R.string.files_navigate_forward),
-        onClick = roots::goForward,
-        enabled = roots.canGoForward,
-        tint = colors.foregroundMuted,
-        iconSize = FangTokens.IconSize.sm,
-      )
-      val rooted = roots.shown
-      for (place in places) {
-        ExplorerPlaceButton(
-          place = place,
-          active = folderKey(place.path) == folderKey(rooted),
-          onClick = { roots.open(place.path) },
-        )
-      }
-      Spacer(modifier = Modifier.weight(1f))
-      Text(
-        text = tildePath(rooted, home),
-        color = colors.foregroundMuted,
-        fontSize = FangTokens.FontSize.meta,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-    }
+    ExplorerPlaceBar(roots = roots)
     HorizontalDivider(thickness = 1.dp, color = colors.border)
   }
 }
