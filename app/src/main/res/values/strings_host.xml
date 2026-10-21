@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Texts the Termux helper (the host) reports, shown wherever the app shows its failures. The host sends a key and
+    Texts the Wolfi host reports, shown wherever the app shows its failures. The host sends a key and
     named arguments; HostText.kt maps each key to the resource host_<key> and its arguments to the placeholders in order.
-    "Pi" and "pi" are the agent program and its command, "Termux" the Android terminal app; neither is translated.
+    "Pi" and "pi" are the agent program and its command; neither is translated.
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- Shown when the helper refused an operation without saying why. -->
-    <string name="host_rejected_without_reason">The Termux helper failed.</string>
+    <!-- Shown when the Wolfi host refused an operation without saying why. -->
+    <string name="host_rejected_without_reason">The Wolfi runtime failed.</string>
 
     <!-- Configuration changes -->
     <string name="host_config_busy">Fang Harness is backing up, restoring or updating the configuration; try again in a moment</string>
     <string name="host_config_lock_busy">Another backup, restore or extension update is running.</string>
     <!-- %1$s: the ids of the running Pi processes, such as "4242, 4343". "pi" is the command the user started in a terminal. -->
     <string name="host_pi_running">Pi is still running (process <xliff:g id="processes" example="4242">%1$s</xliff:g>). Stop it, for example by quitting <xliff:g id="command">pi</xliff:g> in a terminal, and try again.</string>
-    <!-- %1$s: the path of the chat's session file in Termux. -->
-    <string name="host_session_not_found">Session not found: <xliff:g id="path" example="/data/data/com.termux/files/home/.fang/pi/sessions/a.jsonl">%1$s</xliff:g></string>
+    <!-- %1$s: the path of the chat's session file in Wolfi OS. -->
+    <string name="host_session_not_found">Session not found: <xliff:g id="path" example="/data/data/io.leloush.fang/files/wolfi/pi/sessions/a.jsonl">%1$s</xliff:g></string>
     <string name="host_models_invalid"><xliff:g id="file">models.json</xliff:g> is not valid JSON. Ask the agent to fix it.</string>
     <string name="host_settings_invalid"><xliff:g id="file">settings.json</xliff:g> is not valid. Ask the agent to fix it.</string>
-    <!-- %1$s: the folder's path in Termux. -->
+    <!-- %1$s: the folder's path in Wolfi OS. -->
     <string name="host_folder_not_found">Folder not found: <xliff:g id="path" example="/sdcard/projects/app">%1$s</xliff:g></string>
 
-    <!-- The agent (Pi) Fang Harness installs in Termux -->
+    <!-- The agent (Pi) Fang Harness installs in Wolfi OS -->
     <string name="host_agent_not_installed">The agent is not installed</string>
     <!-- %1$s: the agent version this Fang Harness needs, such as 1.3.0. -->
     <string name="host_agent_not_installed_needs">The agent is not installed; Fang Harness needs <xliff:g id="version" example="1.3.0">%1$s</xliff:g></string>
-    <!-- %1$s: the agent version installed in Termux; %2$s: the version this Fang Harness needs. -->
+    <!-- %1$s: the agent version installed in Wolfi OS; %2$s: the version this Fang Harness needs. -->
     <string name="host_agent_version_mismatch">Agent <xliff:g id="installed" example="1.2.0">%1$s</xliff:g> is installed; Fang Harness needs <xliff:g id="expected" example="1.3.0">%2$s</xliff:g></string>
     <string name="host_agent_packages_outdated">The agent\'s packages are out of date</string>
     <string name="host_agent_extensions_outdated">The agent\'s bundled extensions are out of date</string>
@@ -95,7 +95,7 @@
 
     <!-- The file explorer, and the folder browser for adding a workspace -->
     <string name="host_not_a_folder">This isn\'t a folder.</string>
-    <string name="host_files_no_access">Termux can\'t open this.</string>
+    <string name="host_files_no_access">Wolfi OS can\'t open this.</string>
     <string name="host_files_gone">This file or folder no longer exists.</string>
     <string name="host_files_is_folder">This is a folder.</string>
     <string name="host_files_link_loop">This link goes round in circles.</string>
@@ -110,16 +110,16 @@
     <string name="host_files_folder_name_invalid">Folder names can\'t be empty, contain <xliff:g id="slash">/</xliff:g> or be <xliff:g id="dot">.</xliff:g> or <xliff:g id="dots">..</xliff:g></string>
     <!-- %1$s: the name the user typed for the new folder. -->
     <string name="host_files_name_taken">A file or folder named <xliff:g id="name" example="src">%1$s</xliff:g> already exists.</string>
-    <string name="host_browse_no_access">Termux can\'t open this folder.</string>
+    <string name="host_browse_no_access">Wolfi OS can\'t open this folder.</string>
     <string name="host_browse_folder_missing">This folder doesn\'t exist.</string>
-    <!-- "~" is Termux's home folder. -->
+    <!-- "~" is the app home folder. -->
     <string name="host_browse_path_not_absolute">Paths start with <xliff:g id="root">/</xliff:g> or <xliff:g id="home">~</xliff:g>.</string>
     <!-- %1$s: the system's error code, such as EIO. -->
     <string name="host_browse_unlistable">Can\'t list this folder (<xliff:g id="code" example="EIO">%1$s</xliff:g>).</string>
     <string name="host_browse_unlistable_unknown">Can\'t list this folder (unknown error).</string>
 
     <!-- The Changes tab, which shows a workspace's git changes -->
-    <string name="host_git_missing"><xliff:g id="command">git</xliff:g> isn\'t installed in Termux.</string>
+    <string name="host_git_missing"><xliff:g id="command">git</xliff:g> isn\'t installed in Wolfi OS.</string>
     <!-- %1$s: the git command, such as "git diff"; %2$s: its exit code. -->
     <string name="host_git_exited"><xliff:g id="command" example="git diff">%1$s</xliff:g> exited with <xliff:g id="exit" example="128">%2$s</xliff:g>.</string>
     <!-- %1$s: the git command, such as "git diff"; %2$s: how many seconds it was given. -->

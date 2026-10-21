@@ -1,8 +1,6 @@
 package io.leloush.fang.ui.sidebar
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,9 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -31,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -63,7 +58,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
- * Browses folders the way Termux (and so Pi) sees them, through one `browse` host kept open while
+ * Browses folders the way Wolfi OS (and so Pi) sees them, through one `browse` host kept open while
  * the pane is shown. [onChoose] gets the current folder, unless [isWorkspace] says it already is
  * one. The folder list takes whatever height the pane has, so short windows shrink the list, never
  * the button. Typing in the search field swaps the browser for search results across every place;
@@ -146,7 +141,7 @@ private fun ColumnScope.Browser(
 }
 
 /**
- * Termux home, phone storage and any SD cards as tabs. The tab holding the shown folder is
+ * The app home, phone storage and any SD cards as tabs. The tab holding the shown folder is
  * underlined; none is when the folder is outside all of them.
  */
 @Composable

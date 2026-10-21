@@ -16,8 +16,8 @@
 
 **Fang Harness** is a native Android app for agentic coding. Tell it what to build or fix, and it reads your
 code, runs commands, edits files, and checks its own work, all on your phone. It's built on the
-[Pi](https://pi.dev) agent harness and runs in [Termux](https://termux.dev), so there's no laptop or
-cloud server doing the work somewhere else.
+[Pi](https://pi.dev) agent harness and runs in its own [Wolfi OS](https://wolfi.dev) runtime, so
+there's no laptop or cloud server doing the work somewhere else.
 
 <p align="center">
   <img src="site/src/assets/screens/photos.png" alt="A finished chat in which Fang Harness found and moved duplicate photos" height="320">
@@ -41,9 +41,9 @@ cloud server doing the work somewhere else.
 Most agents you use from a phone are remotes for a computer somewhere else. Fang Harness runs the agent,
 your code, and every command it runs on the phone itself:
 
-- **No computer required.** The agent, your files, git, and terminals all live in Termux on your
-  phone. Install compilers, runtimes, and databases with `pkg`, or run Debian or Ubuntu with
-  `proot-distro`, no root required.
+- **No computer required.** The agent, its tools, git, and terminals all live in Wolfi OS on your
+  phone, with your projects in Android shared storage. Install compilers, runtimes, and databases
+  with `apk add`, no root required.
 - **Built on Pi.** Fang Harness is compatible with Pi's ecosystem of skills, tools, prompt templates, and
   extensions. Install extensions the usual Pi way and Fang Harness picks them up.
 - **Native extension UI.** Extensions that use Pi's RPC UI protocol render with native controls:
@@ -61,8 +61,8 @@ your code, and every command it runs on the phone itself:
 - **Runs in the background.** Lock your phone or switch apps; a notification tells you when the chat
   is done or needs your answer. While you're in Fang Harness, a small pill under the header tells you the
   same about your other chats.
-- **Guided setup.** A step-by-step guide sets up Termux and installs Pi for you, explaining each
-  permission it asks for.
+- **Guided setup.** A step-by-step guide downloads and sets up Wolfi OS and installs Pi for you,
+  explaining each permission it asks for.
 - **Bundled extensions.** Fang Harness ships web search and page fetching (a vendored copy of
   [pi-web-access](https://github.com/nicobailon/pi-web-access)) and a to-do list widget.
 - **Backups.** Save your settings, sign-ins, models, and extensions in one tap and restore them
@@ -71,11 +71,9 @@ your code, and every command it runs on the phone itself:
 ## Requirements
 
 - Android 10 or newer on a 64-bit (arm64 or x86_64) device.
-- [Termux](https://termux.dev) from [F-Droid](https://f-droid.org/packages/com.termux/) (0.118 or
-  newer, recommended) or [Google Play](https://play.google.com/store/apps/details?id=com.termux)
-  (Android 11 or newer).
-- A network connection while a chat is working. The agent runs on your phone, but the model runs at
-  the provider you connect.
+- A network connection for the first setup, which downloads Wolfi OS (about 46–49 MB), and while a
+  chat is working. The agent runs on your phone, but the model runs at the provider you connect.
+- Setup is automatic: no separate terminal app or root is needed.
 
 ## Installation
 
@@ -84,6 +82,8 @@ your code, and every command it runs on the phone itself:
 [Download the latest APK](https://github.com/leloush-x/fang-harness/releases/latest) from the releases page on
 your phone and open it to install. Android asks you to allow installs from your browser or file
 manager the first time. Later releases install over it as updates and keep your chats and settings.
+Open the app and tap **Get started**: setup downloads and unpacks Wolfi OS, installs its tools, and
+installs the agent for you.
 
 Each release also lists the APK's SHA-256 checksum in `SHA256SUMS`, and you can confirm that GitHub
 Actions built it from this repository with the [GitHub CLI](https://cli.github.com):
@@ -109,16 +109,15 @@ without installing it, run `./gradlew :app:assembleDebug` and find it in
 `app/build/outputs/apk/debug/`.
 
 A build from source is Fang Harness Dev, a separate app that installs beside a downloaded release rather
-than over it. Both can use the same Termux: Fang Harness Dev keeps its own state there, in `~/.fang-dev`
-and `~/.local/share/fang-dev` instead of the release's `~/.fang` and `~/.local/share/fang`, so
-it needs its own setup and sign-ins, and the two don't see each other's chats.
+than over it. Each build has its own app ID and its own app-private Wolfi runtime, so they don't share
+setup, sign-ins, or chats, and each needs its own setup.
 
 ## Usage
 
 The [Fang Harness guide](https://fang.leloush.io/docs/) covers using the app:
 
-- [Get started](https://fang.leloush.io/docs/get-started/): install Termux, walk through setup, and
-  start your first chat.
+- [Get started](https://fang.leloush.io/docs/get-started/): install the app, walk through automatic
+  setup, and start your first chat.
 - [Connect a model](https://fang.leloush.io/docs/providers/): sign in with a Claude or OpenAI
   subscription, add an API key or an OpenAI-compatible API, and choose models per chat.
 - [Configure the agent](https://fang.leloush.io/docs/configure/): edit Pi's configuration, give the
@@ -139,8 +138,7 @@ Building Fang Harness needs:
 - A network connection on the first build, which downloads the pinned tree-sitter grammars and the
   JDKs Gradle provisions for itself.
 
-Run every check, including ktlint, detekt, Android lint, and the host's type check, lint, and
-tests:
+Run every check, including ktlint, detekt, Android lint, and the host's type check, lint, and tests:
 
 ```sh
 ./gradlew check
@@ -166,7 +164,7 @@ pnpm run dev
 
 Pull requests are welcome. If you run into a bug, unexpected behavior, or a device-specific
 problem, please [open an issue](https://github.com/leloush-x/fang-harness/issues) with your phone model,
-Android version, and Termux build. Reports from real-world use are especially helpful while the
+Android version, and Fang Harness version. Reports from real-world use are especially helpful while the
 project is young.
 
 Do not report suspected security vulnerabilities in public issues. Follow the
@@ -179,7 +177,8 @@ agents from your desktop and phone, and some of its code is adapted from
 [Paseo's](https://github.com/getpaseo/paseo): the folder search, the file-type icon table and icon
 colours, the layout and type scale, and the syntax highlighting colours.
 
-Fang Harness is built on [Pi](https://pi.dev) and [Termux](https://termux.dev), with Jetpack Compose,
+Fang Harness is built on [Pi](https://pi.dev), [Wolfi OS](https://wolfi.dev), and
+[PRoot](https://github.com/proot-me/proot), with Jetpack Compose,
 [libghostty-android](https://github.com/SagerNet/libghostty-android) and
 [Ghostty](https://github.com/ghostty-org/ghostty) for the terminal,
 [tree-sitter](https://github.com/tree-sitter/tree-sitter) for syntax highlighting,

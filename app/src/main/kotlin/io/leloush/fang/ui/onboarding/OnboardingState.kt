@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
 import android.os.PowerManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,10 +21,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.AppGraph
 import io.leloush.fang.host.AuthStatus
-import io.leloush.fang.host.HelperPairing
 import io.leloush.fang.host.HostHello
-import io.leloush.fang.termux.TermuxIdentity
-import io.leloush.fang.termux.TermuxInstall
+import io.leloush.fang.wolfi.WolfiRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -32,23 +31,13 @@ internal enum class StepStatus { Pending, Running, Done, Failed }
 
 /** What a tap on a setup step asks for; handled by [rememberSetupActions]. */
 internal sealed interface SetupAction {
-  data object OpenFDroid : SetupAction
-
-  data object OpenPlay : SetupAction
-
-  data object UninstallTermux : SetupAction
+  data object PrepareRuntime : SetupAction
 
   data object AllowNotifications : SetupAction
 
   data object AllowBackground : SetupAction
 
-  data object AllowTermuxBackground : SetupAction
-
-  data object AllowTermuxStorage : SetupAction
-
-  data object AllowRunCommand : SetupAction
-
-  data object CopyAndOpenTermux : SetupAction
+  data object AllowStorage : SetupAction
 
   data object InstallPi : SetupAction
 
@@ -57,47 +46,37 @@ internal sealed interface SetupAction {
   data object AddProvider : SetupAction
 }
 
-/** What Android reports about Termux and Fang Harness's permissions; re-read whenever Fang Harness comes back. */
+/** What Android and the app's own runtime report; re-read whenever Fang Harness comes back. */
 internal data class DeviceChecks(
-  val termux: TermuxInstall.Status,
-  val termuxVersion: String?,
-  /** Identifies this installation of Termux (`TermuxInstall.installation`); a reinstall gets a new one. */
-  val termuxInstallation: String?,
-  val runCommandGranted: Boolean,
+  val runtimeInstalled: Boolean,
+  val runtimeVersion: String?,
   /** Null below API 33, where notifications need no runtime permission and the step is hidden. */
   val notificationsGranted: Boolean?,
   /** Fang Harness is exempt from battery optimization, so Android keeps its connection to the agent while the screen is off. */
   val backgroundAllowed: Boolean,
-  /** Termux is exempt from battery optimization, so Android doesn't stop it, and Pi running in it, mid-task. */
-  val termuxBackgroundAllowed: Boolean,
-  /** Android can ask for [termuxBackgroundAllowed] in a prompt, rather than the user finding it in Termux's app info. */
-  val termuxBackgroundPromptable: Boolean,
-  /** Fang Harness holds a pairing key for a helper in the Play build of Termux. */
-  val helperPaired: Boolean,
-  /** Termux was reinstalled or swapped since a host last ran, so its setup is gone. */
-  val termuxChanged: Boolean,
-  /** A host has run in the installed Termux, so its setup was done, even before this process reached it. */
-  val termuxReached: Boolean,
+  /** Fang Harness can write outside its own folders, which is what lets the Wolfi shell work on the user's projects. */
+  val allFilesAllowed: Boolean,
 ) {
   companion object {
-    fun read(context: Context) = DeviceChecks(
-      termux = TermuxInstall.status(context),
-      termuxVersion = TermuxInstall.version(context),
-      termuxInstallation = TermuxInstall.installation(context),
-      runCommandGranted = TermuxInstall.hasRunCommandPermission(context),
-      notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-      } else {
-        null
-      },
-      backgroundAllowed = context.getSystemService(PowerManager::class.java)
-        .isIgnoringBatteryOptimizations(context.packageName),
-      termuxBackgroundAllowed = TermuxInstall.termuxBackgroundAllowed(context),
-      termuxBackgroundPromptable = TermuxInstall.canPromptBackground(context),
-      helperPaired = HelperPairing.isPaired(context),
-      termuxChanged = TermuxIdentity.changed(context),
-      termuxReached = TermuxIdentity.reached(context),
-    )
+    fun read(context: Context): DeviceChecks {
+      val runtime = WolfiRuntime(context).status()
+      return DeviceChecks(
+        runtimeInstalled = runtime.installed,
+        runtimeVersion = runtime.version,
+        notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+          null
+        },
+        backgroundAllowed = context.getSystemService(PowerManager::class.java)
+          .isIgnoringBatteryOptimizations(context.packageName),
+        allFilesAllowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+          Environment.isExternalStorageManager()
+        } else {
+          context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        },
+      )
+    }
   }
 }
 
@@ -117,7 +96,7 @@ internal class LiveDeviceChecks(initial: DeviceChecks) {
 /**
  * Re-reads [DeviceChecks] when Fang Harness resumes or its window regains focus (a permission dialog or the notification
  * shade closing), then every [RECHECK_MILLIS] for a few seconds, since Android reports some changes late. With [poll]
- * it keeps reading while resumed, for steps finished in another app that may not bring Fang Harness back.
+ * it keeps reading while resumed.
  */
 @Composable
 internal fun rememberDeviceChecks(poll: Boolean = false): LiveDeviceChecks {
@@ -157,89 +136,33 @@ internal data class OnboardingState(
   val hello: HostHello?,
   val expectedPiVersion: String,
   val setupComplete: Boolean,
-  val commandCopied: Boolean,
   /** [SetupStep] names (and [WELCOME]) the user moved past without finishing; onboarding doesn't reopen them. */
   val passedPages: Set<String>,
   val blockedPermissions: Set<String>,
   val installing: Boolean,
+  val runtimeInstalling: Boolean,
   val progress: List<String>,
+  val runtimeProgress: List<String>,
   val error: SetupError?,
   val authStatus: AuthStatus?,
-  /** Termux's storage prompt was opened this session ([SetupProgress.storagePromptShown]). */
-  val storagePromptShown: Boolean = false,
 ) {
-  /**
-   * The storage step sends the user to All files access: Play's Termux has no storage prompt, and F-Droid's may have
-   * stopped showing it. Android 10 has no such page, so there F-Droid's prompt stays the only way.
-   */
-  val storageInSettings: Boolean
-    get() = checks.termux.isPlay || (storagePromptShown && TermuxInstall.allFilesAccessAvailable)
+  val piReady: Boolean get() = hello?.piVersion == expectedPiVersion
 
-  /** A hello counts only from the installed Termux: removing or replacing it took Pi and its setup with it. */
-  private val currentHello: HostHello? get() = hello.takeIf { checks.termux.isTrusted && !checks.termuxChanged }
+  /** The local Wolfi runtime is ready, so a host can be started at all. */
+  val canLaunchHost: Boolean get() = checks.runtimeInstalled
 
-  val piReady: Boolean get() = currentHello?.piVersion == expectedPiVersion
+  /** Pi installs as soon as the runtime is ready; a failure stops the automatic start until the screen is resumed. */
+  val shouldAutoInstall: Boolean get() = canLaunchHost && !piReady && !installing
 
-  /** The host can be launched at all: F-Droid's Termux with the RUN_COMMAND grant, or Play's with a paired helper. */
-  val canLaunchHost: Boolean
-    get() = when (checks.termux) {
-      TermuxInstall.Status.FDroid -> checks.runCommandGranted
-      TermuxInstall.Status.Play -> checks.helperPaired
-      else -> false
-    }
-
-  /**
-   * A short command that fixes the setup failure, such as `yes | pkg upgrade -y`, offered in place of the setup
-   * command. It applies to the installation that failed; after a reinstall, only the full setup helps.
-   */
-  val setupLiteral: String? get() = errorFor(SetupStep.TermuxSetup)?.command?.takeUnless { checks.termuxChanged }
-
-  /**
-   * Install Pi once Termux may be prepared: the setup command was copied for this installation, setup finished earlier,
-   * or a host already connected. After a reinstall, only a fresh copy counts. The install's first launch is also what
-   * proves the setup command ran.
-   */
-  val shouldAutoInstall: Boolean
-    get() = canLaunchHost && !piReady && !installing &&
-      (commandCopied || currentHello != null || (setupComplete && !checks.termuxChanged))
-
-  /** The setup command was copied and Termux hasn't reported back yet. */
-  val waitingForTermux: Boolean
-    get() = commandCopied && status(SetupStep.TermuxSetup) == StepStatus.Pending
-
-  /**
-   * Termux can be asked about its storage access: Android reports nothing about another app's storage, so only a fresh
-   * hello from Termux can tell. An install's hello answers it too, so this waits for a running one.
-   */
-  val canCheckStorage: Boolean
-    get() = status(SetupStep.TermuxSetup) == StepStatus.Done && canLaunchHost && !installing
-
-  /** Storage access isn't confirmed by a Termux that [canCheckStorage]. */
-  val storageUnconfirmed: Boolean get() = canCheckStorage && status(SetupStep.Storage) != StepStatus.Done
-
-  /** The steps this phone and Termux build need, in order. */
+  /** The steps this phone needs, in order. */
   val visibleSteps: List<SetupStep>
     get() = SetupStep.entries.filter { step ->
-      when (step) {
-        SetupStep.Notifications -> checks.notificationsGranted != null
-        SetupStep.RunCommand -> !checks.termux.isPlay
-        else -> true
-      }
+      step != SetupStep.Notifications || checks.notificationsGranted != null
     }
 
-  /**
-   * The failure still standing: one reported by an earlier launch (from the chat, say) is dropped once Android shows
-   * its step fixed, so fixing it in settings lets the install start without a tap. RUN_COMMAND's step reads the grant
-   * itself and says what to do, so the launch's message about it never shows.
-   */
+  /** The failure still standing: one left over from a launch is dropped once Android shows the step fixed. */
   val currentError: SetupError?
-    get() = error?.takeUnless { stale ->
-      when (stale.step) {
-        SetupStep.Termux -> checks.termux.isTrusted
-        SetupStep.RunCommand -> true
-        else -> false
-      }
-    }
+    get() = error?.takeUnless { it.step == SetupStep.Runtime && checks.runtimeInstalled }
 
   fun errorFor(step: SetupStep): SetupError? = currentError?.takeIf { it.step == step }
 
@@ -249,41 +172,18 @@ internal data class OnboardingState(
     .firstOrNull { status(it) != StepStatus.Done && it.name !in passedPages }
 
   fun status(step: SetupStep): StepStatus = when (step) {
-    SetupStep.Termux -> termuxStatus()
+    SetupStep.Runtime -> runtimeStatus()
     SetupStep.Notifications -> if (checks.notificationsGranted == false) StepStatus.Pending else StepStatus.Done
     SetupStep.Background -> if (checks.backgroundAllowed) StepStatus.Done else StepStatus.Pending
-    SetupStep.TermuxBackground -> if (checks.termuxBackgroundAllowed) StepStatus.Done else StepStatus.Pending
-    SetupStep.Storage -> if (currentHello?.sharedStorage == true) StepStatus.Done else StepStatus.Pending
-    SetupStep.RunCommand -> runCommandStatus()
-    SetupStep.TermuxSetup -> termuxSetupStatus()
+    SetupStep.Storage -> if (checks.allFilesAllowed) StepStatus.Done else StepStatus.Pending
     SetupStep.InstallPi -> installPiStatus()
     SetupStep.SignIn -> if (authStatus?.anyConfigured == true) StepStatus.Done else StepStatus.Pending
   }
 
-  private fun termuxStatus(): StepStatus = when (checks.termux) {
-    TermuxInstall.Status.FDroid, TermuxInstall.Status.Play -> StepStatus.Done
-    TermuxInstall.Status.NotInstalled -> StepStatus.Pending
-    else -> StepStatus.Failed
-  }
-
-  private fun runCommandStatus(): StepStatus = if (checks.runCommandGranted) StepStatus.Done else StepStatus.Pending
-
-  private fun termuxSetupStatus(): StepStatus = when {
-    !checks.termux.isTrusted -> StepStatus.Pending
-
-    errorFor(SetupStep.TermuxSetup) != null -> StepStatus.Failed
-
-    // A hello from before the reinstall doesn't count: the new Termux hasn't run anything yet.
-    checks.termuxChanged -> StepStatus.Pending
-
-    // Without its key, Fang Harness can't reach the helper the setup started.
-    checks.termux.isPlay && !checks.helperPaired -> StepStatus.Pending
-
-    currentHello != null || checks.termuxReached -> StepStatus.Done
-
-    // The first launch after the command ran is on its way.
-    installing -> StepStatus.Running
-
+  private fun runtimeStatus(): StepStatus = when {
+    checks.runtimeInstalled -> StepStatus.Done
+    errorFor(SetupStep.Runtime) != null -> StepStatus.Failed
+    runtimeInstalling -> StepStatus.Running
     else -> StepStatus.Pending
   }
 
@@ -306,48 +206,52 @@ internal fun rememberOnboardingState(graph: AppGraph, checks: DeviceChecks): Onb
   val lastFailure by graph.hostClient.lastFailure.collectAsStateWithLifecycle()
   val hostInstalling by graph.hostClient.installing.collectAsStateWithLifecycle()
   val setupComplete by graph.preferences.setupComplete.collectAsStateWithLifecycle()
-  val copiedFor by graph.preferences.setupCommandCopiedFor.collectAsStateWithLifecycle()
   val passedPages by graph.preferences.setupPagesPassed.collectAsStateWithLifecycle()
   val authStatus by graph.accountRepository.status.collectAsStateWithLifecycle()
   val blockedPermissions by SetupProgress.blockedPermissions.collectAsStateWithLifecycle()
   val installing by SetupProgress.installing.collectAsStateWithLifecycle()
   val progress by SetupProgress.progress.collectAsStateWithLifecycle()
+  val runtimeInstalling by SetupProgress.runtimeInstalling.collectAsStateWithLifecycle()
+  val runtimeProgress by SetupProgress.runtimeProgress.collectAsStateWithLifecycle()
+  val runtimeError by SetupProgress.runtimeError.collectAsStateWithLifecycle()
   val installError by SetupProgress.error.collectAsStateWithLifecycle()
-  val storagePromptShown by SetupProgress.storagePromptShown.collectAsStateWithLifecycle()
   return OnboardingState(
     checks = checks,
     hello = hello,
     expectedPiVersion = graph.hostClient.expectedPiVersion,
     setupComplete = setupComplete,
-    commandCopied = copiedFor != null && copiedFor == checks.termuxInstallation,
     passedPages = passedPages,
     blockedPermissions = blockedPermissions,
     installing = installing || hostInstalling,
+    runtimeInstalling = runtimeInstalling,
     progress = progress,
-    // A failure fixed in Termux brought the user here from elsewhere (chat, sidebar); show it on its step.
-    error = installError ?: lastFailure?.takeIf { it.fixedInTermux }?.toSetupError(),
+    runtimeProgress = runtimeProgress,
+    // A failure fixed in the runtime brought the user here from elsewhere (chat, sidebar); show it on its step.
+    error = runtimeError ?: installError ?: lastFailure?.takeIf { it.fixedBySetup }?.toSetupError(),
     authStatus = authStatus,
-    storagePromptShown = storagePromptShown,
   )
 }
 
 /**
- * Starts the Pi install as soon as its prerequisites are met, and retries a failed one when Fang Harness comes back (the
- * user may have fixed the problem in Termux). Refreshes sign-in status once Pi is installed.
+ * Starts the Wolfi install when the runtime is missing, then Pi as soon as the runtime is ready. A failure stops the
+ * automatic start until the screen is resumed, rather than relaunching in a loop. Refreshes sign-in once Pi is installed.
  */
 @Composable
-internal fun AutoInstall(graph: AppGraph, state: OnboardingState) {
-  // A failure stops the automatic start until Fang Harness resumes, rather than relaunching in a loop.
+internal fun AutoInstall(graph: AppGraph, state: OnboardingState, onChecksChanged: () -> Unit) {
+  val needsRuntime =
+    !state.checks.runtimeInstalled && !state.runtimeInstalling && state.errorFor(SetupStep.Runtime) == null
+  LaunchedEffect(needsRuntime) {
+    if (needsRuntime) SetupProgress.prepareRuntime(graph)
+  }
+  LaunchedEffect(state.runtimeInstalling) {
+    if (!state.runtimeInstalling) onChecksChanged()
+  }
   LaunchedEffect(state.shouldAutoInstall && state.currentError == null) {
     if (state.shouldAutoInstall && state.currentError == null) SetupProgress.install(graph)
   }
   LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+    if (needsRuntime) SetupProgress.prepareRuntime(graph)
     if (state.shouldAutoInstall) SetupProgress.install(graph)
-    // The user may be back from changing Termux's storage access in settings.
-    if (state.canCheckStorage) SetupProgress.recheckStorage(graph)
-  }
-  LaunchedEffect(state.storageUnconfirmed) {
-    if (state.storageUnconfirmed) SetupProgress.recheckStorage(graph)
   }
   LaunchedEffect(state.piReady) {
     if (state.piReady && graph.accountRepository.status.value == null) graph.accountRepository.refresh()

@@ -1,6 +1,6 @@
 package io.leloush.fang.ui.sidebar
 
-/** [cwd] with the Termux [home] prefix shown as `~`. */
+/** [cwd] with the app [home] prefix shown as `~`. */
 internal fun tildePath(cwd: String, home: String): String = when {
   cwd == home -> "~"
   cwd.startsWith("$home/") -> "~" + cwd.removePrefix(home)

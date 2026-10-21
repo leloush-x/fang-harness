@@ -107,7 +107,7 @@ enum class NoticeKind {
 
 /** A notice of Fang Harness's own among a session's saved notices; it's shown in the app's language, whenever that changed. */
 enum class AppNotice {
-  /** The connection to Termux dropped without word of Pi exiting. */
+  /** The connection to Wolfi OS dropped without word of Pi exiting. */
   ConnectionLost,
 }
 

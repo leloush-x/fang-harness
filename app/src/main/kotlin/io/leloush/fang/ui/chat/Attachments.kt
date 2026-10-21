@@ -15,7 +15,7 @@ internal sealed interface Attachment {
   /** Sent inside Pi's `prompt`: the JPEG and its composer-tray thumbnail. */
   class Image(val part: ImagePart, val thumbnail: ImageBitmap) : Attachment
 
-  /** Copied into Termux on send; the prompt lists its path for Pi's tools. */
+  /** Copied into Wolfi OS on send; the prompt lists its path for Pi's tools. */
   class File(val name: String, val bytes: ByteArray) : Attachment
 }
 

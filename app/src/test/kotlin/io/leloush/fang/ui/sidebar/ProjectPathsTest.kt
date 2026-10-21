@@ -4,11 +4,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ProjectPathsTest {
-  private val places = listOf("/data/data/com.termux/files/home", "/storage/emulated/0", "/storage/emulated/0/sd")
+  private val places = listOf("/root", "/storage/emulated/0", "/storage/emulated/0/sd")
 
   @Test
   fun aPlaceAndItsSubfoldersSelectIt() {
-    assertEquals(0, placeIndexOf(places, "/data/data/com.termux/files/home"))
+    assertEquals(0, placeIndexOf(places, "/root"))
     assertEquals(1, placeIndexOf(places, "/storage/emulated/0/Download"))
   }
 

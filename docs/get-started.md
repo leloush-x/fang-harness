@@ -1,16 +1,16 @@
 ---
 title: Get started
-description: Install Fang Harness and Termux, walk through setup, and start your first chat.
+description: Install Fang Harness, walk through automatic setup, and start your first chat.
 ---
 
 Setup takes a few minutes, and Fang Harness does most of it for you. It checks off each step as it finishes and explains every permission it asks for.
 
 ## What you need
 
-- An Android phone or tablet running **Android 10 or newer**, with a 64-bit processor (almost every phone from the last few years).
-- **Termux** from [F-Droid](https://f-droid.org/packages/com.termux/) (version 0.118 or newer) or [Google Play](https://play.google.com/store/apps/details?id=com.termux) (needs Android 11 or newer). The F-Droid version is recommended. Fang Harness only works with these two signed builds and refuses copies of Termux from anywhere else.
+- An Android phone or tablet running **Android 10 or newer**, with a 64-bit arm64 or x86_64 processor (almost every phone from the last few years).
 - **An AI model to talk to**: a Claude Pro or Max subscription, an OpenAI Codex subscription, a Gemini, Z.ai Coding Plan or Kimi Code API key, or an API key for any OpenAI-compatible service. See [Connect a model](/docs/providers/).
-- **A network connection** while a chat is working.
+- **A network connection** for the first setup, which downloads Wolfi OS (about 46–49 MB), and while a chat is working.
+- **No separate terminal app or root.** Fang Harness downloads and sets up Wolfi OS itself.
 
 ## Install Fang Harness
 
@@ -28,21 +28,18 @@ cd fang
 
 The repository's README lists the full toolchain.
 
-A build from source is named **Fang Harness Dev** and installs beside a release. It keeps its files in Termux under `~/.fang-dev` instead of `~/.fang`, so wherever these docs say `~/.fang`, Fang Harness Dev uses `~/.fang-dev`.
+A build from source is named **Fang Harness Dev** and installs beside a release. Each build has its own app ID and its own app-private Wolfi runtime, so setup, sign-ins, chats, and settings stay separate.
 
 ## Walk through setup
 
 Open Fang Harness and tap **Get started**. Each step shows **Done** once it's complete, and you can go back to any of them later from **Settings → Permissions**.
 
-1. **Install Termux.** Fang Harness links to F-Droid and Google Play. Install Termux, then come back to Fang Harness. If you have a copy of Termux from somewhere else, Fang Harness asks you to uninstall it first.
-2. **Let Fang Harness use Termux** (F-Droid build only). Allow **Run commands in Termux environment** when Android asks. This is how Fang Harness starts the agent in Termux.
-3. **Set up Termux.** Tap **Copy command & open Termux**. In Termux, long-press, tap **Paste**, and press Enter. The command installs Node.js and connects Termux to Fang Harness, then switches back to Fang Harness on its own. Android sometimes stops large installs partway; if that happens, paste the command again and it picks up where it left off.
-4. **Notifications** (optional but recommended). Fang Harness lets you know when a chat finishes or needs your answer while you're away.
-5. **Run in the background** (optional but recommended). Keeps a chat going while the screen is off or you're in another app.
-6. **Let Termux run in the background** (optional but recommended). The agent runs inside Termux, so Termux needs the same allowance. If Android can't ask directly, Fang Harness shows where the setting is on your phone.
-7. **Let Termux use phone storage** (optional but recommended). Lets the agent work on files outside Termux, such as in Downloads or Documents.
-8. **Install the agent.** Tap **Install**. Fang Harness installs Pi and its bundled extensions in Termux. It takes a few minutes, and you can leave the screen while it runs.
-9. **Connect a model** (optional here). Sign in with **Claude** or **OpenAI**, add a **Gemini**, **Z.ai** or **Kimi** key, or add an **OpenAI-compatible API**. You can also do this later in **Settings → Providers**.
+1. **Set up Wolfi OS.** Tap **Set up Wolfi OS**. Fang Harness downloads Wolfi OS, unpacks it into app-private storage, and installs Bash, Git, Node.js, and the other tools it needs. It takes a few minutes, and you can leave the screen while it runs.
+2. **Notifications** (optional but recommended). Fang Harness lets you know when a chat finishes or needs your answer while you're away.
+3. **Run in the background** (optional but recommended). Keeps a chat going while the screen is off or you're in another app.
+4. **Use phone storage** (optional but recommended). Lets the agent work on files outside its own storage, such as in Downloads or Documents.
+5. **Install the agent.** Fang Harness installs Pi and its bundled extensions in Wolfi OS automatically once the runtime is ready. It takes a few minutes, and you can leave the screen while it runs.
+6. **Connect a model** (optional here). Sign in with **Claude** or **OpenAI**, add a **Gemini**, **Z.ai** or **Kimi** key, or add an **OpenAI-compatible API**. You can also do this later in **Settings → Providers**.
 
 When you see **You're all set**, tap **Start using Fang Harness**.
 
@@ -51,7 +48,7 @@ When you see **You're all set**, tap **Start using Fang Harness**.
 Fang Harness organizes chats by **workspace**: a folder the agent works in, usually a project.
 
 1. Open the sidebar and tap **Add workspace**.
-2. Pick a folder under **Termux home** or **Phone storage**, or type a path in the search box, then tap **Add as workspace**. To start fresh, create a folder for your project first.
+2. Pick a folder under **Home** or **Phone storage**, or type a path in the search box, then tap **Add as workspace**. To start fresh, create a folder for your project first.
 3. Tap **New chat** in the workspace, type what you want, and tap **Send**.
 
 A few things to know while it works:
@@ -66,19 +63,19 @@ A few things to know while it works:
 
 - **Files**: open the file explorer from a chat to browse and read files, with syntax highlighting for more than twenty languages. The viewer is read-only; to change a file, ask the agent or use a terminal.
 - **Changes**: in a git repository, see exactly what the agent changed, file by file. Fang Harness asks you to trust a repository before it runs git there, because a repository's own settings can run programs.
-- **Terminal**: from **Chat actions → New terminal**, open a Termux shell right next to your chat.
+- **Terminal**: from **Chat actions → New terminal**, open a Wolfi Bash shell right next to your chat.
 - **Chat actions** also lets you rename a chat, reload the agent after changing its configuration, copy the session's file path, or archive the chat.
 
 On a foldable or tablet, open chats, files, changes, and terminals side by side with **Open in split screen**.
 
 ## If something goes wrong
 
-**The setup command stops partway.** Paste it into Termux again; it resumes where it left off. If it says Node.js couldn't be installed, check your internet connection, then paste the command again.
+**Wolfi OS setup stops partway.** Open setup again from **Settings → Permissions** and tap **Set up Wolfi OS** again; it continues where it left off. If it reports a download problem, check your internet connection and retry.
 
-**Android won't ask for the Termux permission again.** Grant it from Fang Harness's app info: **Permissions → Additional permissions → Run commands in Termux environment → Allow**.
+**Fang Harness can't use phone storage after setup.** In **Settings → Permissions → Use phone storage**, tap **Allow**.
 
-**Chats stop when the phone is locked.** Allow background activity for both Fang Harness and Termux in **Settings → Permissions**. Some phones name this setting differently, and the step shows where to find it. [Run in the background](/docs/background/) explains what else can stop a chat.
+**Chats stop when the phone is locked.** Allow background activity for Fang Harness in **Settings → Permissions**. Some phones name this setting differently, and the step shows where to find it. [Run in the background](/docs/background/) explains what else can stop a chat.
 
-**Fang Harness says Termux isn't running or its helper didn't start.** Tap **Open Termux** to see why. Once Termux is running, Fang Harness switches back on its own. If Termux asks for the setup command, tap **Set up Termux** in Fang Harness.
+**Fang Harness says Wolfi OS isn't ready.** Open setup from **Settings → Permissions** and finish or retry the Wolfi OS step. The runtime is part of the app, so there's no other app to open.
 
-**You reinstalled Termux.** Reinstalling removes Fang Harness's setup, the agent, and its sign-ins from Termux. Fang Harness walks you through setup again. A [backup](/docs/configure/#back-up-and-restore) brings back your settings, sign-ins, and models.
+**You reinstalled Fang Harness.** Reinstalling removes Wolfi OS, the agent, and its sign-ins from app-private storage. Fang Harness walks you through setup again. A [backup](/docs/configure/#back-up-and-restore) brings back your settings, sign-ins, and models.

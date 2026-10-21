@@ -11,7 +11,7 @@ plugins {
 
 val hostDir = rootProject.layout.projectDirectory.dir("host")
 
-/** esbuild bundle of the Termux host; AGP picks the output directory and wires the dependency. */
+/** esbuild bundle of the Wolfi host; AGP picks the output directory and wires the dependency. */
 abstract class HostBundle : Exec() {
   @get:OutputDirectory
   abstract val outputDir: DirectoryProperty
@@ -25,7 +25,7 @@ abstract class HostBundle : Exec() {
   }
 }
 
-// The Termux-side host is a TypeScript package; its bundle ships as an APK asset.
+// The in-runtime host is a TypeScript package; its bundle ships as an APK asset.
 val hostInstall = tasks.register<Exec>("hostInstall") {
   description = "Installs the host package's pinned toolchain."
   workingDir = hostDir.asFile
@@ -35,7 +35,7 @@ val hostInstall = tasks.register<Exec>("hostInstall") {
 }
 
 val hostBuild = tasks.register<HostBundle>("hostBuild") {
-  description = "Bundles the Termux host into the fang-host.mjs APK asset, and the Pi extensions Fang Harness ships."
+  description = "Bundles the Wolfi host into the fang-host.mjs APK asset, and the Pi extensions Fang Harness ships."
   dependsOn(hostInstall)
   workingDir = hostDir.asFile
   inputs.dir(hostDir.dir("src"))
@@ -51,7 +51,7 @@ val hostBuild = tasks.register<HostBundle>("hostBuild") {
 }
 
 val hostCheck = tasks.register<Exec>("hostCheck") {
-  description = "Typechecks, lints and tests the Termux host."
+  description = "Typechecks, lints and tests the Wolfi host."
   dependsOn(hostInstall)
   workingDir = hostDir.asFile
   inputs.dir(hostDir.dir("src"))
@@ -387,9 +387,8 @@ android {
   // Debug builds carry the en-XA and ar-XB pseudolocales: switched to one, any text that skips the string resources
   // stays plain English, and layouts show how they take longer or right-to-left text.
   //
-  // Debug builds are Fang Harness Dev, installable beside the release: their own package here, and in src/debug their own
-  // name and folders in Termux and helper ports (TermuxBuild, with the release's in src/release), so both can share one
-  // Termux without touching each other's state.
+  // Debug builds are Fang Harness Dev, installable beside the release. Their own package and private files keep each
+  // build's Wolfi runtime and Pi state separate.
   buildTypes {
     debug {
       isPseudoLocalesEnabled = true
@@ -433,6 +432,7 @@ tasks.named("check") {
 }
 
 dependencies {
+  implementation(project(":wolfi-core"))
   implementation(platform("androidx.compose:compose-bom:2026.09.00"))
   implementation("androidx.activity:activity-compose:1.13.0")
   implementation("androidx.compose.material3:material3")
@@ -441,7 +441,7 @@ dependencies {
   implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
   implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.45.0")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-  // The snapshot of main at c3480d9, which aligns IME input with Termux; 0.1.0-alpha01 predates it.
+  // The snapshot of main at c3480d9, which aligns IME input with terminal apps; 0.1.0-alpha01 predates it.
   implementation("io.github.sagernet:libghostty-android:0.1.0-20260909.143535-10")
   implementation("io.github.sagernet:libghostty-android-compose:0.1.0-20260909.143535-10")
   testImplementation("junit:junit:4.13.2")

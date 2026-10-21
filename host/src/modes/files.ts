@@ -17,8 +17,8 @@ const IMAGE_EXTENSIONS: Record<string, true> = { ".png": true, ".jpg": true, ".j
 
 /** What the app shows for Node's error codes, with the key of its string resource. */
 const MESSAGES: Record<string, { error: string; key: string }> = {
-  EACCES: { error: "Termux can't open this.", key: "files_no_access" },
-  EPERM: { error: "Termux can't open this.", key: "files_no_access" },
+  EACCES: { error: "Wolfi OS can't open this.", key: "files_no_access" },
+  EPERM: { error: "Wolfi OS can't open this.", key: "files_no_access" },
   ENOENT: { error: "This file or folder no longer exists.", key: "files_gone" },
   ENOTDIR: { error: "This isn't a folder.", key: "not_a_folder" },
   EISDIR: { error: "This is a folder.", key: "files_is_folder" },

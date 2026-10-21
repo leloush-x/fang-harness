@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "fang-harness"
 include(":app")
+include(":wolfi-core")

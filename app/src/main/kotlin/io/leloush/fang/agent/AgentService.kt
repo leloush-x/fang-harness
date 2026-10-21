@@ -19,7 +19,7 @@ import io.leloush.fang.R
 import io.leloush.fang.appGraph
 
 /**
- * User-started on-device coding agent sessions running in Termux; keeps Fang Harness's connection to Pi
+ * User-started on-device coding agent sessions running in Wolfi OS; keeps Fang Harness's connection to Pi
  * alive and offers Stop. Foreground service plus partial wake lock, held only while active.
  */
 class AgentService : Service() {

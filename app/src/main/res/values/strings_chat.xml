@@ -21,9 +21,7 @@
     <string name="chat_loading">Loading…</string>
     <string name="chat_installing">Installing the Fang Harness agent…</string>
     <string name="chat_retry">Retry</string>
-    <string name="chat_set_up_termux">Set up Termux</string>
-    <string name="chat_open_termux">Open Termux</string>
-    <string name="chat_open_termux_hint">Termux shows why Fang Harness\'s helper didn\'t start. Once it\'s running, Fang Harness switches back on its own. If Termux asks for the setup command, tap Set up Termux.</string>
+    <string name="chat_set_up_runtime">Set up Wolfi OS</string>
     <string name="chat_exit_code">Agent stopped (exit %1$d)</string>
     <string name="chat_agent_stopped">Agent stopped</string>
     <string name="chat_show_details">Show details</string>
@@ -55,8 +53,8 @@
     <string name="chat_notice_retrying">Retrying…</string>
     <string name="chat_notice_compacting">Compacting context…</string>
     <string name="chat_notice_compacted">Context compacted</string>
-    <!-- The connection to the Termux side dropped without word of Pi exiting; what ended it isn't known. -->
-    <string name="chat_notice_connection_lost">Lost the connection to Termux</string>
+    <!-- The connection to the Wolfi side dropped without word of Pi exiting; what ended it isn't known. -->
+    <string name="chat_notice_connection_lost">Lost the connection to Wolfi OS</string>
     <!-- Error rows in the chat, shown when Pi gives no reason of its own. -->
     <string name="chat_error_request_failed">Request failed</string>
     <string name="chat_error_compaction_failed">Compaction failed</string>

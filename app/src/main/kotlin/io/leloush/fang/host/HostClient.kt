@@ -3,7 +3,6 @@ package io.leloush.fang.host
 import android.content.Context
 import android.util.Log
 import io.leloush.fang.data.BundledExtension
-import io.leloush.fang.termux.TermuxIdentity
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.Base64
@@ -25,10 +24,10 @@ import org.json.JSONObject
  * `fang_request` and, except for [openRpc], reads lines until `fang_result`.
  * Throws [HostFailure] when the host could not run and [HostRejected] when it refused.
  *
- * A launch waits until Fang Harness is in the [foreground]. In the background Android may refuse to start Termux, and in
- * Doze it blocks the host's connection back to Fang Harness once Fang Harness's foreground service stops, so the launch would
- * fail. Nothing launched from the background needs to run before the user returns: reconnects and session lists
- * are only seen on screen.
+ * A launch waits until Fang Harness is in the [foreground]. In the background Android may stop the app's processes, and
+ * in Doze it blocks the host's connection back to Fang Harness once Fang Harness's foreground service stops, so the
+ * launch would fail. Nothing launched from the background needs to run before the user returns: reconnects and session
+ * lists are only seen on screen.
  */
 @Suppress("TooManyFunctions") // One typed wrapper per host mode, beside the launch code they share.
 internal class HostClient(context: Context, private val foreground: Flow<Boolean>) {
@@ -110,7 +109,7 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
 
   suspend fun authStatus(): AuthStatus = AuthStatus.from(call("auth_status", JSONObject()))
 
-  /** Starts a host only for its hello, so [lastHello] reports Termux as it is now, such as its storage access. */
+  /** Starts a host only for its hello, so [lastHello] reports the Wolfi runtime as it is now, such as its storage access. */
   suspend fun hello() {
     call("hello", JSONObject())
   }
@@ -179,7 +178,7 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     call("default_model", JSONObject().put("thinkingLevel", level))
   }
 
-  /** Writes [files] (name to bytes) into a new folder in Termux; returns their absolute paths in order. */
+  /** Writes [files] (name to bytes) into a new folder in Wolfi OS; returns their absolute paths in order. */
   suspend fun saveAttachments(files: List<Pair<String, ByteArray>>): List<String> {
     val encoder = Base64.getEncoder()
     val array = JSONArray()
@@ -189,7 +188,7 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     return call("save_attachments", JSONObject().put("files", array)).optJSONArray("paths").strings()
   }
 
-  /** The backups folder in Termux and its backups, newest first. */
+  /** The backups folder in Wolfi OS and its backups, newest first. */
   suspend fun backups(): Backups {
     val data = call("backups", JSONObject())
     return Backups(data.optString("dir"), data.optJSONArray("backups").objects().map(BackupInfo::from))
@@ -335,7 +334,6 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     }
     failureState.value = null
     helloState.value = HostHello.from(channel.hello)
-    TermuxIdentity.remember(context)
     return channel
   }
 

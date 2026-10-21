@@ -9,7 +9,7 @@
  * tasks; moving to another session or quitting stops them.
  *
  * Each task also has a record on disk (`./records.ts`), so when a Pi stops without passing on what became of its
- * tasks, as when Android ends Termux, the next Pi on the session tells the agent what the records show.
+ * tasks, as when Android stops Fang Harness, the next Pi on the session tells the agent what the records show.
  */
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getShellConfig } from "@earendil-works/pi-coding-agent";

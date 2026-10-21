@@ -21,10 +21,10 @@ import {
 
 const MiB = 1024 * 1024;
 
-/** Stands in for Termux's `$PREFIX/bin/login`: runs [startup] the way a profile and `~/.bashrc` would, then the command. */
-async function writeLogin(dirs: Dirs, startup: string): Promise<void> {
+/** Stands in for Wolfi's `$PREFIX/bin/bash`: runs [startup] the way a profile and `~/.bashrc` would, then the command. */
+async function writeBash(dirs: Dirs, startup: string): Promise<void> {
   await mkdir(path.join(dirs.prefix, "bin"), { recursive: true });
-  await writeFile(path.join(dirs.prefix, "bin/login"), `#!/bin/sh\n[ "$1" = -i ] && shift\n${startup}\nexec /bin/sh "$@"\n`, { mode: 0o755 });
+  await writeFile(path.join(dirs.prefix, "bin/bash"), `#!/bin/sh\n[ "$1" = -lic ] && shift\n${startup}\nexec /bin/sh -c "$1"\n`, { mode: 0o755 });
 }
 
 /** True once `file` exists, polling for up to `timeoutMs`. */
@@ -413,8 +413,8 @@ describe("rpc mode", () => {
     expect(await run.next()).toBeUndefined();
   });
 
-  it("starts Pi with what the Termux session's startup files export, keeping Fang Harness's config directory", async () => {
-    await writeLogin(
+  it("starts Pi with what the Wolfi session's startup files export, keeping Fang Harness's config directory", async () => {
+    await writeBash(
       dirs,
       [
         'export SESSION_VAR="token=${FANG_TOKEN:-none} root=${FANG_ROOT:-none}"',
@@ -434,7 +434,7 @@ describe("rpc mode", () => {
   });
 
   it("starts Pi with the host's environment, minus its own variables, when the startup files fail", async () => {
-    await writeLogin(dirs, "export SESSION_VAR=partial\nexit 1");
+    await writeBash(dirs, "export SESSION_VAR=partial\nexit 1");
     const { run } = await startHost("rpc", dirs);
     await run.next();
     run.send({ type: "fang_request", params: { cwd: dirs.home, sessionPath: null, expectedVersion: PI_VERSION, packageJson: PACKAGE_JSON, fangExtensions: [] } });

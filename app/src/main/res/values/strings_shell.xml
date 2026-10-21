@@ -15,10 +15,9 @@
     <string name="shell_settings">Settings</string>
     <string name="shell_session_actions">Chat actions</string>
     <string name="shell_session_untitled">New chat</string>
-    <string name="shell_termux_status">Termux · Agent %1$s</string>
-    <string name="shell_termux_status_unknown">Termux</string>
-    <string name="shell_termux_attention">Termux needs attention</string>
-    <string name="shell_termux_open">Termux isn\'t running · Open</string>
+    <string name="shell_runtime_status">Wolfi OS · Agent %1$s</string>
+    <string name="shell_runtime_status_unknown">Wolfi OS</string>
+    <string name="shell_runtime_attention">Wolfi OS needs attention</string>
     <string name="shell_time_now">now</string>
     <string name="shell_time_minutes">%1$dm</string>
     <string name="shell_time_hours">%1$dh</string>
@@ -30,7 +29,7 @@
     <string name="shell_rename_save">Save</string>
     <string name="shell_cancel">Cancel</string>
 
-    <string name="shell_browse_home">Termux home</string>
+    <string name="shell_browse_home">Home</string>
     <string name="shell_browse_phone">Phone storage</string>
     <string name="shell_browse_volume">Storage %1$s</string>
     <string name="shell_browse_up">Up one level</string>

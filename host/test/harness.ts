@@ -21,7 +21,7 @@ export interface Dirs {
   root: string;
   configDir: string;
   home: string;
-  /** Stands in for Termux's `$PREFIX`. */
+  /** Stands in for Wolfi's `$PREFIX`. */
   prefix: string;
   /** Stands in for Android's shared storage, `$EXTERNAL_STORAGE`. */
   shared: string;
@@ -146,7 +146,7 @@ export class HostRun {
   }
 }
 
-/** Starts host.mjs the way the Termux bootstrap does and accepts its connect-back. */
+/** Starts host.mjs the way the Wolfi launcher does and accepts its connect-back. */
 export async function startHost(
   mode: string,
   dirs: Dirs,
@@ -170,6 +170,7 @@ export async function startHost(
       FANG_ROOT: dirs.root,
       PI_CODING_AGENT_DIR: dirs.configDir,
       HOME: dirs.home,
+      FANG_HOME: dirs.home,
       PREFIX: dirs.prefix,
       EXTERNAL_STORAGE: dirs.shared,
       ...extraEnv,

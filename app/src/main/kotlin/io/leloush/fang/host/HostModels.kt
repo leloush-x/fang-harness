@@ -5,13 +5,13 @@ import java.time.Instant
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** What the last connecting `host.mjs` reported about its Termux environment. */
+/** What the last connecting `host.mjs` reported about its Wolfi environment. */
 internal data class HostHello(
   val piVersion: String?,
   val nodeVersion: String,
   val configDir: String,
   val home: String,
-  /** Termux can write to Android's shared storage: the user gave it All files access or storage permission. */
+  /** Wolfi OS can write to Android's shared storage: the user gave it All files access or storage permission. */
   val sharedStorage: Boolean = false,
 ) {
   companion object {

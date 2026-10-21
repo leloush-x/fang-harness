@@ -24,7 +24,7 @@ internal class HostRejected(
       if (result.optBoolean("ok")) return null
       val code = result.optString("code", "error")
       val englishError = result.opt("error") as? String
-      if (englishError.isNullOrEmpty()) return HostRejected(code, "The Termux helper failed.", text = null)
+      if (englishError.isNullOrEmpty()) return HostRejected(code, "The Wolfi runtime failed.", text = null)
       return HostRejected(code, englishError, HostText.of(englishError, result.optJSONObject("i18n")))
     }
   }

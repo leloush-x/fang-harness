@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -37,8 +36,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.leloush.fang.R
-import io.leloush.fang.termux.TermuxSetup
-import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.SimmeringPot
 import io.leloush.fang.ui.theme.FangTokens
@@ -226,41 +223,6 @@ internal fun SecondaryButton(
     contentPadding = ButtonPadding,
   ) {
     Text(text = text, fontSize = FangTokens.FontSize.base)
-  }
-}
-
-/** A short Termux command in monospace on surface2, with a button that copies it. */
-@Composable
-internal fun CommandBox(command: String, modifier: Modifier = Modifier) {
-  val colors = fangColors
-  val context = LocalContext.current
-  val shape = RoundedCornerShape(FangTokens.Radius.md)
-  Row(
-    modifier =
-      modifier
-        .fillMaxWidth()
-        .background(colors.surface2, shape)
-        .border(1.dp, colors.border, shape)
-        .padding(start = FangTokens.Spacing.s12, end = FangTokens.Spacing.s4)
-        .padding(vertical = FangTokens.Spacing.s8),
-    verticalAlignment = Alignment.Top,
-    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
-  ) {
-    Text(
-      text = command,
-      modifier = Modifier.weight(1f).padding(vertical = FangTokens.Spacing.s4),
-      color = colors.foreground,
-      fontFamily = FontFamily.Monospace,
-      fontSize = FangTokens.FontSize.code,
-      lineHeight = FangTokens.LineHeight.code,
-    )
-    IconButton28(
-      icon = R.drawable.ic_lucide_copy,
-      contentDescription = stringResource(R.string.onboarding_copy_command),
-      onClick = { TermuxSetup.copy(context, command) },
-      tint = colors.foregroundMuted,
-      iconSize = FangTokens.IconSize.sm,
-    )
   }
 }
 

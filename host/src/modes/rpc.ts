@@ -18,7 +18,7 @@ import { nullableStringParam, stringParam } from "../params.js";
 import { installedFangExtensionFiles, fangExtensionFingerprintsParam } from "../fang-extensions.js";
 import { SYSTEM_APPEND } from "../prompt.js";
 import { openSettingsIfValid, readGlobalSettings, userNpmPackages } from "../settings.js";
-import { termuxSessionEnv } from "../termux-session.js";
+import { sessionEnv } from "../session.js";
 import { configBusy, isConfigLocked } from "../config-lock.js";
 
 const STDERR_TAIL = 16 * 1024;
@@ -49,7 +49,7 @@ class TailBuffer {
 }
 
 /**
- * One timestamped line on the host's stderr. Termux returns it to Fang Harness once the host exits, which logs it, so a
+ * One timestamped line on the host's stderr. The app logs it once the host exits, so a
  * dropped connection can be traced to its side.
  */
 function note(message: string): void {
@@ -177,7 +177,7 @@ export async function rpc(ctx: ModeContext): Promise<void> {
     if (!(replacedByNpm && name === WEB_ACCESS_EXTENSION)) args.push("--extension", path);
   }
   args.push("--append-system-prompt", SYSTEM_APPEND);
-  const env = await termuxSessionEnv(ctx.env);
+  const env = await sessionEnv(ctx.env);
   // The channel socket goes last, at CHANNEL_FD; Pi hands none of its fds past stderr to the commands it runs.
   const child = spawn(process.execPath, args, { cwd, env, stdio: ["pipe", "pipe", "pipe", "pipe"] });
   const channel = child.stdio[CHANNEL_FD] as Socket;

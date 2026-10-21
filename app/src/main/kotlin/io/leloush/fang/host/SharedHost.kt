@@ -12,7 +12,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /**
- * One long-lived request host shared by every caller, so each request doesn't pay for starting Termux. [open] starts
+ * One long-lived request host shared by every caller, so each request doesn't pay for starting the runtime. [open] starts
  * the host with the first request; it ends once none has come for [idleMillis]. Requests run concurrently, matched
  * to their replies by id. Main-thread confined.
  */

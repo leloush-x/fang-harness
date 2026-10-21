@@ -4,7 +4,7 @@ import { HostError, piEntry } from "../env.js";
 import type { JsonObject } from "../framing.js";
 import type { ModeContext } from "../mode.js";
 import { stringParam } from "../params.js";
-import { termuxSessionEnv } from "../termux-session.js";
+import { sessionEnv } from "../session.js";
 import { commandFailed, forwardLines } from "./ensure.js";
 
 /**
@@ -24,7 +24,7 @@ export async function packageInstall(ctx: ModeContext): Promise<JsonObject> {
   // extension update runs npm in the same folder Pi installs into.
   if (await isConfigLocked(ctx.env)) throw configBusy();
   const args = [await piEntry(ctx.env.root), "install", source];
-  const env = await termuxSessionEnv(ctx.env);
+  const env = await sessionEnv(ctx.env);
   let result = { code: null as number | null, lastLine: "" };
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     result = await runPi(ctx, args, env);

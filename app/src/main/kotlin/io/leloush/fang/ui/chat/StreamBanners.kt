@@ -16,13 +16,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,14 +29,12 @@ import androidx.compose.ui.unit.TextUnit
 import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcessState
 import io.leloush.fang.agent.TimelineItem
-import io.leloush.fang.host.TermuxWaker
 import io.leloush.fang.ui.components.CodeBox
 import io.leloush.fang.ui.components.CodeText
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.SimmeringPot
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
-import kotlinx.coroutines.launch
 
 /**
  * The process banner at the top of the stream: starting, installing Pi, or failed with Retry. [onOpenOnboarding] opens
@@ -100,9 +96,7 @@ private fun BannerLine(
 }
 
 /**
- * Pi could not start. A Termux setup failure offers setup, which opens at the step that fixes it; an unreachable Play
- * helper offers Open Termux, which starts the helper there and switches back to Fang Harness before retrying, and setup for
- * when Termux says the helper can't start.
+ * Pi could not start. A runtime setup failure offers setup, which opens at the step that fixes it.
  */
 @Composable
 private fun FailedBanner(
@@ -111,27 +105,13 @@ private fun FailedBanner(
   onOpenOnboarding: () -> Unit,
   modifier: Modifier,
 ) {
-  val context = LocalContext.current
-  val scope = rememberCoroutineScope()
   val failure = state.failure
   BannerCard(modifier) {
     AlertLine(state.message)
-    if (failure?.needsTermuxOpen == true) {
-      Text(
-        text = stringResource(R.string.chat_open_termux_hint),
-        color = fangColors.foregroundMuted,
-        fontSize = FangTokens.FontSize.meta,
-      )
-    }
-    // Open Termux, Set up Termux and Retry don't fit on one line at large font sizes.
+    // Set up runtime and Retry don't fit on one line at large font sizes.
     FlowRow(horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8)) {
-      if (failure?.needsTermuxOpen == true) {
-        TextButton(onClick = { scope.launch { if (TermuxWaker.wake(context, asked = true)) onRetry() } }) {
-          Text(text = stringResource(R.string.chat_open_termux))
-        }
-      }
-      if (failure?.fixedInTermux == true) {
-        TextButton(onClick = onOpenOnboarding) { Text(text = stringResource(R.string.chat_set_up_termux)) }
+      if (failure?.fixedBySetup == true) {
+        TextButton(onClick = onOpenOnboarding) { Text(text = stringResource(R.string.chat_set_up_runtime)) }
       }
       TextButton(onClick = onRetry) { Text(text = stringResource(R.string.chat_retry)) }
     }

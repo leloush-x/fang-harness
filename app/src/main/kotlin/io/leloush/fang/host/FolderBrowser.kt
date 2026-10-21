@@ -10,12 +10,12 @@ import org.json.JSONObject
 /** A starting point offered by the browser. [kind] is `home`, `shared` or `volume` (with its [name]). */
 internal data class FolderPlace(val kind: String, val path: String, val name: String?)
 
-/** Subfolders of [path], as Termux sees them. [error] explains an unreadable path; [parent] is null at `/`. */
+/** Subfolders of [path], as Wolfi OS sees them. [error] explains an unreadable path; [parent] is null at `/`. */
 internal data class FolderListing(val path: String, val parent: String?, val dirs: List<String>, val error: HostText?)
 
 /**
  * One `host.mjs browse` process kept open while the folder browser is shown, so only opening it pays
- * for starting Termux. Requests are one at a time; [close] ends the host.
+ * for starting the runtime. Requests are one at a time; [close] ends the host.
  */
 internal class FolderBrowser(private val channel: HostChannel, val places: List<FolderPlace>) : AutoCloseable {
   private val lock = Mutex()

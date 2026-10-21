@@ -1,14 +1,13 @@
 /**
  * Bundles the host into `$OUT/fang-host.mjs`, and each Pi extension Fang Harness ships into
- * `$OUT/fang-extensions/<name>.js`. Both ship as APK assets. The extensions stay out of the host, which Fang Harness hands
- * to Termux inside an Intent with a size limit (`HostLauncher`); Fang Harness sends their source over the host's socket to
- * `ensure` instead, which installs them, and each chat sends only their SHA-256 to check the installed copy.
+ * `$OUT/fang-extensions/<name>.js`. Both ship as APK assets and are copied into the app's Wolfi storage at launch. The
+ * extensions stay out of the host: Fang Harness sends their source over the host's socket to `ensure`, which installs
+ * them, and each chat sends only their SHA-256 to check the installed copy.
  *
- * Also bundles the Termux helper daemon (Google Play Termux has no RUN_COMMAND) into `$OUT/fang-helper.mjs`, and
- * copies its shell scripts into `$OUT/termux-helper/`. The licences of the third-party code in the bundles go to
- * `$OUT/licenses/`, next to the app's own in `app/src/main/assets/licenses/`, for Settings › Open-source licenses.
+ * The licences of the third-party code in the bundles go to `$OUT/licenses/`, next to the app's own in
+ * `app/src/main/assets/licenses/`, for Settings › Open-source licenses.
  */
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { build } from "esbuild";
 
 const runtimeManifest: unknown = JSON.parse(await readFile("../app/src/main/assets/pi/package.json", "utf8"));
@@ -22,7 +21,6 @@ const out = process.env.OUT;
 if (!out) throw new Error("Set OUT to the directory the bundles go in");
 
 const common = { bundle: true, platform: "node", format: "esm", target: "node22", logLevel: "warning" } as const;
-const helperScripts = ["fang-setup.sh", "run.sh", "start.sh"];
 
 // The MIT and BSD licences ask every copy to carry its notice, and esbuild drops the notices of the code it bundles,
 // so each bundle with third-party code starts with them.
@@ -55,7 +53,7 @@ async function packageVersion(name: string): Promise<string> {
 const licenses: Record<string, string> = {
   jsdiff:
     `jsdiff ${diffVersion} (https://github.com/kpdecker/jsdiff), BSD 3-Clause License. ` +
-    `Parses diffs in Fang Harness's Termux host.\n\n${diffLicense}`,
+    `Parses diffs in Fang Harness's Wolfi host.\n\n${diffLicense}`,
   typebox:
     `TypeBox ${typeboxVersion} (https://github.com/sinclairzx81/typebox), MIT License. ` +
     `Bundled into the Fang Harness web access extension.\n\n${typeboxLicense}`,
@@ -67,7 +65,6 @@ const licenses: Record<string, string> = {
     `The Fang Harness todo extension's tool texts come from it.\n\n${todoLicense}`,
 };
 
-await mkdir(`${out}/termux-helper`, { recursive: true });
 await mkdir(`${out}/licenses`, { recursive: true });
 await Promise.all([
   build({ ...common, entryPoints: ["src/main.ts"], outfile: `${out}/fang-host.mjs`, banner: { js: hostNotices } }),
@@ -95,7 +92,5 @@ await Promise.all([
     // external loads its whole module graph, so typebox, which builds the tool schemas at startup, is bundled.
     external: [...runtimePackages, "@earendil-works/*"],
   }),
-  build({ ...common, entryPoints: ["src/helper/main.ts"], outfile: `${out}/fang-helper.mjs` }),
-  ...helperScripts.map((name) => copyFile(`src/helper/${name}`, `${out}/termux-helper/${name}`)),
   ...Object.entries(licenses).map(([name, text]) => writeFile(`${out}/licenses/${name}.txt`, text)),
 ]);

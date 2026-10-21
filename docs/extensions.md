@@ -3,7 +3,7 @@ title: Extensions, skills, and prompts
 description: Install Pi packages in Fang Harness, write your own extensions, add skills and prompt templates, and see how extensions appear in Fang Harness's interface.
 ---
 
-Fang Harness supports Pi's extensions, skills, and prompt templates. They go in Fang Harness's config folder, `~/.fang/pi`. See [Configure the agent](/docs/configure/) for editing files there.
+Fang Harness supports Pi's extensions, skills, and prompt templates. They go in Fang Harness's config folder, `files/wolfi/pi`. See [Configure the agent](/docs/configure/) for editing files there.
 
 ## Bundled extensions
 
@@ -11,7 +11,7 @@ Fang Harness bundles extensions for ease of use, or where the experience it want
 
 - **Fang Harness todo** keeps a to-do list for the agent's current task, shown as a tab on the message box. The list is saved with the chat, and `/todos` shows it. It showcases Fang Harness's [widgets](#how-extensions-look-in-fang). Its tool matches [rpiv-todo](https://github.com/juicesharp/rpiv-mono)'s.
 - **Fang Harness background** (experimental) lets the agent run commands in the background, such as servers and long builds, and picks the chat back up when each one exits. Fang Harness keeps the chat's agent and the phone awake while they run. See [Background tasks](/docs/background/#background-tasks).
-- **Fang Harness web access** lets the agent search the web and read pages, docs, and PDFs. `/websearch` opens its search curator. It's a copy of [pi-web-access](https://github.com/nicobailon/pi-web-access), changed to start faster on Android. Its settings, such as search API keys, go in `~/.fang/pi/web-search.json`; the [pi-web-access README](https://github.com/nicobailon/pi-web-access#readme) lists them.
+- **Fang Harness web access** lets the agent search the web and read pages, docs, and PDFs. `/websearch` opens its search curator. It's a copy of [pi-web-access](https://github.com/nicobailon/pi-web-access), changed to start faster on Android. Its settings, such as search API keys, go in `files/wolfi/pi/web-search.json`; the [pi-web-access README](https://github.com/nicobailon/pi-web-access#readme) lists them.
 
 Turn them off in **Settings → Fang Harness extensions**. Idle chats reload to apply the change; working chats apply it when their agent next starts.
 
@@ -34,24 +34,25 @@ Then reload the chat with **Chat actions → Reload agent** or `/reload`. Pi ins
 **Run Pi's install command** in a terminal tab. Fang Harness's Pi isn't on the terminal's `PATH`, so give its path and config folder:
 
 ```sh
-PI_CODING_AGENT_DIR=~/.fang/pi \
-  node ~/.local/share/fang/pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js \
+APP=/data/data/io.leloush.fang/files/wolfi
+PI_CODING_AGENT_DIR="$APP/pi" \
+  node "$APP/runtime/pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js" \
   install npm:@example/pi-tools
 ```
 
-Use `remove` to uninstall or `list` to list packages, then reload the chat. Without `PI_CODING_AGENT_DIR`, Pi installs into `~/.pi/agent`, which Fang Harness ignores.
+For Fang Harness Dev, use `/data/data/io.leloush.fang.debug/files/wolfi`. Use `remove` to uninstall or `list` to list packages, then reload the chat. Without `PI_CODING_AGENT_DIR`, Pi installs into `~/.pi/agent`, which Fang Harness ignores.
 
 Pi's [packages documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md) covers git sources, version pinning, and partial loading. Packages run code with the agent's permissions; review them before installing.
 
 ### Update installed packages
 
-**Settings → Agent → Update Pi extensions** runs Pi's `pi update --extensions` with Fang Harness's config folder. After you confirm, Pi updates every package listed in `~/.fang/pi/settings.json` to its latest version, except npm packages pinned to a version, such as `npm:@example/pi-tools@1.2.0`. The row shows Pi's progress, and a message says when the update finished or why it failed. Pi itself stays at the version Fang Harness ships, and Fang Harness's bundled extensions update with the app.
+**Settings → Agent → Update Pi extensions** runs Pi's `pi update --extensions` with Fang Harness's config folder. After you confirm, Pi updates every package listed in `files/wolfi/pi/settings.json` to its latest version, except npm packages pinned to a version, such as `npm:@example/pi-tools@1.2.0`. The row shows Pi's progress, and a message says when the update finished or why it failed. Pi itself stays at the version Fang Harness ships, and Fang Harness's bundled extensions update with the app.
 
 Chats can't start while the update runs. Afterwards, chats that aren't working reload with the new versions; a working chat picks them up the next time its agent starts.
 
 ## Write your own extension
 
-Put a TypeScript file in `~/.fang/pi/extensions/`, such as `hello.ts`, and reload the chat. Pi's [extensions documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md) covers the API. Extension commands appear when you type `/`.
+Put a TypeScript file in `files/wolfi/pi/extensions/`, such as `hello.ts`, and reload the chat. Pi's [extensions documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md) covers the API. Extension commands appear when you type `/`.
 
 ## How extensions look in Fang Harness
 
@@ -72,11 +73,11 @@ RPC mode can't show custom components, headers, footers, editors, or component w
 
 ## Skills
 
-A skill is a folder with a `SKILL.md` that teaches the agent a task. Put skills in `~/.fang/pi/skills/`. Skills in a project's `.agents/skills/` or `.pi/skills/` load only from [trusted projects](/docs/configure/#project-settings). The agent uses skills on its own; type `/skill:` and a name to run one.
+A skill is a folder with a `SKILL.md` that teaches the agent a task. Put skills in `files/wolfi/pi/skills/`. Skills in a project's `.agents/skills/` or `.pi/skills/` load only from [trusted projects](/docs/configure/#project-settings). The agent uses skills on its own; type `/skill:` and a name to run one.
 
 ## Prompt templates
 
-A prompt template is a Markdown file run as a command. Save `~/.fang/pi/prompts/review.md`:
+A prompt template is a Markdown file run as a command. Save `files/wolfi/pi/prompts/review.md`:
 
 ```markdown
 ---

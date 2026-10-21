@@ -6,7 +6,7 @@ import androidx.compose.ui.Modifier
 import io.leloush.fang.ui.components.FangSheet
 
 /**
- * Picks a folder to add as a sidebar workspace with [FolderBrowserPane], starting in Termux [home].
+ * Picks a folder to add as a sidebar workspace with [FolderBrowserPane], starting in the app [home].
  * Folders [isWorkspace] already accepts can't be added again.
  */
 @OptIn(ExperimentalMaterial3Api::class)

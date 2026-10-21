@@ -73,7 +73,7 @@ Whatever you pick applies to the current chat and becomes the default for new ch
 
 ## Where it's stored
 
-Fang Harness saves providers in Pi's own configuration files, in Termux under `~/.fang/pi`:
+Fang Harness saves providers in Pi's own configuration files, in its private Wolfi storage at `files/wolfi/pi`:
 
 - `auth.json` holds subscription sign-ins and the Gemini, Z.ai and Kimi keys.
 - `models.json` holds OpenAI-compatible providers, their models, and their API keys.

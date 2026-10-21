@@ -7,7 +7,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -29,12 +28,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.agent.ChatLocation
 import io.leloush.fang.agent.ChatNotification
-import io.leloush.fang.host.TermuxWaker
 import io.leloush.fang.ui.AppNavigator
 import io.leloush.fang.ui.ChatInboxOverlay
 import io.leloush.fang.ui.Destination
@@ -42,7 +39,6 @@ import io.leloush.fang.ui.MainScreen
 import io.leloush.fang.ui.ShellActions
 import io.leloush.fang.ui.archive.ArchiveScreen
 import io.leloush.fang.ui.archive.ArchivedChatScreen
-import io.leloush.fang.ui.components.LoadingPill
 import io.leloush.fang.ui.onboarding.OnboardingScreen
 import io.leloush.fang.ui.onboarding.PermissionsScreen
 import io.leloush.fang.ui.settings.AddModelsScreen
@@ -86,16 +82,6 @@ class MainActivity : ComponentActivity() {
     super.onNewIntent(intent)
     requestedChat.value = ChatNotification.location(intent)
   }
-
-  override fun onStart() {
-    super.onStart()
-    TermuxWaker.fangShown()
-  }
-
-  override fun onStop() {
-    super.onStop()
-    TermuxWaker.fangCovered(this)
-  }
 }
 
 /**
@@ -133,20 +119,11 @@ private fun FangApp(graph: AppGraph, requestedChat: MutableStateFlow<ChatLocatio
         Screen(shown, navigator, actions, drafts, requestedChat, onSidePanelOpen = { sidePanelOpen = it })
       }
     }
-    // The waking pill sits above the inbox's, so both show when both are up.
     ChatInboxOverlay(
       shown = stack.last() == Destination.Main && !sidePanelOpen,
       onOpen = { requestedChat.value = it },
-    ) { WakingPill() }
-  }
-}
-
-/** Fang Harness opened Termux to start its helper and is waiting for it, on whichever screen asked, below its header bar. */
-@Composable
-private fun WakingPill() {
-  val waking by TermuxWaker.waking.collectAsStateWithLifecycle()
-  AnimatedVisibility(visible = waking, enter = fadeIn(), exit = fadeOut()) {
-    LoadingPill(stringResource(R.string.termux_waking))
+      above = {},
+    )
   }
 }
 

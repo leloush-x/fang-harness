@@ -34,7 +34,7 @@ internal sealed interface BackupOutcome {
 }
 
 /**
- * Backups of Pi's configuration, kept in Termux. Backups and restores run in [scope], so leaving the screen that
+ * Backups of Pi's configuration, kept in Wolfi OS. Backups and restores run in [scope], so leaving the screen that
  * started one neither cancels it nor loses its outcome; one runs at a time. A restore replaces the configuration but
  * never the sessions, so every chat's Pi is stopped first and the chats on screen start again afterwards with the
  * restored settings. Main thread only.

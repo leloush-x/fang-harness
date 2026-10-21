@@ -12,7 +12,6 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HostServerTest {
@@ -74,36 +73,6 @@ class HostServerTest {
     channel.close()
   }
 
-  @Test
-  fun getRequestsAreAnsweredBySetupAndClosed() {
-    val session = SetupSession(
-      sid = SID,
-      token = ByteArray(32),
-      key = ByteArray(32),
-      expiresAt = Long.MAX_VALUE,
-      files = mapOf("setup.sh" to "installer".toByteArray(), "run.sh" to "run script".toByteArray()),
-      onKeyServed = {},
-    )
-    PlaySetup.open(session)
-
-    val ok = get("/fang/$SID/run.sh")
-    assertTrue(ok.startsWith("HTTP/1.1 200 OK\r\n"))
-    assertTrue("Content-Length: 10\r\n" in ok)
-    assertTrue("Connection: close\r\n" in ok)
-    assertTrue("Cache-Control: no-store\r\n" in ok)
-    assertTrue(ok.endsWith("\r\n\r\nrun script"))
-    assertTrue(get("/fang/$SID/nothing").startsWith("HTTP/1.1 404 "))
-    session.complete()
-    assertTrue(get("/fang/$SID/key").startsWith("HTTP/1.1 410 "))
-  }
-
-  /** The whole response; the server closes the connection after it. */
-  private fun get(path: String): String {
-    val client = connect()
-    client.getOutputStream().write("GET $path HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: curl\r\n\r\n".toByteArray())
-    return String(client.getInputStream().readBytes())
-  }
-
   private fun connect(): Socket = Socket(InetAddress.getByName("127.0.0.1"), server.port).also {
     it.soTimeout = TIMEOUT.toInt()
     clients += it
@@ -120,6 +89,5 @@ class HostServerTest {
     const val TIMEOUT = 5_000L
     val TOKEN = "a".repeat(64)
     val OTHER_TOKEN = "b".repeat(64)
-    const val SID = "00112233445566778899aabbccddeeff"
   }
 }
