@@ -188,8 +188,18 @@ jobs:
             echo "Release v$VERSION_NAME already exists"
             exit 0
           fi
-          gh release create "v$VERSION_NAME" dist/*.apk dist/SHA256SUMS \
-            --title "Fang Harness $VERSION_NAME" \
-            --target "$GITHUB_SHA" \
-            --generate-notes \
-            --latest
+          # GitHub answers 403 now and then when it is busy, and a release that is built and signed but never
+          # published is lost. The step tries again before it gives up.
+          for attempt in 1 2 3 4; do
+            if gh release create "v$VERSION_NAME" dist/*.apk dist/SHA256SUMS \
+              --title "Fang Harness $VERSION_NAME" \
+              --target "$GITHUB_SHA" \
+              --generate-notes \
+              --latest; then
+              exit 0
+            fi
+            echo "Publishing v$VERSION_NAME failed (attempt $attempt); trying again"
+            sleep $((attempt * 5))
+          done
+          echo "Could not publish v$VERSION_NAME"
+          exit 1
