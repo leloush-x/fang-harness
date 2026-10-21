@@ -1,0 +1,358 @@
+package io.leloush.fang.ui.files
+
+import android.graphics.BitmapFactory
+import android.text.format.Formatter
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.leloush.fang.R
+import io.leloush.fang.agent.AgentProcess
+import io.leloush.fang.appGraph
+import io.leloush.fang.files.FileState
+import io.leloush.fang.files.FileTab
+import io.leloush.fang.host.FileContent
+import io.leloush.fang.ui.chat.MenuButton
+import io.leloush.fang.ui.components.HeaderBar
+import io.leloush.fang.ui.components.IconButton28
+import io.leloush.fang.ui.components.FangSheet
+import io.leloush.fang.ui.components.SheetRow
+import io.leloush.fang.ui.components.fileLanguage
+import io.leloush.fang.ui.components.rememberHighlightedCode
+import io.leloush.fang.ui.components.splitLines
+import io.leloush.fang.ui.settings.SegmentedControl
+import io.leloush.fang.ui.settings.copyToClipboard
+import io.leloush.fang.ui.sidebar.tildePath
+import io.leloush.fang.ui.theme.FangTokens
+import io.leloush.fang.ui.theme.fangColors
+import io.leloush.fang.ui.workspace.CloseSplitButton
+import io.leloush.fang.ui.workspace.PaneControls
+import io.leloush.fang.ui.workspace.TabCountButton
+import io.leloush.fang.ui.workspace.rememberWorkspaceTabs
+import io.leloush.fang.workspace.WorkspaceTab
+import kotlin.math.max
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/**
+ * One open file in a pane: a header with the file's name over its folder, the workspace's tab button,
+ * the file's actions and the explorer toggle, which act through [controls]; Paseo's bar with the file's size and line
+ * count; and the file itself, read again each time its tab shows, since Pi may have changed it. Text shows with line
+ * numbers, coloured when a grammar knows the extension; images show fitted to the width.
+ */
+@Composable
+internal fun FileScreen(file: FileTab, controls: PaneControls, modifier: Modifier = Modifier) {
+  val graph = LocalContext.current.appGraph
+  val hello by graph.hostClient.lastHello.collectAsStateWithLifecycle()
+  val tabs = rememberWorkspaceTabs(controls.pane, file.cwd)
+  val state by file.state.collectAsStateWithLifecycle()
+  var actionsOpen by remember(file) { mutableStateOf(false) }
+  val folder = if (file.folder.isEmpty()) file.cwd else "${file.cwd}/${file.folder}"
+  LaunchedEffect(file) { file.reload() }
+
+  Column(modifier = modifier.fillMaxSize().background(fangColors.surface0)) {
+    HeaderBar(
+      title = file.name,
+      subtitle = hello?.home?.let { tildePath(folder, it) } ?: folder,
+      leading = { MenuButton(controls.onToggleSidebar) },
+      trailing = {
+        TabCountButton(count = tabs.count, onClick = controls.onOpenTabs)
+        IconButton28(
+          icon = R.drawable.ic_lucide_ellipsis,
+          contentDescription = stringResource(R.string.file_actions),
+          onClick = { actionsOpen = true },
+        )
+        ExplorerToggle(controls.onToggleExplorer)
+        CloseSplitButton(controls)
+      },
+    )
+    when (val shown = state) {
+      FileState.Loading -> FileNote(Modifier.weight(1f)) {
+        CircularProgressIndicator(
+          modifier = Modifier.size(FangTokens.IconSize.md),
+          color = fangColors.foregroundMuted,
+          strokeWidth = 1.5.dp,
+        )
+        NoteText(stringResource(R.string.file_loading))
+      }
+
+      is FileState.Failed -> FileNote(Modifier.weight(1f)) {
+        NoteText(stringResource(R.string.file_failed), fangColors.destructive)
+        if (shown.message.isNotEmpty()) NoteText(shown.message)
+      }
+
+      is FileState.Loaded -> {
+        // A fresh list per file, so switching files never carries the old one's scroll position over.
+        key(file) { LoadedFile(file, shown.content, Modifier.weight(1f)) }
+      }
+    }
+  }
+
+  if (actionsOpen) {
+    FileActionsSheet(
+      file = file,
+      onClose = { controls.onCloseTab(WorkspaceTab.File(file)) },
+      onDismiss = { actionsOpen = false },
+    )
+  }
+}
+
+@Composable
+private fun LoadedFile(file: FileTab, content: FileContent, modifier: Modifier) {
+  val lines = (content as? FileContent.Text)?.let { rememberSourceLines(it.text, file.name) }
+  val previewable = content is FileContent.Text && isMarkdownFile(file.name) && content.size <= PREVIEW_LIMIT
+  FileBar(
+    size = content.size,
+    lineCount = lines?.size,
+    showsPreview = file.showsPreview.takeIf { previewable },
+    onShowPreview = { file.showsPreview = it },
+  )
+  when (content) {
+    is FileContent.Text -> if (previewable && file.showsPreview) {
+      MarkdownPreview(content.text, modifier)
+    } else {
+      SourceView(lines.orEmpty(), modifier)
+    }
+
+    is FileContent.Image -> ImageView(content.bytes, modifier)
+
+    is FileContent.Binary -> FileNote(modifier) { NoteText(stringResource(R.string.file_binary)) }
+
+    is FileContent.TooLarge -> FileNote(modifier) { NoteText(stringResource(R.string.file_too_large)) }
+  }
+}
+
+/**
+ * Paseo's file bar: the file's size and, for text, its line count, in the whisper style; for markdown, the
+ * Preview and Source switch at its end, [showsPreview] saying which is selected.
+ */
+@Composable
+private fun FileBar(size: Long, lineCount: Int?, showsPreview: Boolean?, onShowPreview: (Boolean) -> Unit) {
+  val colors = fangColors
+  val context = LocalContext.current
+  Row(
+    modifier = Modifier.fillMaxWidth().height(36.dp).padding(horizontal = FangTokens.Spacing.s12),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
+  ) {
+    Text(
+      Formatter.formatShortFileSize(context, size),
+      color = colors.foregroundMuted,
+      fontSize = FangTokens.FontSize.sm,
+    )
+    if (lineCount != null) {
+      Text(
+        text = pluralStringResource(R.plurals.file_lines, lineCount, lineCount),
+        color = colors.foregroundMuted,
+        fontSize = FangTokens.FontSize.sm,
+      )
+    }
+    if (showsPreview != null) {
+      Spacer(Modifier.weight(1f))
+      SegmentedControl(options = listOf(true, false), selected = showsPreview, onSelect = onShowPreview) {
+          preview,
+          selected,
+        ->
+        Text(
+          text = stringResource(if (preview) R.string.file_preview else R.string.file_source),
+          color = if (selected) colors.foreground else colors.foregroundMuted,
+          fontSize = FangTokens.FontSize.sm,
+        )
+      }
+    }
+  }
+  HorizontalDivider(thickness = 1.dp, color = colors.border)
+}
+
+/**
+ * [text]'s lines, coloured for [name]'s extension up to Paseo's 1 MiB highlighting budget for phones and plain past
+ * it. The lines are split off the main thread; a file ending in a line break has no empty line after it.
+ */
+@Composable
+private fun rememberSourceLines(text: String, name: String): List<AnnotatedString> {
+  val highlighted = rememberHighlightedCode(text, fileLanguage(name).takeIf { text.length <= HIGHLIGHT_LIMIT })
+  val lines by produceState<List<AnnotatedString>?>(null, highlighted) {
+    value = withContext(Dispatchers.Default) {
+      highlighted.splitLines().let { if (it.size > 1 && it.last().isEmpty()) it.dropLast(1) else it }
+    }
+  }
+  return lines.orEmpty()
+}
+
+/** Paseo's source view: a 56dp gutter of right-aligned line numbers and the lines, wrapped, in the code font. */
+@Composable
+private fun SourceView(lines: List<AnnotatedString>, modifier: Modifier) {
+  val colors = fangColors
+  val navigationBar = WindowInsets.navigationBars.asPaddingValues()
+  SelectionContainer(modifier = modifier) {
+    LazyColumn(
+      modifier = Modifier.fillMaxSize(),
+      contentPadding = PaddingValues(
+        top = FangTokens.Spacing.s8,
+        bottom = FangTokens.Spacing.s16 + navigationBar.calculateBottomPadding(),
+      ),
+    ) {
+      itemsIndexed(lines) { index, line ->
+        Row(modifier = Modifier.fillMaxWidth()) {
+          Text(
+            text = (index + 1).toString(),
+            modifier = Modifier.width(GUTTER_WIDTH).padding(end = FangTokens.Spacing.s12),
+            color = colors.foregroundMuted,
+            fontFamily = FontFamily.Monospace,
+            fontSize = FangTokens.FontSize.code,
+            lineHeight = FangTokens.LineHeight.code,
+            textAlign = TextAlign.End,
+          )
+          Text(
+            text = line,
+            modifier = Modifier.weight(1f).padding(end = FangTokens.Spacing.s12),
+            color = colors.foreground,
+            fontFamily = FontFamily.Monospace,
+            fontSize = FangTokens.FontSize.code,
+            lineHeight = FangTokens.LineHeight.code,
+          )
+        }
+      }
+    }
+  }
+}
+
+/** The image fitted to the width; a format Android can't decode says so, as a binary file does. */
+@Composable
+private fun ImageView(bytes: ByteArray, modifier: Modifier) {
+  val image by produceState<ImageResult>(ImageResult.Decoding, bytes) {
+    value =
+      withContext(Dispatchers.Default) { decodeImage(bytes)?.let(ImageResult::Decoded) ?: ImageResult.Undecodable }
+  }
+  when (val shown = image) {
+    ImageResult.Decoding -> Box(modifier = modifier.fillMaxSize())
+
+    ImageResult.Undecodable -> FileNote(modifier) { NoteText(stringResource(R.string.file_binary)) }
+
+    is ImageResult.Decoded -> Box(
+      modifier = modifier.fillMaxSize().padding(FangTokens.Spacing.s12),
+      contentAlignment = Alignment.Center,
+    ) {
+      Image(
+        bitmap = shown.bitmap,
+        contentDescription = null,
+        modifier = Modifier.fillMaxWidth(),
+        contentScale = ContentScale.Fit,
+      )
+    }
+  }
+}
+
+private sealed interface ImageResult {
+  data object Decoding : ImageResult
+
+  data object Undecodable : ImageResult
+
+  class Decoded(val bitmap: ImageBitmap) : ImageResult
+}
+
+/** [bytes] decoded at no more than [MAX_IMAGE_SIDE] pixels a side, so a camera photo can't exhaust memory. */
+private fun decodeImage(bytes: ByteArray): ImageBitmap? {
+  val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+  BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+  if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+  var sample = 1
+  while (max(bounds.outWidth, bounds.outHeight) / sample > MAX_IMAGE_SIDE) sample *= 2
+  val options = BitmapFactory.Options().apply { inSampleSize = sample }
+  return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
+}
+
+/** A file tab's actions: copy the file's full path, or close the tab. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun FileActionsSheet(file: FileTab, onClose: () -> Unit, onDismiss: () -> Unit) {
+  val context = LocalContext.current
+  val dismissThen = { action: () -> Unit ->
+    onDismiss()
+    action()
+  }
+  FangSheet(onDismissRequest = onDismiss) {
+    SheetRow(
+      label = stringResource(R.string.file_copy_path),
+      icon = R.drawable.ic_lucide_copy,
+      onClick = { dismissThen { copyToClipboard(context, file.name, "${file.cwd}/${file.path}") } },
+    )
+    SheetRow(
+      label = stringResource(R.string.file_close),
+      icon = R.drawable.ic_lucide_x,
+      labelColor = fangColors.destructive,
+      onClick = { dismissThen(onClose) },
+    )
+  }
+}
+
+@Composable
+private fun FileNote(modifier: Modifier, content: @Composable () -> Unit) {
+  Column(
+    modifier = modifier.fillMaxSize().padding(FangTokens.Spacing.s16),
+    verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8, Alignment.CenterVertically),
+    horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    content()
+  }
+}
+
+@Composable
+private fun NoteText(text: String, color: Color = fangColors.foregroundMuted) {
+  Text(text = text, color = color, fontSize = FangTokens.FontSize.base, textAlign = TextAlign.Center)
+}
+
+/** Paseo highlights files up to 1 MiB on phones and shows bigger ones plain. */
+private const val HIGHLIGHT_LIMIT = 1024 * 1024
+
+/**
+ * Markdown up to this size can be previewed; bigger files show only their source. The renderer composes a whole
+ * document at once, and a table of 64 KiB already takes half the app's heap, so a bigger one could crash it.
+ */
+private const val PREVIEW_LIMIT = 64 * 1024
+
+private const val MAX_IMAGE_SIDE = 2048
+
+private val GUTTER_WIDTH = 56.dp

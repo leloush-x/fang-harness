@@ -1,0 +1,111 @@
+---
+import LogoDefs from "../components/LogoDefs.astro";
+import "../styles/global.css";
+import monoBold from "../assets/fonts/jetbrains-mono-bold.woff2?url";
+
+interface Props {
+  title: string;
+  description: string;
+  /** JSON-LD objects for this page. */
+  structuredData?: object[];
+}
+
+const { title, description, structuredData = [] } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL("/og.png", Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#141716" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fbf7f1" media="(prefers-color-scheme: light)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="preload" href={monoBold} as="font" type="font/woff2" crossorigin />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Fang Harness" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Fang Harness running a coding agent on an Android phone" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    {
+      structuredData.map((data) => (
+        <script type="application/ld+json" is:inline set:html={JSON.stringify(data)} />
+      ))
+    }
+
+    <script is:inline>
+      document.documentElement.classList.add("js");
+
+      // Applies the theme picked in the nav before the page paints, so a saved choice never flashes the system's
+      // theme first. It shares Starlight's storage key, so one choice covers the landing page and the guide. Auto, the
+      // default, leaves data-theme unset, and the page's light-dark() colors follow the system theme.
+      window.fangTheme = (() => {
+        const key = "starlight-theme";
+        const browserBar = { dark: "#141716", light: "#fbf7f1" };
+        const root = document.documentElement;
+        const apply = (theme) => {
+          root.dataset.themeChoice = theme;
+          if (theme === "auto") delete root.dataset.theme;
+          else root.dataset.theme = theme;
+          for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+            const systemTheme = meta.media.includes("dark") ? "dark" : "light";
+            meta.content = browserBar[theme === "auto" ? systemTheme : theme];
+          }
+        };
+        const stored = () => {
+          try {
+            const theme = localStorage.getItem(key);
+            return theme === "dark" || theme === "light" ? theme : "auto";
+          } catch {
+            return "auto";
+          }
+        };
+        apply(stored());
+        return {
+          stored,
+          choose(theme) {
+            apply(theme);
+            try {
+              localStorage.setItem(key, theme === "auto" ? "" : theme);
+            } catch {
+              // Storage is blocked; the choice lasts until the page is left.
+            }
+          },
+        };
+      })();
+    </script>
+  </head>
+  <body>
+    <LogoDefs />
+    <slot />
+    <script>
+      const targets = document.querySelectorAll<HTMLElement>("[data-reveal]");
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            entry.target.classList.add("revealed");
+            observer.unobserve(entry.target);
+          }
+        },
+        { rootMargin: "0px 0px -8% 0px" },
+      );
+      for (const target of targets) observer.observe(target);
+    </script>
+  </body>
+</html>
