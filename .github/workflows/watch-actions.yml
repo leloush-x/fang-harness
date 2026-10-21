@@ -59,29 +59,33 @@ jobs:
               per_page: 100,
             });
             const ours = issues.filter((issue) => issue.title.startsWith(PREFIX));
-            // The report of each workflow, by the workflow it is about.
+            // The report of each workflow, by the workflow it is about. A workflow that failed several times has
+            // a report for each of them; only one of them is open at a time, but an old one may be left open.
             const reports = new Map();
             for (const issue of ours) {
               const marker = MARKER.exec(issue.body ?? "");
               if (marker === null) continue;
-              const open = reports.get(marker[1]);
-              if (open === undefined || (issue.state === "open" && open.state !== "open")) reports.set(marker[1], issue);
+              const forWorkflow = reports.get(marker[1]) || [];
+              forWorkflow.push(issue);
+              reports.set(marker[1], forWorkflow);
             }
 
-            // A workflow that passes again closes its report: the build is green now.
-            for (const [workflow, issue] of reports) {
-              if (issue.state !== "open") continue;
+            // A workflow that passes again closes its reports: the build is green now.
+            for (const [workflow, forWorkflow] of reports) {
               const run = latest.get(workflow);
               if (run === undefined || run.conclusion !== "success") continue;
-              await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: "closed" });
-              core.info(`Closed the report for ${run.name}, which passed.`);
+              for (const issue of forWorkflow) {
+                if (issue.state !== "open") continue;
+                await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: "closed" });
+                core.info(`Closed the report for ${run.name}, which passed.`);
+              }
             }
 
             // A workflow that is red now has one report, whichever commit it failed on.
             for (const [workflow, run] of latest) {
               if (run.conclusion !== "failure") continue;
-              const open = reports.get(workflow);
-              if (open !== undefined && open.state === "open") continue;
+              const open = (reports.get(workflow) || []).some((issue) => issue.state === "open");
+              if (open) continue;
               const title = `${PREFIX}${run.name} (${run.head_sha.slice(0, 7)})`;
               const body = [
                 `<!-- watched:${workflow} -->`,
