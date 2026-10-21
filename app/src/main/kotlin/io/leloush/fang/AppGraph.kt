@@ -1,5 +1,6 @@
 package io.leloush.fang
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -93,6 +94,8 @@ internal class AppGraph(private val application: Application) {
   val chatViews = ChatViews()
 
   init {
+    // The app's home is the runtime's own root now; what was saved on Android's shared storage follows it, once.
+    preferences.adoptHome(WolfiRuntime.WOLFI_ROOT, LEGACY_HOME)
     holdWhileWorking()
     restartChatsOnceSetupWorks()
     feedChatInbox()
@@ -179,3 +182,10 @@ internal class AppGraph(private val application: Application) {
 }
 
 internal val Context.appGraph: AppGraph get() = (applicationContext as FangApplication).graph
+
+/**
+ * Android's shared storage, which was the app's home before the runtime's own root was; [Preferences.adoptHome] moves
+ * what was saved there, once. Shared storage itself is untouched, and the folder browser still offers it.
+ */
+@SuppressLint("SdCardPath")
+private const val LEGACY_HOME = "/sdcard"

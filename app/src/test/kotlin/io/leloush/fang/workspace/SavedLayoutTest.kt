@@ -6,6 +6,44 @@ import org.junit.Test
 
 class SavedLayoutTest {
   @Test
+  fun theFolderTheAppUsedAsHomeMovesToTheNewOne() {
+    val layout = SavedLayout(
+      tabs = listOf(SavedTab.Terminal("/sdcard", number = 1, name = null)),
+      panes = mapOf(Pane.Primary to SavedPaneItem.Chat("/sdcard", "/s/a.jsonl")),
+    )
+
+    val moved = layout.underHome("/", "/sdcard")
+
+    assertEquals(
+      SavedLayout(
+        tabs = listOf(SavedTab.Terminal("/", number = 1, name = null)),
+        panes = mapOf(Pane.Primary to SavedPaneItem.Chat("/", "/s/a.jsonl")),
+      ),
+      moved,
+    )
+  }
+
+  @Test
+  fun aFolderTheUserChoseInsideTheOldHomeStays() {
+    val layout = SavedLayout(
+      tabs = listOf(SavedTab.Terminal("/sdcard/projects/app", number = 1, name = null)),
+      panes = mapOf(Pane.Primary to SavedPaneItem.Chat("/sdcard/projects/app", "/s/a.jsonl")),
+    )
+
+    assertNull(layout.underHome("/", "/sdcard"))
+  }
+
+  @Test
+  fun aLayoutThatNamesNeitherHomeIsLeftAlone() {
+    val layout = SavedLayout(
+      tabs = listOf(SavedTab.File("/w", "a")),
+      panes = mapOf(Pane.Primary to SavedPaneItem.Chat("/w", "/s/a.jsonl")),
+    )
+
+    assertNull(layout.underHome("/", "/sdcard"))
+  }
+
+  @Test
   fun everyKindOfTabAndPaneItemReadsBackAsSaved() {
     val layout = SavedLayout(
       tabs = listOf(

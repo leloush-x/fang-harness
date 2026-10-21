@@ -32,6 +32,34 @@ internal fun SavedLayout.toJson(): String = JSONObject()
   .put("panes", JSONObject(panes.entries.associate { (pane, item) -> pane.name to item.toJson() }))
   .toString()
 
+/**
+ * The same layout with every folder that is exactly [legacyHome] replaced by [home], or null when none is.
+ *
+ * The app's home moved, and a restart would otherwise restore the folder it used to be: a folder only *under*
+ * [legacyHome] is left alone, since the user chose it.
+ */
+internal fun SavedLayout.underHome(home: String, legacyHome: String): SavedLayout? {
+  fun moved(cwd: String): String = if (cwd == legacyHome) home else cwd
+  if (tabs.none { it.cwd == legacyHome } && panes.values.none { it is SavedPaneItem.Chat && it.cwd == legacyHome }) {
+    return null
+  }
+  return SavedLayout(
+    tabs = tabs.map { tab ->
+      when (tab) {
+        is SavedTab.Terminal -> tab.copy(cwd = moved(tab.cwd))
+        is SavedTab.File -> tab.copy(cwd = moved(tab.cwd))
+        is SavedTab.Commit -> tab.copy(cwd = moved(tab.cwd))
+      }
+    },
+    panes = panes.mapValues { (_, item) ->
+      when (item) {
+        is SavedPaneItem.Chat -> item.copy(cwd = moved(item.cwd))
+        is SavedPaneItem.Tab -> item
+      }
+    },
+  )
+}
+
 /** The layout [json] holds, or null when it isn't one, so a damaged one is dropped rather than half restored. */
 internal fun savedLayoutOf(json: String): SavedLayout? = try {
   val root = JSONObject(json)

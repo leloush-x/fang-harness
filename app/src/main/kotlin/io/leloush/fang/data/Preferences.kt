@@ -12,6 +12,7 @@ import io.leloush.fang.ui.theme.ThemeMode
 import io.leloush.fang.workspace.SavedLayout
 import io.leloush.fang.workspace.savedLayoutOf
 import io.leloush.fang.workspace.toJson
+import io.leloush.fang.workspace.underHome
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -236,6 +237,22 @@ internal class Preferences(context: Context) {
     prefs.edit { putString(LAYOUT, layout.toJson()) }
   }
 
+  /**
+   * Moves what was saved on the old home to [home], once.
+   *
+   * Android's shared storage was the app's home before the runtime's own root was, so every folder kept from then —
+   * the workspace last opened, and the chats and terminals a restart shows again — still names it, and a chat,
+   * terminal or explorer folder keeps starting there however the app's home changes. Only a folder that is exactly
+   * [legacyHome] moves: one the user picked inside it is theirs, and stays.
+   */
+  fun adoptHome(home: String, legacyHome: String) {
+    if (prefs.getBoolean(ADOPTED_HOME, false)) return
+    if (lastProjectCwdState.value == legacyHome) setLastProjectCwd(home)
+    savedLayout()?.underHome(home, legacyHome)?.let(::setSavedLayout)
+    // Marked last, so a run that ends between the two tries again.
+    prefs.edit { putBoolean(ADOPTED_HOME, true) }
+  }
+
   private fun readWorkspaces(): List<String> {
     val array = JSONArray(prefs.getString(WORKSPACES, null) ?: return emptyList())
     return List(array.length()) { array.getString(it) }
@@ -291,6 +308,7 @@ internal class Preferences(context: Context) {
     const val MAX_RUNNING_CHATS = "maxRunningChats"
     const val IDLE_STOP = "idleStop"
     const val LAYOUT = "layout"
+    const val ADOPTED_HOME = "adoptedHome"
     const val DISABLED_EXTENSIONS = "disabledExtensions"
     const val IN_APP_NOTIFICATIONS = "inAppNotifications"
   }
