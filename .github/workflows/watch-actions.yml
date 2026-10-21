@@ -1,8 +1,8 @@
 name: Watch actions
 
 # A cron job that watches the repository's other workflows. A run that failed on main is reported in an issue, so a
-# broken build is noticed without watching the Actions page, and the report closes itself once the run is redone and
-# passes. It reads the runs and writes issues; it never touches the code, and it never builds anything.
+# broken build is noticed without watching the Actions page, and the report closes itself once that workflow is redone
+# and passes. It reads the runs and writes issues; it never touches the code, and it never builds anything.
 on:
   schedule:
     # Every half hour, off the hour and off the half: GitHub delays a scheduled run when the repository is busy, and
@@ -30,7 +30,9 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const PREFIX = "CI failed: ";
-            const SHA_MARKER = /<!--\s*sha:([0-9a-f]{7,40})\s*-->/;
+            // The marker names the workflow as well as the commit: two workflows run on one push, and one of them
+            // passing says nothing about the other.
+            const MARKER = /<!--\s*watched:([0-9]+):([0-9a-f]{7,40})\s*-->/;
             const LOOKBACK_MS = 24 * 60 * 60 * 1000;
 
             // The runs of the last day, so a report is about something that just happened rather than about
@@ -42,9 +44,11 @@ jobs:
               created: `>=${new Date(Date.now() - LOOKBACK_MS).toISOString()}`,
               per_page: 100,
             });
+            // A run is identified by its workflow and its commit, not by the commit alone.
+            const id = (run) => `${run.workflow_id}:${run.head_sha}`;
+            // A failing run whose workflow was redone on the same commit and passed needs no report.
+            const passed = new Set(runs.filter((run) => run.conclusion === "success").map(id));
             const failed = runs.filter((run) => run.conclusion === "failure" && run.name !== "Watch actions");
-            // A commit whose run was redone and passed needs no report, whichever run failed first.
-            const passed = new Set(runs.filter((run) => run.conclusion === "success").map((run) => run.head_sha));
 
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
@@ -54,28 +58,27 @@ jobs:
             });
             const ours = issues.filter((issue) => issue.title.startsWith(PREFIX));
 
-            // The report of a commit that passed when it was redone.
+            // The report of a run that passed when its workflow was redone.
             for (const issue of ours) {
               if (issue.state !== "open") continue;
-              const sha = SHA_MARKER.exec(issue.body ?? "")?.[1];
-              if (sha === undefined || !passed.has(sha)) continue;
+              const marker = MARKER.exec(issue.body ?? "");
+              if (marker === null || !passed.has(`${marker[1]}:${marker[2]}`)) continue;
               await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: "closed" });
-              core.info(`Closed the report for ${sha.slice(0, 7)}, which passed.`);
+              core.info(`Closed the report for ${marker[2].slice(0, 7)}, which passed.`);
             }
 
-            // The report of a commit that failed and has none yet. A commit is reported once: a report that was
-            // closed is not reopened, so a still-red build stays one issue rather than one per run.
+            // The report of a run that failed and has none yet. A run is reported once: a report that was closed
+            // is not reopened, so a still-red build stays one issue rather than one per run.
             const reported = new Set(
-              ours.map((issue) => SHA_MARKER.exec(issue.body ?? "")?.[1]).filter((sha) => sha !== undefined),
+              ours.map((issue) => MARKER.exec(issue.body ?? "")).filter((marker) => marker !== null).map((marker) => `${marker[1]}:${marker[2]}`),
             );
             for (const run of failed) {
+              if (reported.has(id(run)) || passed.has(id(run))) continue;
+              reported.add(id(run));
               const sha = run.head_sha;
-              if (reported.has(sha)) continue;
-              if (passed.has(sha)) continue;
-              reported.add(sha);
               const title = `${PREFIX}${run.name} (${sha.slice(0, 7)})`;
               const body = [
-                `<!-- sha:${sha} -->`,
+                `<!-- watched:${run.workflow_id}:${sha} -->`,
                 `The **${run.name}** workflow failed on \`main\`.`,
                 "",
                 `- Commit: ${sha}`,
