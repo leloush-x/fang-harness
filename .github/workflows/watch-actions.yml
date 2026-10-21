@@ -66,9 +66,12 @@ jobs:
             for (const issue of ours) {
               const marker = MARKER.exec(issue.body ?? "");
               if (marker === null) continue;
-              const forWorkflow = reports.get(marker[1]) || [];
+              // The workflow's id is a number in the API, so the marker is read as one: a string would never
+              // match the runs, and no report would ever close.
+              const workflow = Number(marker[1]);
+              const forWorkflow = reports.get(workflow) || [];
               forWorkflow.push(issue);
-              reports.set(marker[1], forWorkflow);
+              reports.set(workflow, forWorkflow);
             }
 
             // A workflow that passes again closes its reports: the build is green now.
