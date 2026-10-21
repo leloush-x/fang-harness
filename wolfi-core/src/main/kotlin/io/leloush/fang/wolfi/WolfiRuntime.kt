@@ -33,6 +33,13 @@ class WolfiRuntime(context: Context) {
   /** Pi's config, sessions and packages. */
   val piConfig: File get() = configDir
 
+  /**
+   * The files [command] binds over the `/proc` entries Android denies an app (`htop`'s `Cannot open /proc/stat`).
+   * The host rewrites them while it runs; these are only what the bind needs to find, and what a process sees before
+   * its host writes its own.
+   */
+  private val syntheticProc = File(hostDir, SYNTHETIC_PROC_DIR)
+
   data class Status(val installed: Boolean, val version: String?)
 
   fun status(): Status = Status(installed = rootfsReady() && toolsReady(), version = rootfsVersion())
@@ -96,11 +103,41 @@ class WolfiRuntime(context: Context) {
       val file = File(path)
       if (file.exists()) args += listOf("-b", path)
     }
+    // After /proc, whose entries these replace: PRoot gives the later binding the path.
+    for ((name, file) in syntheticProcFiles()) args += listOf("-b", "${file.absolutePath}:/proc/$name")
     args += listOf("-b", app.filesDir.absolutePath)
     args += listOf("-b", "/dev/urandom:/dev/random")
     args += listOf("-r", rootfs.absolutePath, "-0", "--link2symlink", "--sysvipc", "-L")
     args.addAll(command)
     return args
+  }
+
+  /**
+   * The files to bind over `/proc`, written when they are missing. Android refuses an app `/proc/stat`, `/proc/uptime`,
+   * `/proc/loadavg` and `/proc/vmstat`, so a tool that reads them fails inside the runtime even as root; the host
+   * fills these in while it runs. `/proc` stays bound as well, for everything Android does allow, such as meminfo.
+   */
+  @Synchronized
+  private fun syntheticProcFiles(): Map<String, File> {
+    syntheticProc.mkdirs()
+    val cpus = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+    val counters = List(CPU_COUNTERS) { "0" }.joinToString(" ")
+    val stat = buildString {
+      append("cpu  ").append(counters).append('\n')
+      for (cpu in 0 until cpus) append("cpu").append(cpu).append(' ').append(counters).append('\n')
+    }
+    val seeds = mapOf(
+      "stat" to stat,
+      // A day of uptime is a placeholder the host replaces within two seconds of starting.
+      "uptime" to "86400.00 0.00\n",
+      "loadavg" to "0.00 0.00 0.00 0/0 0\n",
+      "vmstat" to "nr_free_pages 0\n",
+    )
+    return syntheticProcEntries().associateWith { name ->
+      File(syntheticProc, name).apply {
+        if (!exists()) runCatching { writeText(seeds.getValue(name)) }
+      }
+    }
   }
 
   /**
@@ -312,6 +349,15 @@ class WolfiRuntime(context: Context) {
     /** Android's shared storage, which the runtime reaches only with All files access. */
     @SuppressLint("SdCardPath")
     const val SHARED_STORAGE = "/sdcard"
+
+    /** Under `runtime`: the files bound over the `/proc` entries Android denies an app; `host/src/synthetic-proc.ts` names the same four. */
+    private const val SYNTHETIC_PROC_DIR = "proc"
+
+    /** The `cpu` line's ten counters, as `/proc/stat` defines them. */
+    private const val CPU_COUNTERS = 10
+
+    /** The `/proc` entries whose files the runtime writes, in the order the binds are added. */
+    private fun syntheticProcEntries() = listOf("stat", "vmstat", "loadavg", "uptime")
 
     private val SYSTEM_MOUNTS = listOf("/apex", "/odm", "/product", "/system", "/system_ext", "/vendor")
     private val SHARED_MOUNTS = listOf(SHARED_STORAGE, "/storage", "/data", "/dev", "/proc", "/sys")

@@ -1,4 +1,5 @@
 import { connect } from "node:net";
+import { join } from "node:path";
 import { Connection } from "./connection.js";
 import { HostError, installedPiVersion, grantedSharedStorage, readHostEnv } from "./env.js";
 import { isObject, type JsonObject } from "./framing.js";
@@ -25,8 +26,11 @@ import { sessions } from "./modes/sessions.js";
 import { subscriptionSave } from "./modes/subscription-save.js";
 import { terminal } from "./modes/terminal.js";
 import { updateExtensions } from "./modes/update-extensions.js";
+import { startSyntheticProc } from "./synthetic-proc.js";
 
 const PROTOCOL = 1;
+/** Under `FANG_ROOT`: the files the launcher binds over the `/proc` entries Android denies an app. */
+const SYNTHETIC_PROC_DIR = "proc";
 const REQUEST_TIMEOUT_MS = 10_000;
 /** After the app hangs up, an aborted operation gets this long to unwind before the process exits. */
 const ABORT_GRACE_MS = 5000;
@@ -69,6 +73,8 @@ async function main(): Promise<void> {
 
   const socket = connect({ host: "127.0.0.1", port, allowHalfOpen: true });
   const conn = new Connection(socket);
+  // The /proc entries Android denies an app, before the first command runs: htop and its like read them.
+  startSyntheticProc(join(env.root, SYNTHETIC_PROC_DIR));
   conn.send({
     type: "fang_hello",
     protocol: PROTOCOL,
