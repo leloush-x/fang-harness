@@ -4,9 +4,13 @@ name: Watch actions
 # a broken build is noticed without watching the Actions page, and the report closes itself once that workflow passes
 # again. It reads the runs and writes issues; it never touches the code, and it never builds anything.
 on:
+  # The watcher runs when a build finishes, which is the moment its result matters, and on a timer as a backstop.
+  # GitHub may delay a scheduled run by hours when the repository is busy, so the timer alone is not enough.
+  workflow_run:
+    workflows: ["CI", "Release"]
+    types: [completed]
   schedule:
-    # Every half hour, off the hour and off the half: GitHub delays a scheduled run when the repository is busy, and
-    # the runs this watches take a quarter of an hour.
+    # Every half hour, off the hour and off the half, so it does not land with everything else.
     - cron: "17,47 * * * *"
   workflow_dispatch:
 
