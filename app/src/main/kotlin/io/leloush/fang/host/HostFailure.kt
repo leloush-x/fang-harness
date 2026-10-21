@@ -9,8 +9,7 @@ import java.io.IOException
  * Why a Wolfi-side operation could not run. [message] is user-presentable, in the app's language when it is read.
  */
 internal sealed class HostFailure(val kind: Kind,
-  @StringRes protected val messageRes: Int,
-  cause: Throwable? = null,
+  @StringRes protected val messageRes: Int, cause: Throwable? = null
 ) :
   IOException(null, cause) {
   /** A failure whose [messageRes] has placeholders overrides this to fill them. */
