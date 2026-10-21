@@ -1,7 +1,7 @@
 # Fang Harness
 
 A private copy of an Android AI-coding harness. The app is Jetpack Compose; the agent runs in
-Termux, driven by a TypeScript host that the app ships as an asset.
+Wolfi OS through bundled PRoot, driven by a TypeScript host that the app ships as an asset.
 
 ## Branches and worktrees
 
@@ -22,23 +22,22 @@ After the push lands: `git merge-base --is-ancestor HEAD origin/main`, then
 ```sh
 ./gradlew check                     # ktlint + detekt + Android lint + unit tests + host check
 ./gradlew :app:assembleDebug        # debug APK
-./gradlew :app:testDebugUnitTest --tests "io.leloush.fang.host.HelperProtocolTest"
+./gradlew :app:testDebugUnitTest --tests "io.leloush.fang.host.HostServerTest"
 cd host && pnpm run check           # typecheck + lint + test
-cd host && pnpm vitest run test/helper-protocol.test.ts
+cd host && pnpm vitest run test/terminal-busy.test.ts
 cd site && pnpm run check
 ```
 
-`./gradlew check` is the gate: it runs `:app:check` (ktlint, detekt, Android lint, unit tests) plus
-`:app:hostCheck`, which shells out to `pnpm run typecheck && pnpm run lint && pnpm run test` in
-`host/`. The first build needs the network: it downloads the pinned tree-sitter grammars
-(`syntaxSources`) and the JDKs Gradle provisions for itself.
+`./gradlew check` is the gate: it runs `:app:check` (ktlint, detekt, Android lint, unit tests)
+plus `:app:hostCheck`, which shells out to
+`pnpm run typecheck && pnpm run lint && pnpm run test` in `host/`. The first build needs the network:
+it downloads the pinned tree-sitter grammars (`syntaxSources`) and the JDKs Gradle provisions for itself.
 
 ## The app talks to the host over a socket, not a library
 
-The host is a separate Node program that runs **inside Termux**. The app ships it as the APK asset
-`fang-host.mjs` and pushes it to Termux on demand; `HostLauncher` starts it through Termux's
-`RunCommandService` (F-Droid build) or through the app's own in-Termux helper (Google Play build,
-which has no `RunCommandService`).
+The host is a separate Node program that runs **inside Wolfi OS**. The app ships it as the APK asset
+`fang-host.mjs` and writes it to `files/wolfi/runtime`; `HostLauncher` starts it as a local child of
+the app, through bundled PRoot and Wolfi's Node.js, so no other app or service is involved.
 
 The connection is **connect-back**: the app opens a loopback listener, the host dials in and
 presents a single-use 32-byte token, compared in constant time. The wire format is hand-rolled JSONL
@@ -63,9 +62,7 @@ user-installed packages — Pi's, not ours).
 | JNI symbols in `app/src/main/cpp/syntax.c` | `Java_io_leloush_fang_syntax_TreeSitter_*` |
 | Host bundle and extension assets | `fang-host.mjs`, `fang-extensions/fang-todo.js` |
 | Wire protocol | `fang_hello`, `fang_request`, … |
-| Helper HMAC labels | `fang-helper-server`, `fang-helper-client`, `fang-helper-c2s`, `fang-helper-s2c` |
-| Pairing key derivation | `fang-pair-key`, and the AAD `fang-pair\|<sid>` |
-| Termux state | `~/.fang`, `~/.fang-dev`, `FANG_ROOT` |
+| App-private Wolfi state | `/data/data/io.leloush.fang/files/wolfi`, `FANG_ROOT` |
 | Pi runtime manifest | `fang-pi-runtime` in `app/src/main/assets/pi/package.json` |
 
 The traps, all of which bit during the rename:
@@ -73,10 +70,8 @@ The traps, all of which bit during the rename:
 - **JNI names must match the Kotlin package exactly.** `io.leloush.fang.syntax.TreeSitter` is
   `Java_io_leloush_fang_syntax_TreeSitter_…`. Get it wrong and the native methods fail at runtime,
   not at build time.
-- **The HMAC labels are the protocol.** Changing them changes every derived MAC, so the pinned
-  vectors in `host/test/helper-protocol.test.ts`, `app/src/test/kotlin/io/leloush/fang/host/HelperProtocolTest.kt`
-  and `app/src/test/kotlin/io/leloush/fang/host/PlaySetupTest.kt` must be recomputed. Recompute them
-  from the implementation, not by hand.
+- **The app id selects the runtime.** Each build's Wolfi OS, Pi config, backups, and chats live under
+  its own app-private storage, so derive paths from `filesDir`, not a fixed `/data/data/io.leloush.fang`.
 - **Resource names cannot contain spaces.** The style is `Theme.FangHarness`, not `Theme.Fang Harness`.
 - **The package rename reorders imports.** ktlint wants them lexicographic; `ktlint --format` fixes
   the order.
@@ -87,25 +82,22 @@ The traps, all of which bit during the rename:
 ## Release and debug builds
 
 The debug build is Fang Harness Dev, a separate app that installs beside the release, so the user
-can test it on a phone that runs the release. Both builds share one Termux and keep their own state
-under their own names, from `TermuxBuild` in `app/src/debug/kotlin` and `app/src/release/kotlin`
-(the helper's ports come from `HelperProtocol.PORTS`):
+can test it on a phone that runs the release. The two app IDs have separate app-private storage, and
+each has its own Wolfi OS runtime; setup, sign-ins, chats, and backups are not shared:
 
 | | Release | Debug (Fang Harness Dev) |
 |---|---|---|
 | Package | `io.leloush.fang` | `io.leloush.fang.debug` |
-| Host and pinned Pi (`FANG_ROOT`) | `~/.local/share/fang` | `~/.local/share/fang-dev` |
-| Pi's config and sessions (`PI_CODING_AGENT_DIR`) | `~/.fang/pi` | `~/.fang-dev/pi` |
-| Backups, background tasks | `~/.fang/backups`, `~/.fang/background` | `~/.fang-dev/backups`, `~/.fang-dev/background` |
-| Play-Termux helper, ports, boot script, command | `~/.fang/helper`, 47310–47314, `~/.termux/boot/fang-helper`, `fang-start` | `~/.fang-dev/helper`, 47320–47324, `~/.termux/boot/fang-dev-helper`, `fang-dev-start` |
+| App-private runtime | `/data/data/io.leloush.fang/files/wolfi` | `/data/data/io.leloush.fang.debug/files/wolfi` |
+| Wolfi OS | `rootfs` | `rootfs` |
+| Host and pinned Pi (`FANG_ROOT`) | `runtime` | `runtime` |
+| Pi's config and sessions (`PI_CODING_AGENT_DIR`) | `pi` | `pi` |
+| Backups, background tasks | `backups`, `background` | `backups`, `background` |
 
-Derive every Termux path from `TermuxBuild.NAME`, from Pi's config folder (`PI_CODING_AGENT_DIR`,
-Pi's `getAgentDir()`, or the host's `env.configDir`), from `FANG_ROOT`, or from the helper's own
-folder — never from a fixed `~/.fang`. Anything the app launches by component (`am start`) takes
-the package name from `context.packageName`; the activity class is `io.leloush.fang.MainActivity` in
-both builds. The one shared piece is the shell hook in `~/.bashrc`, `~/.zshrc` and fish's
-`conf.d/fang.fish`, which both setups write the same way: it starts every installed helper, so a
-session either build opens serves both.
+Derive every runtime path from the app's `filesDir` and `WolfiRuntime`, from Pi's config folder
+(`PI_CODING_AGENT_DIR`, Pi's `getAgentDir()`, or the host's `env.configDir`), or from `FANG_ROOT` —
+never from a fixed path. Anything the app launches by component (`am start`) takes the package name
+from `context.packageName`; the activity class is `io.leloush.fang.MainActivity` in both builds.
 
 `minSdk` is 29, `targetSdk` 37, ABIs `arm64-v8a` and `x86_64`. The version comes from the
 gradle properties `fang.versionName` and `fang.versionCode`, which the release workflow sets.
@@ -137,8 +129,8 @@ profile, for example `echo no | avdmanager create avd -n fang-<branch> -d pixel_
 
 To chat with a model on the emulator, run `scripts/emulator-llm.sh emulator-<port>` once Fang
 Harness Dev's setup has installed the agent, or add `--release` to sign in the release build
-instead. It reads the API key from the Mac's Keychain and writes the provider into Pi's config in
-Termux. The provider URL and the Keychain service come from `FANG_LLM_BASE_URL` and
+instead. It reads the API key from the Mac's Keychain and writes the provider into Pi's config in the
+emulator's Wolfi runtime. The provider URL and the Keychain service come from `FANG_LLM_BASE_URL` and
 `FANG_LLM_KEYCHAIN_SERVICE`, so point them at your own endpoint. Never print the key or copy it
 anywhere else.
 
@@ -191,7 +183,7 @@ its message when it is read, so it's never stored in English. Give a string with
 comment saying what each one holds. Format numbers, times and dates with the locale
 (`NumberFormat`, `DateFormat`, `DateUtils`).
 
-The Termux host writes its messages in English, and each one the app may show also carries an
+The Wolfi host writes its messages in English, and each one the app may show also carries an
 `i18n` object, `{ key, args }`, beside the English: `i18n` on a failure, `<field>I18n` beside a text
 field such as `error` or `line`. `app/src/main/kotlin/io/leloush/fang/host/HostText.kt` maps each key
 to a resource in `strings_host.xml` and falls back to the English for a key it doesn't know. When the

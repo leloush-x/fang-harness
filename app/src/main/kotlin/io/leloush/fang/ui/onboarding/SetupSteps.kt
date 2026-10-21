@@ -34,7 +34,9 @@ internal class StepSpec(
 internal fun stepSpec(step: SetupStep, state: OnboardingState, onAction: (SetupAction) -> Unit): StepSpec =
   when (step) {
     SetupStep.Runtime -> runtimeSpec(state, onAction)
+
     SetupStep.Notifications -> notificationsSpec(state, onAction)
+
     SetupStep.Background -> permissionSpec(
       step = step,
       state = state,
@@ -44,6 +46,7 @@ internal fun stepSpec(step: SetupStep, state: OnboardingState, onAction: (SetupA
       done = R.string.onboarding_background_done,
       action = StepButton(stringResource(R.string.onboarding_allow)) { onAction(SetupAction.AllowBackground) },
     )
+
     SetupStep.Storage -> permissionSpec(
       step = step,
       state = state,
@@ -53,6 +56,7 @@ internal fun stepSpec(step: SetupStep, state: OnboardingState, onAction: (SetupA
       done = R.string.onboarding_storage_done,
       action = StepButton(stringResource(R.string.onboarding_allow)) { onAction(SetupAction.AllowStorage) },
     )
+
     SetupStep.InstallPi -> installPiSpec(state, onAction)
     SetupStep.SignIn -> signInSpec(state, onAction)
   }
@@ -71,7 +75,13 @@ private fun permissionSpec(
 ): StepSpec {
   val status = state.status(step)
   if (status == StepStatus.Done) {
-    return StepSpec(step = step, icon = icon, title = stringResource(title), body = stringResource(done), status = status)
+    return StepSpec(
+      step = step,
+      icon = icon,
+      title = stringResource(title),
+      body = stringResource(done),
+      status = status,
+    )
   }
   return StepSpec(
     step = step,

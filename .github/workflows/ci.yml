@@ -50,4 +50,11 @@ jobs:
 
       - name: Verify the Wolfi runtime is packaged
         run: |
-          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E 'assets/fang-host.mjs|lib/(arm64-v8a|x86_64)/lib(proot|loader)\.so'
+          for path in \
+            assets/fang-host.mjs \
+            lib/arm64-v8a/libproot.so \
+            lib/arm64-v8a/libloader.so \
+            lib/x86_64/libproot.so \
+            lib/x86_64/libloader.so; do
+            unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -q " $path$" || { echo "missing $path"; exit 1; }
+          done

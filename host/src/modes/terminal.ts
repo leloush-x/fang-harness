@@ -207,7 +207,7 @@ class Resizer {
 }
 
 /**
- * Runs the user's login shell on a pseudo-terminal in `cwd`, through BusyBox's `script` in Wolfi OS.
+ * Runs the user's login shell on a pseudo-terminal in `cwd`, through Wolfi's `script` package.
  * After the request the connection stays JSONL both ways: Fang Harness sends `input` (base64 bytes) and `resize`
  * (`rows`, `cols`); the host sends `output` (base64 bytes), `busy` (`busy`) whenever work starts or stops running in
  * the shell, and, once the shell has gone, one `fang_exit`. Closing the connection ends the shell.

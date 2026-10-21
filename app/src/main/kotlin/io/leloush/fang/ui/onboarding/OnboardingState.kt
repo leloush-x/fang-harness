@@ -238,7 +238,8 @@ internal fun rememberOnboardingState(graph: AppGraph, checks: DeviceChecks): Onb
  */
 @Composable
 internal fun AutoInstall(graph: AppGraph, state: OnboardingState, onChecksChanged: () -> Unit) {
-  val needsRuntime = !state.checks.runtimeInstalled && !state.runtimeInstalling && state.errorFor(SetupStep.Runtime) == null
+  val needsRuntime =
+    !state.checks.runtimeInstalled && !state.runtimeInstalling && state.errorFor(SetupStep.Runtime) == null
   LaunchedEffect(needsRuntime) {
     if (needsRuntime) SetupProgress.prepareRuntime(graph)
   }

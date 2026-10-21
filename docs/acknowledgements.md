@@ -13,8 +13,9 @@ The license texts for everything Fang Harness ships are in the app under **Setti
 
 ## The agent
 
-- **[Pi](https://pi.dev)** is the agent harness that does the work. Fang Harness installs it in Termux and is compatible with its skills, prompt templates, and extensions.
-- **[Termux](https://termux.dev)** is the Linux environment on Android where the agent, your files, and your tools live.
+- **[Pi](https://pi.dev)** is the agent harness that does the work. Fang Harness installs it in Wolfi OS and is compatible with its skills, prompt templates, and extensions.
+- **[Wolfi OS](https://wolfi.dev)** is the Linux environment where the agent and its tools live, with Android shared storage at `/sdcard`. Fang Harness downloads it on first setup and keeps it in app-private storage.
+- **[PRoot](https://github.com/proot-me/proot)** runs Wolfi OS on Android without root, as a child of Fang Harness.
 
 ## The app
 
