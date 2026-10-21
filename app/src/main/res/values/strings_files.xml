@@ -34,4 +34,8 @@
     <string name="file_actions">File actions</string>
     <string name="file_copy_path">Copy path</string>
     <string name="file_close">Close file</string>
+    <string name="files_navigate_back">Go back</string>
+    <string name="files_navigate_forward">Go forward</string>
+    <string name="files_place_root">Wolfi</string>
+    <string name="files_place_shared">Phone</string>
 </resources>

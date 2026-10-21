@@ -9,6 +9,7 @@ import io.leloush.fang.ui.chat.ChatScreen
 import io.leloush.fang.ui.chat.ChatViews
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.files.ExplorerPanel
+import io.leloush.fang.ui.files.ExplorerSelection
 import io.leloush.fang.ui.workspace.PaneControls
 import io.leloush.fang.ui.workspace.WorkspaceTabScreen
 import io.leloush.fang.workspace.Pane
@@ -71,10 +72,10 @@ internal fun PaneExplorer(
   ExplorerPanel(
     cwd = cwd,
     open = open,
-    selectedPath = shownFile?.path,
+    selectedFile = shownFile?.let { ExplorerSelection(it.cwd, it.path) },
     snackbar = snackbar,
     onClose = onClose,
-    onOpenFile = { path -> cwd?.let { closeOrSwap(graph.files.open(pane, it, path)) } },
-    onOpenCommit = { commit -> cwd?.let { closeOrSwap(graph.commits.open(pane, it, commit)) } },
+    onOpenFile = { root, path -> closeOrSwap(graph.files.open(pane, root, path)) },
+    onOpenCommit = { root, commit -> closeOrSwap(graph.commits.open(pane, root, commit)) },
   )
 }

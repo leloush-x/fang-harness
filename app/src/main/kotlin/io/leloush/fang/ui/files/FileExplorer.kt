@@ -1,5 +1,6 @@
 package io.leloush.fang.ui.files
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,9 +26,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -54,8 +57,10 @@ import io.leloush.fang.ui.git.GitWorkspace
 import io.leloush.fang.ui.git.GitWorkspaces
 import io.leloush.fang.ui.git.TrustPrompt
 import io.leloush.fang.ui.git.shownExplorerTab
+import io.leloush.fang.ui.sidebar.tildePath
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
+import io.leloush.fang.wolfi.WolfiRuntime
 import kotlinx.coroutines.launch
 
 /** Paseo's mobile explorer toggle: Lucide `panel-right`, muted, at the end of a workspace header. */
@@ -67,6 +72,55 @@ internal fun ExplorerToggle(onClick: () -> Unit) {
     onClick = onClick,
     tint = fangColors.foregroundMuted,
   )
+}
+
+/** The file row an explorer highlights: the open file [path], and the folder [root] it was opened from. */
+internal class ExplorerSelection(val root: String, val path: String)
+
+/** A folder the explorer can be rooted at, shown under the name [label]. */
+internal class ExplorerPlace(val path: String, @StringRes val label: Int)
+
+/**
+ * The places the explorer offers: the runtime's own root, which the app's home is, and Android's shared storage
+ * beside it. Writing shared storage needs All files access, which Settings › Permissions asks for.
+ */
+private fun explorerPlaces(): List<ExplorerPlace> = listOf(
+  ExplorerPlace(WolfiRuntime.WOLFI_ROOT, R.string.files_place_root),
+  ExplorerPlace(WolfiRuntime.SHARED_STORAGE, R.string.files_place_shared),
+)
+
+/**
+ * The folders one explorer pane has shown, and which of them it shows now: the workspace it opened on, then each
+ * place the user switched to. Back and forward walk the list, as a browser does.
+ *
+ * Held for the composition's life rather than saved, so a recreated activity starts the pane on its workspace again;
+ * the trees it listed are saved (see [ExplorerTrees]), so returning to one is still free.
+ */
+internal class ExplorerRoots(initial: String) {
+  private var roots by mutableStateOf(listOf(initial))
+  private var index by mutableStateOf(0)
+
+  /** The folder the pane shows. */
+  val shown: String get() = roots.getOrElse(index) { roots.last() }
+
+  val canGoBack: Boolean get() = index > 0
+
+  val canGoForward: Boolean get() = index < roots.lastIndex
+
+  fun goBack() {
+    if (canGoBack) index--
+  }
+
+  fun goForward() {
+    if (canGoForward) index++
+  }
+
+  /** Shows [path], dropping what forward would have shown, as a browser does. */
+  fun open(path: String) {
+    if (path == shown) return
+    roots = roots.subList(0, index + 1) + path
+    index = roots.lastIndex
+  }
 }
 
 /**
@@ -87,28 +141,34 @@ internal fun ExplorerToggle(onClick: () -> Unit) {
 internal fun ExplorerPanel(
   cwd: String?,
   open: Boolean,
-  selectedPath: String?,
+  selectedFile: ExplorerSelection?,
   snackbar: SnackbarStackState,
   onClose: () -> Unit,
-  onOpenFile: (path: String) -> Unit,
-  onOpenCommit: (GitCommit) -> Unit,
+  onOpenFile: (root: String, path: String) -> Unit,
+  onOpenCommit: (root: String, commit: GitCommit) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val graph = LocalContext.current.appGraph
   val trees = rememberSaveable(saver = ExplorerTrees.saver(graph.fileHost)) { ExplorerTrees(graph.fileHost) }
   val repositories = remember(graph) { GitWorkspaces(graph.gitHost) }
-  val folder = cwd?.let(::folderKey)
-  val state = folder?.let { trees[it] }
-  val repository = folder?.let { repositories[it] }
+  val hello by graph.hostClient.lastHello.collectAsStateWithLifecycle()
+  val home = hello?.home?.takeIf { it.isNotEmpty() } ?: WolfiRuntime.WOLFI_ROOT
+  // The workspace it opened on, or a place the user switched to, which Back returns from.
+  val roots = remember(cwd, home) { ExplorerRoots(cwd ?: home) }
+  val folder = folderKey(roots.shown)
+  val state = trees[folder]
+  val repository = repositories[folder]
   val trusted = folder in graph.preferences.trustedRepositories.collectAsStateWithLifecycle().value
   val explorerTabs by graph.preferences.explorerTabs.collectAsStateWithLifecycle()
-  val changesAvailable = repository?.detection?.available == true
+  val changesAvailable = repository.detection?.available == true
   val shownTab = shownExplorerTab(explorerTabs[folder], changesAvailable)
   val scope = rememberCoroutineScope()
   val detect = rememberDetection(repository, trusted, snackbar)
-  val filesShown = repository == null || shownTab == ExplorerTab.Files
+  // The open file is highlighted only in the folder it was opened from, which the pane may have moved away from.
+  val selectedPath = selectedFile?.takeIf { folderKey(it.root) == folder }?.path
+  val filesShown = shownTab == ExplorerTab.Files
   // Launched in the panel's scope, so switching back to Changes mid-listing doesn't abort it.
-  LaunchedEffect(state, open, filesShown) { if (open && filesShown) scope.launch { state?.refresh() } }
+  LaunchedEffect(state, open, filesShown) { if (open && filesShown) scope.launch { state.refresh() } }
   LaunchedEffect(repository, open) { if (open) detect() }
   Column(
     modifier = modifier
@@ -120,21 +180,24 @@ internal fun ExplorerPanel(
     ExplorerHeader(
       tabs = if (changesAvailable) ExplorerTab.entries else listOf(ExplorerTab.Files),
       shown = shownTab,
-      onSelect = { tab -> folder?.let { graph.preferences.setExplorerTab(it, tab) } },
+      onSelect = { tab -> graph.preferences.setExplorerTab(folder, tab) },
       onClose = onClose,
+      roots = roots,
+      places = remember { explorerPlaces() },
+      home = home,
     )
     val content = Modifier.weight(1f)
     val refreshFiles = {
-      scope.launch { state?.refresh() }
+      scope.launch { state.refresh() }
       scope.launch { detect() }
     }
     when {
-      repository == null || shownTab == ExplorerTab.Files ->
-        FilesPane(state, selectedPath, snackbar, onRefresh = { refreshFiles() }, onOpenFile, content)
+      filesShown ->
+        FilesPane(state, selectedPath, snackbar, onRefresh = { refreshFiles() }, onOpenFile, content, roots.shown)
 
       !trusted -> TrustPrompt(
-        onTrust = { graph.preferences.trustRepository(repository.root) },
-        onNotNow = { graph.preferences.setExplorerTab(repository.root, ExplorerTab.Files) },
+        onTrust = { graph.preferences.trustRepository(folder) },
+        onNotNow = { graph.preferences.setExplorerTab(folder, ExplorerTab.Files) },
         modifier = content,
       )
 
@@ -143,7 +206,7 @@ internal fun ExplorerPanel(
         open = open,
         snackbar = snackbar,
         onDetect = detect,
-        onOpenCommit = onOpenCommit,
+        onOpenCommit = { commit -> onOpenCommit(roots.shown, commit) },
         modifier = content,
       )
     }
@@ -176,41 +239,37 @@ private fun rememberDetection(
   }
 }
 
-/** The Files tab: its toolbar over the workspace's tree; failures other than the top folder's show on [snackbar]. */
+/** The Files tab: its toolbar over the root folder's tree; failures other than the top folder's show on [snackbar]. */
 @Composable
 private fun FilesPane(
-  state: FileExplorerState?,
+  state: FileExplorerState,
   selectedPath: String?,
   snackbar: SnackbarStackState,
   onRefresh: () -> Unit,
-  onOpenFile: (path: String) -> Unit,
+  onOpenFile: (root: String, path: String) -> Unit,
   modifier: Modifier,
+  root: String,
 ) {
   val graph = LocalContext.current.appGraph
   val showHidden by graph.preferences.showHiddenFiles.collectAsStateWithLifecycle()
   val sort by graph.preferences.explorerSort.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
   val report = { error: String? -> if (error != null) scope.launch { snackbar.show(error) } }
-  val entries = if (state == null) {
-    emptyList()
-  } else {
-    remember(state.directories, state.expanded, showHidden, sort) {
-      explorerRows(state.directories, state.expanded, showHidden, sort)
-    }
+  val entries = remember(state.directories, state.expanded, showHidden, sort) {
+    explorerRows(state.directories, state.expanded, showHidden, sort)
   }
-  val anyShownExpanded = state != null && !state.restoringScroll && showsExpandedFolder(entries, state.expanded)
+  val anyShownExpanded = !state.restoringScroll && showsExpandedFolder(entries, state.expanded)
   Column(modifier = modifier) {
     ExplorerToolbar(
       sort = sort,
       showHidden = showHidden,
-      refreshing = state?.refreshing == true,
-      enabled = state?.directories?.isNotEmpty() == true,
+      refreshing = state.refreshing,
+      enabled = state.directories.isNotEmpty(),
       canCollapseAll = anyShownExpanded,
-      onCollapseAll = { state?.collapseAll(showHidden, sort) },
-      onNewFolder = { state?.creatingFolder = true },
+      onCollapseAll = { state.collapseAll(showHidden, sort) },
+      onNewFolder = { state.creatingFolder = true },
       onRefresh = onRefresh,
     )
-    if (state == null) return@Column
     LaunchedEffect(state, entries, state.relisted, state.refreshing) {
       if (!state.refreshing) state.restoreScroll(entries)
     }
@@ -219,7 +278,7 @@ private fun FilesPane(
       entries = entries,
       selectedPath = selectedPath,
       onToggle = { folder -> scope.launch { report(state.toggle(folder)) } },
-      onOpenFile = onOpenFile,
+      onOpenFile = { path -> onOpenFile(root, path) },
       onCreateFolder = { name -> scope.launch { report(state.createFolder(name)) } },
       onRetry = { scope.launch { state.refresh() } },
       modifier = Modifier.weight(1f),
@@ -227,34 +286,96 @@ private fun FilesPane(
   }
 }
 
-/** Paseo's explorer tabs, the shown one highlighted, and the close button. */
+/**
+ * Paseo's explorer tabs and close button, and where the panel is rooted: Back and Forward over the places it has
+ * shown, then one button per place, with the folder shown last so a pane rooted elsewhere still says where it is.
+ */
 @Composable
 private fun ExplorerHeader(
   tabs: List<ExplorerTab>,
   shown: ExplorerTab,
   onSelect: (ExplorerTab) -> Unit,
   onClose: () -> Unit,
+  roots: ExplorerRoots,
+  places: List<ExplorerPlace>,
+  home: String,
 ) {
   val colors = fangColors
-  Row(
-    modifier = Modifier
-      .padding(top = FangTokens.Spacing.s8)
-      .fillMaxWidth()
-      .height(56.dp)
-      .padding(start = FangTokens.Spacing.s8, end = FangTokens.Spacing.s12),
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s4),
-  ) {
-    for (tab in tabs) ExplorerTabButton(tab, active = tab == shown, onClick = { onSelect(tab) })
-    Spacer(modifier = Modifier.weight(1f))
-    IconButton28(
-      icon = R.drawable.ic_lucide_x,
-      contentDescription = stringResource(R.string.files_explorer_close),
-      onClick = onClose,
-      tint = colors.foregroundMuted,
-    )
+  Column {
+    Row(
+      modifier = Modifier
+        .padding(top = FangTokens.Spacing.s8)
+        .fillMaxWidth()
+        .height(56.dp)
+        .padding(start = FangTokens.Spacing.s8, end = FangTokens.Spacing.s12),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s4),
+    ) {
+      for (tab in tabs) ExplorerTabButton(tab, active = tab == shown, onClick = { onSelect(tab) })
+      Spacer(modifier = Modifier.weight(1f))
+      IconButton28(
+        icon = R.drawable.ic_lucide_x,
+        contentDescription = stringResource(R.string.files_explorer_close),
+        onClick = onClose,
+        tint = colors.foregroundMuted,
+      )
+    }
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(start = FangTokens.Spacing.s4, end = FangTokens.Spacing.s12, bottom = FangTokens.Spacing.s4),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s4),
+    ) {
+      IconButton28(
+        icon = R.drawable.ic_lucide_chevron_left,
+        contentDescription = stringResource(R.string.files_navigate_back),
+        onClick = roots::goBack,
+        enabled = roots.canGoBack,
+        tint = colors.foregroundMuted,
+        iconSize = FangTokens.IconSize.sm,
+      )
+      IconButton28(
+        icon = R.drawable.ic_lucide_chevron_right,
+        contentDescription = stringResource(R.string.files_navigate_forward),
+        onClick = roots::goForward,
+        enabled = roots.canGoForward,
+        tint = colors.foregroundMuted,
+        iconSize = FangTokens.IconSize.sm,
+      )
+      val rooted = roots.shown
+      for (place in places) {
+        ExplorerPlaceButton(place = place, active = folderKey(place.path) == folderKey(rooted)) { roots.open(place.path) }
+      }
+      Spacer(modifier = Modifier.weight(1f))
+      Text(
+        text = tildePath(rooted, home),
+        color = colors.foregroundMuted,
+        fontSize = FangTokens.FontSize.meta,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+    HorizontalDivider(thickness = 1.dp, color = colors.border)
   }
-  HorizontalDivider(thickness = 1.dp, color = colors.border)
+}
+
+/** One place the explorer can be rooted at, highlighted while it is the one shown. */
+@Composable
+private fun ExplorerPlaceButton(place: ExplorerPlace, active: Boolean, onClick: () -> Unit) {
+  val colors = fangColors
+  Text(
+    text = stringResource(place.label),
+    modifier = Modifier
+      .clip(RoundedCornerShape(FangTokens.Radius.md))
+      .background(if (active) sidebarHighlight() else Color.Transparent)
+      .clickable(onClick = onClick)
+      .semantics { selected = active }
+      .padding(horizontal = FangTokens.Spacing.s8, vertical = FangTokens.Spacing.s4),
+    color = if (active) colors.foreground else colors.foregroundMuted,
+    fontSize = FangTokens.FontSize.meta,
+    maxLines = 1,
+  )
 }
 
 /** Paseo's explorer tab: its name, muted unless it's the [active] one, which is highlighted. */
