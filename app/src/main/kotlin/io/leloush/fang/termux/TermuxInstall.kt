@@ -126,7 +126,7 @@ internal object TermuxInstall {
    * Android's prompt to exempt Termux from battery optimization when Termux [canPromptBackground]. Otherwise Termux's
    * battery page, an undocumented Settings action some phones lack, and failing that its app info.
    */
-  @SuppressLint("BatteryLife") // Fang Harness isn't on Google Play; Termux runs its agent, which must not stop mid-task.
+  @SuppressLint("BatteryLife") // Not on Google Play: Termux runs the agent, which must not stop mid-task.
   fun requestBackground(context: Context) {
     val termux = "package:$PACKAGE_NAME".toUri()
     if (canPromptBackground(context)) {

@@ -44,9 +44,9 @@ import io.leloush.fang.R
 import io.leloush.fang.agent.NoticeLevel
 import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.agent.text
+import io.leloush.fang.ui.components.FangMarkdown
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.MarkdownCache
-import io.leloush.fang.ui.components.FangMarkdown
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import kotlin.math.roundToInt

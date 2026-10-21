@@ -43,10 +43,11 @@ internal object TermuxSetup {
    * the host does.
    */
   fun requestFDroidStorage(context: Context) {
-    val command = "echo \"Fang Harness: waiting for storage access. Switch back to Fang Harness any time.\"; sleep 1; " +
-      "termux-setup-storage && " +
-      "for i in $(seq 60); do [ -w \"${'$'}{EXTERNAL_STORAGE:-/sdcard}\" ] && break; sleep 1; done; " +
-      "am start -n ${context.packageName}/${MainActivity::class.java.name} >/dev/null"
+    val command =
+      "echo \"Fang Harness: waiting for storage access. Switch back to Fang Harness any time.\"; sleep 1; " +
+        "termux-setup-storage && " +
+        "for i in $(seq 60); do [ -w \"${'$'}{EXTERNAL_STORAGE:-/sdcard}\" ] && break; sleep 1; done; " +
+        "am start -n ${context.packageName}/${MainActivity::class.java.name} >/dev/null"
     HostLauncher.runInTerminal(context, "storage", command)
     TermuxInstall.openTermux(context)
   }

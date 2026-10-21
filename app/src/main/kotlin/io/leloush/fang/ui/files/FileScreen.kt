@@ -55,9 +55,9 @@ import io.leloush.fang.files.FileState
 import io.leloush.fang.files.FileTab
 import io.leloush.fang.host.FileContent
 import io.leloush.fang.ui.chat.MenuButton
+import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.HeaderBar
 import io.leloush.fang.ui.components.IconButton28
-import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.SheetRow
 import io.leloush.fang.ui.components.fileLanguage
 import io.leloush.fang.ui.components.rememberHighlightedCode

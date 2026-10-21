@@ -25,9 +25,9 @@ import io.leloush.fang.appGraph
 import io.leloush.fang.git.CommitDiffState
 import io.leloush.fang.git.CommitTab
 import io.leloush.fang.ui.chat.MenuButton
+import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.HeaderBar
 import io.leloush.fang.ui.components.IconButton28
-import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.SheetRow
 import io.leloush.fang.ui.files.ExplorerToggle
 import io.leloush.fang.ui.sidebar.tildePath

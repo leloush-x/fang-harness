@@ -37,10 +37,10 @@ import androidx.compose.ui.unit.dp
 import io.leloush.fang.R
 import io.leloush.fang.agent.ImagePart
 import io.leloush.fang.agent.TimelineItem
+import io.leloush.fang.ui.components.FangMarkdown
 import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.MarkdownCache
-import io.leloush.fang.ui.components.FangMarkdown
 import io.leloush.fang.ui.components.SimmeringPot
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors

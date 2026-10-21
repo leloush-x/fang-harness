@@ -40,9 +40,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.core.net.toUri
 import io.leloush.fang.R
 import io.leloush.fang.appGraph
+import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.LucideIcon
-import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.SheetRow
 import io.leloush.fang.ui.components.SimmeringPot
 import io.leloush.fang.ui.settings.copyToClipboard

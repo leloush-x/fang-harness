@@ -40,9 +40,9 @@ import io.leloush.fang.appGraph
 import io.leloush.fang.data.folderKey
 import io.leloush.fang.host.GitCommit
 import io.leloush.fang.host.GitDiffMode
+import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.LucideIcon
-import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.files.Spinner
 import io.leloush.fang.ui.onboarding.PrimaryButton
