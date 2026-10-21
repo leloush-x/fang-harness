@@ -136,15 +136,11 @@ jobs:
           RELEASE_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 }}
         run: |
           mkdir dist
-          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
-            # No release key configured: ship the unsigned APK rather than
-            # failing the release.
-            echo "No RELEASE_KEYSTORE_BASE64 configured; publishing the unsigned APK"
-            cp unsigned/fang-unsigned.apk "dist/fang-v$VERSION_NAME.apk"
-          else
-            BUILD_TOOLS="$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION" \
-              scripts/sign-release-apk.sh unsigned/fang-unsigned.apk "dist/fang-v$VERSION_NAME.apk"
-          fi
+          # An unsigned APK cannot be installed, so there is no fallback here:
+          # a release without a key fails instead of publishing something the
+          # device will refuse.
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION" \
+            scripts/sign-release-apk.sh unsigned/fang-unsigned.apk "dist/fang-v$VERSION_NAME.apk"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
