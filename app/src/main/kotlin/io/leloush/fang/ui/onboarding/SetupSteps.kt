@@ -58,6 +58,7 @@ internal fun stepSpec(step: SetupStep, state: OnboardingState, onAction: (SetupA
     )
 
     SetupStep.InstallPi -> installPiSpec(state, onAction)
+
     SetupStep.SignIn -> signInSpec(state, onAction)
   }
 

@@ -73,9 +73,13 @@ internal fun rememberSetupActions(
   val requestPermission = rememberPermissionRequest(state.blockedPermissions, onPermissionResult)
   return { action ->
     when (action) {
+
       SetupAction.PrepareRuntime -> SetupProgress.prepareRuntime(graph)
+
       SetupAction.AllowNotifications -> requestPermission(Manifest.permission.POST_NOTIFICATIONS)
+
       SetupAction.AllowBackground -> context.startSafely { requestBackgroundExemption(context) }
+
       SetupAction.AllowStorage -> context.startSafely {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
           openAllFilesSettings(context)
@@ -83,8 +87,11 @@ internal fun rememberSetupActions(
           requestPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
       }
+
       SetupAction.InstallPi -> SetupProgress.install(graph)
+
       is SetupAction.Login -> onLogin(action.providerId)
+
       SetupAction.AddProvider -> onAddProvider()
     }
   }
