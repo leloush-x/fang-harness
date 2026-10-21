@@ -297,7 +297,11 @@ private fun ExplorerHeader(
       )
       val rooted = roots.shown
       for (place in places) {
-        ExplorerPlaceButton(place = place, active = folderKey(place.path) == folderKey(rooted)) { roots.open(place.path) }
+        ExplorerPlaceButton(
+          place = place,
+          active = folderKey(place.path) == folderKey(rooted),
+          onClick = { roots.open(place.path) },
+        )
       }
       Spacer(modifier = Modifier.weight(1f))
       Text(
