@@ -10,10 +10,10 @@ import io.leloush.fang.data.folderKey
 import io.leloush.fang.data.sameFolder
 import io.leloush.fang.host.HostRejected
 import io.leloush.fang.host.SessionInfo
+import io.leloush.fang.wolfi.WolfiRuntime
 import io.leloush.fang.workspace.Pane
 import io.leloush.fang.workspace.PaneItem
 import io.leloush.fang.workspace.WorkspaceTab
-import io.leloush.fang.wolfi.WolfiRuntime
 import java.io.IOException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
