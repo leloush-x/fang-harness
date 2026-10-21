@@ -47,3 +47,7 @@ jobs:
 
       - name: Check and build
         run: ./gradlew check :app:assembleDebug
+
+      - name: Verify the Wolfi runtime is packaged
+        run: |
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E 'assets/fang-host.mjs|lib/(arm64-v8a|x86_64)/lib(proot|loader)\.so'
