@@ -22,7 +22,19 @@ data class TimelineState(
    * or the run ends. `clear_queue` still returns them meanwhile, yet Pi delivers them anyway.
    */
   val queueInFlight: Boolean = false,
-)
+) {
+  /**
+   * Two states are the same only when they are the same object.
+   *
+   * A [kotlinx.coroutines.flow.StateFlow] compares every new value with the one it holds, and a generated `equals`
+   * would walk the whole chat: every item, and the streamed text with it, on every delta of a reply. That is the
+   * cost a long chat's streaming rests on, paid on the thread that reads Pi's events. The state is replaced whenever
+   * anything changes, so identity tells two states apart, and the screen's own throttle decides how often it draws.
+   */
+  override fun equals(other: Any?): Boolean = this === other
+
+  override fun hashCode(): Int = System.identityHashCode(this)
+}
 
 /**
  * The shortest time between two screen updates of streamed content. Every update re-parses and lays out the
