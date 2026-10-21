@@ -18,25 +18,25 @@ const { c2s, s2c } = sessionKeys(K, nonceC, nonceS);
 describe("fang-helper/1 vectors", () => {
   it("derives the handshake MACs and session keys", () => {
     expect(serverMac(K, nonceC, nonceS).toString("hex")).toBe(
-      "c92c57837f8549ddfb5a965ace997642ce25f3e3b136a6bf561433663f3a1461",
+      "f1c6b6cf5f75f497d3fffdd4bfc70890166e49fbe2b9b046ed4f6ae2c8e83c5f",
     );
     expect(clientMac(K, nonceC, nonceS).toString("hex")).toBe(
-      "9fb54e8cc24ecc55dea53d1287d19d3bcfb851c899430f38410a4df7a93503ab",
+      "17066979ccce93fca0d1f993543eb1aa423f6d842255f0435a01a415c70869e7",
     );
-    expect(c2s.toString("hex")).toBe("eb0b435f5cf0a7eb2819992de866100bbfc6a262e919e47e01853e37d871fab7");
-    expect(s2c.toString("hex")).toBe("3a4ec171786f7ad7f37d65dfa5744436aab39444b5c7823744a1225b0e36f487");
+    expect(c2s.toString("hex")).toBe("35ab6ce27d291c5642acc963f0c3d78fd4f38f2bd2d004df345a7426c86f0e71");
+    expect(s2c.toString("hex")).toBe("a33408c6299154bdae49759e131d428c279c3b0d4831e9163b445c9881144aaf");
   });
 
   it("seals frames with a per-direction counter", () => {
     const client = new FrameSealer(c2s);
     expect(client.sealBody({ type: "hello" }).toString("hex")).toBe(
-      "d63a72ad9216ab54d318f274debda5af6abd7a1a6216a23ca62b049800c61723",
+      "fcfb5ab65cc49cad195bbf471ee6b9639bba1af4ed826e138ba16697d69a527c",
     );
     expect(client.sealBody({ type: "hello" }).toString("hex")).toBe(
-      "740b781b9f3a35201158d88e92de83752160aa8dfd430a4c5ae8f2520ca20250",
+      "5696811a9cb57adb907792b93963ec3976a36d936b9d09578f2a50240889eef8",
     );
     expect(new FrameSealer(s2c).sealBody({ type: "hello", version: "x" }).toString("hex")).toBe(
-      "a916a91721dc194149655fc1fa133d8a8a5746ae372aaa1199edd92cc04ab9340a0d56b15a8f2a0ba991c0bf6156",
+      "44728e25fc3bd94ab9cab296051bd0c4cba4d3da3e5faaa19ee8ef8ee2641750c6ed4f6817dd05a9c6b7a4a39f09",
     );
   });
 
@@ -73,10 +73,10 @@ describe("pairing vector", () => {
   const token = Buffer.alloc(32, 0x11);
   const sid = "00112233445566778899aabbccddeeff";
   const body =
-    "222222222222222222222222319d2a307af21c87b8dbc08698713d1eca98a06961f19086e5b493fa03650cce9202f9300b110c5b7284c10e82768b8e";
+    "22222222222222222222222220732b98962a8c00ec1da107e4dd015de1ef4ac4195fdd716281e640626ad134d00ecce68873851e6749628d3d071825";
 
   it("derives pk and decrypts the key body", () => {
-    expect(pairingKey(token).toString("hex")).toBe("5f0176d40fe08c42eb95805e16f536883a652dc2778578b27bb197ccf0d9e34c");
+    expect(pairingKey(token).toString("hex")).toBe("c30194d6f11f4ca9fcb6e555a793ef35e5b136c22207869f9f6eb0c04143af6a");
     expect(decryptPairingBody(body, token, sid)).toEqual(K);
   });
 

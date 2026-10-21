@@ -396,7 +396,7 @@ describe("helper pair", () => {
   const sid = "00112233445566778899aabbccddeeff";
   const token = "11".repeat(32);
   const body =
-    "222222222222222222222222319d2a307af21c87b8dbc08698713d1eca98a06961f19086e5b493fa03650cce9202f9300b110c5b7284c10e82768b8e";
+    "22222222222222222222222220732b98962a8c00ec1da107e4dd015de1ef4ac4195fdd716281e640626ad134d00ecce68873851e6749628d3d071825";
   const vectorKey = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
 
   async function pairWith(status: number): Promise<{ code: number | null; stderr: string }> {

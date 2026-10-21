@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { AppInputRouter, type ChannelMessage, ChannelReader, MAX_CHANNEL_LINE, OutputMerger } from "../src/channel.js";
+import {
+  AppInputRouter,
+  type ChannelMessage,
+  ChannelReader,
+  CHANNEL_TYPE,
+  MAX_CHANNEL_LINE,
+  OutputMerger,
+} from "../src/channel.js";
 
 /** [data] cut into chunks at pseudo-random points from [seed], so every run tries the same cuts. */
 function chunks(data: Buffer, seed: number): Buffer[] {
@@ -64,10 +71,13 @@ describe("AppInputRouter", () => {
   it("gives Pi the held back start of a line when the input ends", () => {
     const toPi: Buffer[] = [];
     const router = new AppInputRouter((data) => toPi.push(Buffer.from(data)), () => {}, () => {});
-    router.push(Buffer.from(`{"type":"pip`));
+    // A prefix shorter than the whole channel prefix, so the router cannot
+    // tell yet whether this is a channel line.
+    const start = `{"type":"${CHANNEL_TYPE}`.slice(0, 13);
+    router.push(Buffer.from(start));
     expect(toPi).toEqual([]);
     router.end();
-    expect(Buffer.concat(toPi).toString()).toBe(`{"type":"pip`);
+    expect(Buffer.concat(toPi).toString()).toBe(start);
   });
 
   it("drops a channel line that is too long or not a message, and goes on with the next lines", () => {
