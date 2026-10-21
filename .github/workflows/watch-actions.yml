@@ -11,6 +11,8 @@ on:
   workflow_dispatch:
 
 permissions:
+  # Reading the runs needs actions: read; without it the API answers 403.
+  actions: read
   contents: read
   issues: write
 
