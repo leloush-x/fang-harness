@@ -46,6 +46,8 @@ keystore="$work/release.p12"
   "$work/aligned.apk"
 
 certificates=$("$BUILD_TOOLS/apksigner" verify --print-certs "$signed")
+# apksigner verifies the signature for the app's own minimum, Android 10, and a device that cannot verify it
+# refuses the package with nothing but "the package appears to be invalid".
 # apksigner prints one digest per signature scheme; they must all name the one release certificate.
 actual=$(sed -n 's/^.*certificate SHA-256 digest: //p' <<<"$certificates" | sort -u)
 expected=$(printf '%s' "$RELEASE_CERT_SHA256" | tr -d ':' | tr 'A-F' 'a-f')
@@ -53,3 +55,7 @@ if [ "$actual" != "$expected" ]; then
   echo "$signed is signed by $actual, not the release certificate $expected" >&2
   exit 1
 fi
+
+# apksigner keeps the alignment it was given, and a device with 16 KB memory pages needs it: an APK that lost the
+# alignment is refused on those devices.
+"$BUILD_TOOLS/zipalign" -c -P 16 -v 4 "$signed"

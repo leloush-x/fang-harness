@@ -104,9 +104,11 @@ gradle properties `fang.versionName` and `fang.versionCode`, which the release w
 
 ## Signing the release
 
-Every push to `main` publishes a signed APK as GitHub release `v0.0.N`. The workflow has three
-jobs: `build` (runs `./gradlew check :app:assembleRelease` with no secrets), `sign` (holds the key),
-and `publish`.
+Every push to `main` publishes a signed APK as GitHub release `v0.1.N`, where N is one more than the
+latest release's number, starting at 10. The version code is a hundred more than the number, so it stays
+above the codes of the 0.0 series: Android refuses a build whose code is not higher than the one it would
+replace. The workflow has three jobs: `build` (runs `./gradlew check :app:assembleRelease` with no
+secrets), `sign` (holds the key), and `publish`.
 
 The key lives in the repository's secrets and variables, not in the repo:
 
@@ -118,8 +120,18 @@ unsigned APK cannot be installed at all. If you need a new key, generate a PKCS1
 and set all four; keep the keystore and its password somewhere durable, because losing them means
 the installed app can never be updated.
 
-`scripts/sign-release-apk.sh` checks the signed APK carries the expected certificate, and the
-attestation step is skipped automatically on a private repository.
+`scripts/sign-release-apk.sh` checks the signed APK carries the expected certificate, that the
+signature verifies for the app's own minimum, and that the APK is still aligned for a device with 16 KB
+memory pages. The `sign` job checks the signed APK as well, since that is the file that reaches a phone:
+the version, the signature, the alignment and the runtime the app needs have to be in it. The attestation
+step is skipped automatically on a private repository.
+
+The release notes carry the APK's size and SHA-256, and say which asset to install. A phone that
+downloads the file over a slow link can end up with a part of it, and the installer then says only that
+"the package appears to be invalid"; the notes let the user see that the file they hold is not the
+release. The build's own artifact is named `unsigned-apk-NOT-INSTALLABLE` for the same reason: an
+unsigned APK cannot be installed at all, and one saved under the name of the release is a file a phone
+refuses.
 
 ## Testing on devices
 

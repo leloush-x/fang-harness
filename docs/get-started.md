@@ -14,7 +14,7 @@ Setup takes a few minutes, and Fang Harness does most of it for you. It checks o
 
 ## Install Fang Harness
 
-[Download the latest APK](https://github.com/leloush-x/fang-harness/releases/latest) from the releases page on your phone and open it to install. Android asks you to allow installs from your browser or file manager the first time. Later releases install over it as updates and keep your chats and settings.
+[Download the latest APK](https://github.com/leloush-x/fang-harness/releases/latest) from the releases page on your phone and open it to install. On the release page, download the file named `fang-v<VERSION>.apk`: it is the only one that installs, and the release notes say how big it is and what it should hash to. A copy of another size is a download that was cut short, and Android will refuse it with "the package appears to be invalid": download it again rather than install it. Android asks you to allow installs from your browser or file manager the first time. Later releases install over it as updates and keep your chats and settings.
 
 ### Build from source
 

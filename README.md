@@ -80,18 +80,24 @@ your code, and every command it runs on the phone itself:
 ### Download a release
 
 [Download the latest APK](https://github.com/leloush-x/fang-harness/releases/latest) from the releases page on
-your phone and open it to install. Android asks you to allow installs from your browser or file
-manager the first time. Later releases install over it as updates and keep your chats and settings.
+your phone and open it to install. On the release page, download the file named `fang-v<VERSION>.apk`: it is
+the only one that installs, and the release notes say how big it is and what it should hash to. If the copy
+on your phone is a different size, the download was cut short, and the installer will refuse it with
+"the package appears to be invalid": download it again rather than install it. Android asks you to allow
+installs from your browser or file manager the first time. Later releases install over it as updates and
+keep your chats and settings.
 Open the app and tap **Get started**: setup downloads and unpacks Wolfi OS, installs its tools, and
 installs the agent for you.
 
-Each release also lists the APK's SHA-256 checksum in `SHA256SUMS`, and you can confirm that GitHub
-Actions built it from this repository with the [GitHub CLI](https://cli.github.com):
+Each release also lists the APK's SHA-256 checksum in `SHA256SUMS`, and you can confirm it on a computer
+with the [GitHub CLI](https://cli.github.com):
 
 ```sh
 sha256sum --check SHA256SUMS
-gh attestation verify fang-v<VERSION>.apk --repo leloush-x/fang-harness
 ```
+
+The repository is private, so GitHub does not keep a build provenance attestation for its releases and
+there is nothing to verify with `gh attestation verify`.
 
 ### Build from source
 
