@@ -28,6 +28,12 @@ android {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
   }
+
+  // The same toolchain the app uses. Without it the tests run on the JDK that runs Gradle, which is older than the
+  // class files this module's own compile options produce, and cannot load them.
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(26)
+  }
 }
 
 dependencies {
