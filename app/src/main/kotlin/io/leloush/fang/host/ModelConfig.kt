@@ -18,6 +18,14 @@ internal data class ModelConfig(
   val maxTokens: Long? = null,
   val cost: ModelCost? = null,
 ) {
+  /**
+   * Whether the model costs nothing: an id the provider marks free, or a price of zero.
+   *
+   * An id marked free is the provider's own word for it; a price of zero says the same thing. A model with no price
+   * at all is not called free, because nothing is known about it.
+   */
+  fun isFree(): Boolean = id.endsWith(":free") || cost?.isZero() == true
+
   fun toJson(): JSONObject {
     val json = JSONObject().put("id", id)
     name?.let { json.put("name", it) }
@@ -70,6 +78,9 @@ internal data class ModelConfig(
 
 /** Prices in US dollars per million tokens; Pi needs all four together. */
 internal data class ModelCost(val input: Double, val output: Double, val cacheRead: Double, val cacheWrite: Double) {
+  /** Whether every price is zero, which makes the model free. */
+  fun isZero(): Boolean = input == 0.0 && output == 0.0 && cacheRead == 0.0 && cacheWrite == 0.0
+
   fun toJson(): JSONObject = JSONObject()
     .put("input", input)
     .put("output", output)

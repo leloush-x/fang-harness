@@ -4,22 +4,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,12 +23,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import io.leloush.fang.R
 import io.leloush.fang.appGraph
 import io.leloush.fang.host.ModelConfig
 import io.leloush.fang.ui.components.IconButton28
-import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.SimmeringPot
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
@@ -95,7 +88,7 @@ internal fun AddModelsScreen(draft: ModelDraft, onBack: () -> Unit) {
     }
     FieldLabel(stringResource(R.string.models_custom))
     val custom = draft.added.filter { it.id !in availableIds }.map(ModelForm::preview)
-    if (custom.isNotEmpty()) ModelPickList(models = custom, draft = draft)
+    if (custom.isNotEmpty()) ModelRows(custom, draft)
     CustomModelField(
       input = draft.custom,
       onAdd = {
@@ -152,16 +145,23 @@ internal fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> U
   }
 }
 
-/** The model's name (or id), then its id when named, thinking, images and context window. */
+/** What a model can do: thinking, images and the context window. */
 @Composable
-internal fun modelSubtitle(config: ModelConfig): String? {
+internal fun modelDetails(config: ModelConfig): String? {
   val parts = buildList {
-    if (config.name != null) add(config.id)
     if (config.reasoning == true) add(stringResource(R.string.model_summary_thinking))
     if (config.images == true) add(stringResource(R.string.model_summary_images))
     config.contextWindow?.let { add(stringResource(R.string.model_summary_context, formatTokens(it))) }
   }
   return parts.joinToString(stringResource(R.string.separator_dot)).ifEmpty { null }
+}
+
+/** The model's name (or id), then its id when named, thinking, images and context window. */
+@Composable
+internal fun modelSubtitle(config: ModelConfig): String? {
+  val details = modelDetails(config)
+  if (config.name == null) return details
+  return listOfNotNull(config.id, details).joinToString(stringResource(R.string.separator_dot))
 }
 
 /** 272000 → "272K", 1050000 → "1.05M", with the app language's digits and unit. */
@@ -182,28 +182,6 @@ internal fun formatTokens(count: Long): String {
 
 private const val THOUSAND = 1_000L
 private const val MILLION = 1_000_000L
-
-@Composable
-private fun ModelPickList(models: List<ModelConfig>, draft: ModelDraft) {
-  val colors = fangColors
-  SettingsSection(title = null) {
-    models.forEachIndexed { index, config ->
-      if (index > 0) SettingsDivider()
-      val added = draft.isAdded(config.id)
-      SettingsRow(
-        title = config.name ?: config.id,
-        subtitle = modelSubtitle(config),
-        onClick = { draft.toggle(config) },
-      ) {
-        LucideIcon(
-          icon = if (added) R.drawable.ic_lucide_check else R.drawable.ic_lucide_plus,
-          contentDescription = null,
-          tint = if (added) colors.accent else colors.foregroundMuted,
-        )
-      }
-    }
-  }
-}
 
 @Composable
 private fun CustomModelField(input: CustomModelInput, onAdd: () -> Unit) {

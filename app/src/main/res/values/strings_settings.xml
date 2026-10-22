@@ -198,6 +198,8 @@
     <string name="provider_keep_editing">Keep editing</string>
 
     <string name="models_available">Available models</string>
+    <string name="models_free">Free</string>
+    <string name="models_all">All models</string>
     <string name="models_none">The endpoint didn\'t list any models.</string>
     <string name="models_custom">Custom models</string>
     <string name="models_custom_hint">Model ID</string>
