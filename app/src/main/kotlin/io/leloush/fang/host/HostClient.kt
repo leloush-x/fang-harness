@@ -276,8 +276,10 @@ internal class HostClient(
     scope.launch {
       try {
         utility.request(JSONObject().put("type", UTILITY_REQUEST).put("op", "auth_status"), UTILITY_TIMEOUT_MILLIS)
-      } catch (failure: Exception) {
+      } catch (failure: IOException) {
         Log.i(TAG, "Warming the runtime host did not work: ${failure.message}")
+      } catch (rejected: HostRejected) {
+        Log.i(TAG, "Warming the runtime host was refused: ${rejected.error}")
       }
     }
   }
