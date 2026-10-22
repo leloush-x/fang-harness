@@ -67,7 +67,7 @@ private fun ModelSection(
       modifier = Modifier
         .fillMaxWidth()
         .clickable(onClick = onToggle)
-        .padding(horizontal = FangTokens.Spacing.s16, vertical = FangTokens.Spacing.s10),
+        .padding(horizontal = FangTokens.Spacing.s16, vertical = FangTokens.Spacing.s8),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
     ) {
