@@ -91,6 +91,7 @@ class WolfiRuntime(context: Context) {
 
   /** The full PRoot command for a program inside the rootfs. */
   fun command(vararg command: String): List<String> {
+    ensureMachineFiles()
     val libraryDir = app.applicationInfo.nativeLibraryDir
     val proot = File(libraryDir, "libproot.so")
     if (!proot.canExecute()) throw IOException("libproot.so is missing")
@@ -198,6 +199,19 @@ class WolfiRuntime(context: Context) {
     }.getOrDefault("")
   }
 
+  /**
+   * Writes the files the rootfs leaves out because they are the machine's own, when they are missing.
+   *
+   * The archive excludes them, as an image excludes them, so without this the runtime has no hosts file and anything
+   * that resolves `localhost` fails. It is done for every process rather than at setup, so a runtime that was
+   * unpacked before this was true is fixed the first time it is used, and a file the user changed is left alone.
+   */
+  @Synchronized
+  private fun ensureMachineFiles() {
+    if (!rootfsReady()) return
+    MachineFiles.ensure(File(rootfs, "etc"))
+  }
+
   private fun rootfsReady(): Boolean = File(rootfs, "usr/bin/bash").exists() && File(rootfs, "etc/os-release").exists()
 
   private fun toolsReady(): Boolean =
@@ -215,11 +229,7 @@ class WolfiRuntime(context: Context) {
   private fun prepareRootfs() {
     File(rootfs, "tmp").mkdirs()
     runCatching { Os.chmod(File(rootfs, "tmp").absolutePath, 0x3FF) }
-    val resolv = File(rootfs, "etc/resolv.conf")
-    if (!resolv.exists() || resolv.length() == 0L) {
-      resolv.delete()
-      resolv.writeText("nameserver 1.1.1.1\nnameserver 8.8.8.8\n")
-    }
+    MachineFiles.ensure(File(rootfs, "etc"))
     // The terminal and Pi both read these; an empty root has neither, and Bash's own defaults are enough.
     val bashrc = File(rootfs, "root/.bashrc")
     if (!bashrc.exists()) {
