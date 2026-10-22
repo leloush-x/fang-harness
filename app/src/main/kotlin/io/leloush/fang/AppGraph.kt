@@ -54,6 +54,7 @@ internal class AppGraph(private val application: Application) {
   val hostClient = HostClient(
     application,
     foreground = ProcessLifecycleOwner.get().lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.STARTED) },
+    scope = scope,
   )
   val keepAlive = KeepAlive(application)
   val wolfi = WolfiRuntime(application)
@@ -94,6 +95,9 @@ internal class AppGraph(private val application: Application) {
   val chatViews = ChatViews()
 
   init {
+    // The host that answers the questions asked most is started now, in the background: loading Pi's own software
+    // takes about ten seconds under PRoot, and doing it here means the screens that need it find it ready.
+    hostClient.warm()
     // The app's home is the runtime's own root now; what was saved on Android's shared storage follows it, once.
     preferences.adoptHome(WolfiRuntime.WOLFI_ROOT, LEGACY_HOME)
     holdWhileWorking()

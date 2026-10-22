@@ -26,6 +26,7 @@ import { sessions } from "./modes/sessions.js";
 import { subscriptionSave } from "./modes/subscription-save.js";
 import { terminal } from "./modes/terminal.js";
 import { updateExtensions } from "./modes/update-extensions.js";
+import { utility } from "./modes/utility.js";
 import { startSyntheticProc } from "./synthetic-proc.js";
 
 const PROTOCOL = 1;
@@ -126,6 +127,8 @@ async function main(): Promise<void> {
       return respond(ctx, files);
     case "git":
       return respond(ctx, git);
+    case "utility":
+      return respond(ctx, utility);
     case "browse":
       return respond(ctx, browse);
     case "save_attachments":

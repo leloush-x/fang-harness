@@ -6,6 +6,7 @@ import io.leloush.fang.data.BundledExtension
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.Base64
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
@@ -28,13 +30,25 @@ import org.json.JSONObject
  * in Doze it blocks the host's connection back to Fang Harness once Fang Harness's foreground service stops, so the
  * launch would fail. Nothing launched from the background needs to run before the user returns: reconnects and session
  * lists are only seen on screen.
+ *
+ * The questions asked most — the session list, the sign-in state, the models an endpoint offers — are asked of one
+ * host that stays up ([utility]), because each of them used to start a process that loaded Pi's own software, which
+ * takes about ten seconds under PRoot. [warm] starts that host in the background, so the cost is paid while the user
+ * is reading the app rather than when they open a screen.
  */
 @Suppress("TooManyFunctions") // One typed wrapper per host mode, beside the launch code they share.
-internal class HostClient(context: Context, private val foreground: Flow<Boolean>) {
+internal class HostClient(
+  context: Context,
+  private val foreground: Flow<Boolean>,
+  private val scope: CoroutineScope,
+) {
   private val context = context.applicationContext
   private val helloState = MutableStateFlow<HostHello?>(null)
   private val failureState = MutableStateFlow<HostFailure?>(null)
   private val installingState = MutableStateFlow(false)
+
+  /** The host that answers the questions asked most, kept up for a while after the last one. */
+  private val utility = SharedHost(scope, UTILITY_IDLE_MILLIS, ::openUtility)
 
   /**
    * The bundled `pi/package.json`: Pi and the packages Fang Harness's extensions import; `ensure` installs it, `rpc` requires
@@ -96,7 +110,8 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
 
   /** Newest first. */
   suspend fun sessions(): List<SessionInfo> =
-    call("sessions", JSONObject()).optJSONArray("sessions").objects().map(SessionInfo::from)
+    utilityData("sessions", JSONObject(), UTILITY_TIMEOUT_MILLIS)
+      .optJSONArray("sessions").objects().map(SessionInfo::from)
 
   /** Deletes the session files at [paths]; one that is already gone counts as deleted. */
   suspend fun deleteSessions(paths: List<String>) {
@@ -105,9 +120,11 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
 
   /** A session's messages as Pi's RPC `get_messages` reports them, read without starting Pi. */
   suspend fun sessionMessages(path: String): JSONArray =
-    call("session_messages", JSONObject().put("path", path)).optJSONArray("messages") ?: JSONArray()
+    utilityData("session_messages", JSONObject().put("path", path), UTILITY_TIMEOUT_MILLIS)
+      .optJSONArray("messages") ?: JSONArray()
 
-  suspend fun authStatus(): AuthStatus = AuthStatus.from(call("auth_status", JSONObject()))
+  suspend fun authStatus(): AuthStatus =
+    AuthStatus.from(utilityData("auth_status", JSONObject(), UTILITY_TIMEOUT_MILLIS))
 
   /** Starts a host only for its hello, so [lastHello] reports the Wolfi runtime as it is now, such as its storage access. */
   suspend fun hello() {
@@ -136,12 +153,15 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
 
   /** The endpoint's models, each prefilled from its own metadata and then Pi's catalogue. */
   suspend fun providerModels(baseUrl: String, apiKey: String, api: String): List<ModelConfig> =
-    call("provider_models", JSONObject().put("baseUrl", baseUrl).put("apiKey", apiKey).put("api", api))
-      .optJSONArray("models").objects().map(ModelConfig::from)
+    utilityData(
+      "provider_models",
+      JSONObject().put("baseUrl", baseUrl).put("apiKey", apiKey).put("api", api),
+      UTILITY_TIMEOUT_MILLIS,
+    ).optJSONArray("models").objects().map(ModelConfig::from)
 
   /** Pi's catalogue settings for [ids], in order; an unknown id comes back with only its id. */
   suspend fun modelDefaults(ids: List<String>, api: String): List<ModelConfig> =
-    call("model_defaults", JSONObject().put("ids", JSONArray(ids)).put("api", api))
+    utilityData("model_defaults", JSONObject().put("ids", JSONArray(ids)).put("api", api), UTILITY_TIMEOUT_MILLIS)
       .optJSONArray("models").objects().map(ModelConfig::from)
 
   suspend fun providerSave(provider: ProviderConfig) {
@@ -240,6 +260,44 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
    * channel ends the host. Cancelling the caller closes it too.
    */
   suspend fun openFiles(): HostChannel = openRequestHost("files", "fang_files_ready")
+
+  /**
+   * Starts a `utility` host for the questions asked most, and returns its channel once the host is ready for
+   * requests; closing the channel ends the host. Cancelling the caller closes it too.
+   */
+  suspend fun openUtility(): HostChannel = openRequestHost("utility", "fang_utility_ready")
+
+  /**
+   * Starts the host that answers the questions asked most, in the background, so the cost of loading Pi's own
+   * software is paid while the user reads the app instead of when they open a screen. A failure is ignored: the
+   * host is started again with the first question that needs it.
+   */
+  fun warm() {
+    scope.launch {
+      try {
+        utility.request(JSONObject().put("type", UTILITY_REQUEST).put("op", "auth_status"), UTILITY_TIMEOUT_MILLIS)
+      } catch (failure: Exception) {
+        Log.i(TAG, "Warming the runtime host did not work: ${failure.message}")
+      }
+    }
+  }
+
+  /**
+   * The utility host's answer to [op], or the failure it reported. The host answers with the operation's own
+   * result, or with the reason it failed and the code that names the cause.
+   */
+  private suspend fun utilityData(op: String, params: JSONObject, timeoutMillis: Long): JSONObject {
+    val reply = utility.request(
+      JSONObject().put("type", UTILITY_REQUEST).put("op", op).put("params", params),
+      timeoutMillis,
+    )
+    val error = reply.opt("error") as? String
+    if (error != null) {
+      val code = reply.optString("code", "error")
+      throw HostRejected(code, error, HostText.of(error, reply.optJSONObject("i18n")))
+    }
+    return reply.optJSONObject("data") ?: JSONObject()
+  }
 
   /**
    * Starts a `git` host for [GitHost] and returns its channel once the host is ready for requests; closing the
@@ -384,5 +442,14 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     const val EXTENSIONS_UPDATE_TIMEOUT_MILLIS = 15 * 60_000L
     const val LOGIN_TIMEOUT_MILLIS = 10 * 60_000L
     const val REQUEST_HOST_START_TIMEOUT_MILLIS = 15_000L
+
+    /** The request the utility host answers, with the operation named in [op]. */
+    const val UTILITY_REQUEST = "fang_utility_request"
+
+    /** How long the utility host stays up after the last question. */
+    const val UTILITY_IDLE_MILLIS = 120_000L
+
+    /** The time a question may take: loading Pi's own software is the slow part, and it is paid once per host. */
+    const val UTILITY_TIMEOUT_MILLIS = 120_000L
   }
 }
