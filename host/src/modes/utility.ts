@@ -2,18 +2,28 @@ import { HostError } from "../env.js";
 import { isObject, type JsonObject } from "../framing.js";
 import type { ModeContext } from "../mode.js";
 import { authStatus } from "./auth-status.js";
+import { defaultModel } from "./default-model.js";
+import { logout } from "./logout.js";
 import { modelDefaults } from "./model-defaults.js";
 import { providerModels } from "./provider-models.js";
+import { providerRemove } from "./provider-remove.js";
+import { providerSave } from "./provider-save.js";
 import { sessionMessages } from "./session-messages.js";
 import { sessions } from "./sessions.js";
+import { subscriptionSave } from "./subscription-save.js";
 
 /** The operations this host answers, and the function that answers each. */
 const OPERATIONS: Record<string, (ctx: ModeContext) => Promise<JsonObject>> = {
   auth_status: authStatus,
+  default_model: defaultModel,
+  logout,
   model_defaults: modelDefaults,
   provider_models: providerModels,
+  provider_remove: providerRemove,
+  provider_save: providerSave,
   session_messages: sessionMessages,
   sessions,
+  subscription_save: subscriptionSave,
 };
 
 /**

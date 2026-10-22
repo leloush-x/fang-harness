@@ -146,7 +146,7 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
   }
 
   suspend fun logout(providerId: String) {
-    call("logout", JSONObject().put("providerId", providerId))
+    utilityData("logout", JSONObject().put("providerId", providerId), UTILITY_TIMEOUT_MILLIS)
   }
 
   /** The endpoint's models, each prefilled from its own metadata and then Pi's catalogue. */
@@ -164,22 +164,20 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
   }
 
   suspend fun providerSave(provider: ProviderConfig) {
-    call("provider_save", provider.toJson())
+    utilityData("provider_save", provider.toJson(), UTILITY_TIMEOUT_MILLIS)
   }
 
   /** Writes a subscription's model settings (`modelOverrides`, extra models) and which of its models show. */
   suspend fun subscriptionSave(providerId: String, enabled: List<String>, models: List<ModelConfig>) {
-    call(
-      "subscription_save",
-      JSONObject()
-        .put("providerId", providerId)
-        .put("enabled", JSONArray(enabled))
-        .put("models", JSONArray(models.map(ModelConfig::toJson))),
-    )
+    val params = JSONObject()
+      .put("providerId", providerId)
+      .put("enabled", JSONArray(enabled))
+      .put("models", JSONArray(models.map(ModelConfig::toJson)))
+    utilityData("subscription_save", params, UTILITY_TIMEOUT_MILLIS)
   }
 
   suspend fun providerRemove(id: String) {
-    call("provider_remove", JSONObject().put("id", id))
+    utilityData("provider_remove", JSONObject().put("id", id), UTILITY_TIMEOUT_MILLIS)
   }
 
   /** Runs `pi install [source]`, adding a Pi package that chats load when their Pi next starts. */
@@ -189,12 +187,13 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
 
   /** Makes new Pi sessions start with this model while it stays available and in scope. */
   suspend fun setDefaultModel(provider: String, modelId: String) {
-    call("default_model", JSONObject().put("provider", provider).put("modelId", modelId))
+    val params = JSONObject().put("provider", provider).put("modelId", modelId)
+    utilityData("default_model", params, UTILITY_TIMEOUT_MILLIS)
   }
 
   /** Makes new Pi sessions start with this thinking level, clamped to their model. */
   suspend fun setDefaultThinkingLevel(level: String) {
-    call("default_model", JSONObject().put("thinkingLevel", level))
+    utilityData("default_model", JSONObject().put("thinkingLevel", level), UTILITY_TIMEOUT_MILLIS)
   }
 
   /** Writes [files] (name to bytes) into a new folder in Wolfi OS; returns their absolute paths in order. */
