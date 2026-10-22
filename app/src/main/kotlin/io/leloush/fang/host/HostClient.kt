@@ -292,11 +292,7 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
       JSONObject().put("type", UTILITY_REQUEST).put("op", op).put("params", params),
       timeoutMillis,
     )
-    val error = reply.opt("error") as? String
-    if (error != null) {
-      val code = reply.optString("code", "error")
-      throw HostRejected(code, error, HostText.of(error, reply.optJSONObject("i18n")))
-    }
+    if (reply.has("error")) throw HostRejected.from(reply) ?: HostFailure.Disconnected()
     return reply.optJSONObject("data") ?: JSONObject()
   }
 
