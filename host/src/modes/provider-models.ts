@@ -26,6 +26,9 @@ export async function providerModels(ctx: ModeContext): Promise<JsonObject> {
     throw new HostError("bad_url", `${baseUrl} is not an http:// or https:// URL`);
   }
   const url = `${baseUrl.replace(/\/+$/, "")}/models`;
+  // The catalogue and the endpoint's answer are wanted at the same time: the catalogue is Pi's own software, which
+  // takes seconds to load under PRoot, and the endpoint is a network round trip. Neither waits for the other.
+  const catalogue = loadCatalogue(ctx, api);
   let response: Response;
   let body: string;
   // The body read shares the timeout and failure handling: a server can send headers and then stall or hang up.
@@ -36,6 +39,8 @@ export async function providerModels(ctx: ModeContext): Promise<JsonObject> {
     });
     body = await response.text();
   } catch (error) {
+    // The catalogue is not waited for when the endpoint fails, so its own failure must not go unhandled.
+    void catalogue.catch(() => undefined);
     if (error instanceof DOMException && error.name === "TimeoutError") {
       throw new HostError("timeout", `No response from ${baseUrl} within 15 s`);
     }
@@ -81,8 +86,8 @@ export async function providerModels(ctx: ModeContext): Promise<JsonObject> {
       detected.set(entry.id, detectModel(entry.id, entry));
     }
   }
-  const catalogue = await loadCatalogue(ctx, api);
-  const models = [...detected.values()].map((model) => fillMissing(model, catalogue(model.id)));
+  const catalogueLookup = await catalogue;
+  const models = [...detected.values()].map((model) => fillMissing(model, catalogueLookup(model.id)));
   return { models: models.toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) };
 }
 
