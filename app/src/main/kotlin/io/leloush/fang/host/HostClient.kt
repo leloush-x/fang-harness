@@ -37,11 +37,7 @@ import org.json.JSONObject
  * is reading the app rather than when they open a screen.
  */
 @Suppress("TooManyFunctions") // One typed wrapper per host mode, beside the launch code they share.
-internal class HostClient(
-  context: Context,
-  private val foreground: Flow<Boolean>,
-  private val scope: CoroutineScope,
-) {
+internal class HostClient(context: Context, private val foreground: Flow<Boolean>, private val scope: CoroutineScope) {
   private val context = context.applicationContext
   private val helloState = MutableStateFlow<HostHello?>(null)
   private val failureState = MutableStateFlow<HostFailure?>(null)
@@ -109,9 +105,10 @@ internal class HostClient(
   }
 
   /** Newest first. */
-  suspend fun sessions(): List<SessionInfo> =
-    utilityData("sessions", JSONObject(), UTILITY_TIMEOUT_MILLIS)
-      .optJSONArray("sessions").objects().map(SessionInfo::from)
+  suspend fun sessions(): List<SessionInfo> {
+    val data = utilityData("sessions", JSONObject(), UTILITY_TIMEOUT_MILLIS)
+    return data.optJSONArray("sessions").objects().map(SessionInfo::from)
+  }
 
   /** Deletes the session files at [paths]; one that is already gone counts as deleted. */
   suspend fun deleteSessions(paths: List<String>) {
@@ -119,9 +116,10 @@ internal class HostClient(
   }
 
   /** A session's messages as Pi's RPC `get_messages` reports them, read without starting Pi. */
-  suspend fun sessionMessages(path: String): JSONArray =
-    utilityData("session_messages", JSONObject().put("path", path), UTILITY_TIMEOUT_MILLIS)
-      .optJSONArray("messages") ?: JSONArray()
+  suspend fun sessionMessages(path: String): JSONArray {
+    val data = utilityData("session_messages", JSONObject().put("path", path), UTILITY_TIMEOUT_MILLIS)
+    return data.optJSONArray("messages") ?: JSONArray()
+  }
 
   suspend fun authStatus(): AuthStatus =
     AuthStatus.from(utilityData("auth_status", JSONObject(), UTILITY_TIMEOUT_MILLIS))
@@ -152,17 +150,18 @@ internal class HostClient(
   }
 
   /** The endpoint's models, each prefilled from its own metadata and then Pi's catalogue. */
-  suspend fun providerModels(baseUrl: String, apiKey: String, api: String): List<ModelConfig> =
-    utilityData(
-      "provider_models",
-      JSONObject().put("baseUrl", baseUrl).put("apiKey", apiKey).put("api", api),
-      UTILITY_TIMEOUT_MILLIS,
-    ).optJSONArray("models").objects().map(ModelConfig::from)
+  suspend fun providerModels(baseUrl: String, apiKey: String, api: String): List<ModelConfig> {
+    val params = JSONObject().put("baseUrl", baseUrl).put("apiKey", apiKey).put("api", api)
+    val data = utilityData("provider_models", params, UTILITY_TIMEOUT_MILLIS)
+    return data.optJSONArray("models").objects().map(ModelConfig::from)
+  }
 
   /** Pi's catalogue settings for [ids], in order; an unknown id comes back with only its id. */
-  suspend fun modelDefaults(ids: List<String>, api: String): List<ModelConfig> =
-    utilityData("model_defaults", JSONObject().put("ids", JSONArray(ids)).put("api", api), UTILITY_TIMEOUT_MILLIS)
-      .optJSONArray("models").objects().map(ModelConfig::from)
+  suspend fun modelDefaults(ids: List<String>, api: String): List<ModelConfig> {
+    val params = JSONObject().put("ids", JSONArray(ids)).put("api", api)
+    val data = utilityData("model_defaults", params, UTILITY_TIMEOUT_MILLIS)
+    return data.optJSONArray("models").objects().map(ModelConfig::from)
+  }
 
   suspend fun providerSave(provider: ProviderConfig) {
     call("provider_save", provider.toJson())
