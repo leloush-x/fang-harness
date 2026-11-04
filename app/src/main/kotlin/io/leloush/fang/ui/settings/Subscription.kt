@@ -56,6 +56,14 @@ internal val subscriptions = listOf(
     "openai-completions",
     usesApiKey = true,
   ),
+  Subscription(
+    "openrouter",
+    R.string.settings_openrouter,
+    R.string.settings_openrouter_subtitle,
+    R.string.login_title_openrouter,
+    "openai-completions",
+    usesApiKey = true,
+  ),
 )
 
 /** True once Pi holds a credential for the provider [id]. */

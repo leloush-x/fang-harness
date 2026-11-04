@@ -236,13 +236,37 @@ class WolfiRuntime(context: Context) {
       bashrc.parentFile?.mkdirs()
       bashrc.writeText(
         "export PS1='\\[\\033[01;32m\\]\\u@wolfi\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '\n" +
-          "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n",
+          "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n" +
+          "export LANG=C.UTF-8\n",
       )
     }
     val profile = File(rootfs, "root/.bash_profile")
     if (!profile.exists()) {
       profile.parentFile?.mkdirs()
       profile.writeText("[ -f ~/.bashrc ] && . ~/.bashrc\n")
+    }
+
+    // Termux-style storage links: ~/storage/* points at Android's shared storage so the agent and the
+    // user can reach phone files without guessing /sdcard paths. Created once; a user who removed one
+    // keeps it gone.
+    val storageDir = File(rootfs, "root/storage")
+    if (!storageDir.exists()) {
+      storageDir.mkdirs()
+      val links = mapOf(
+        "shared" to "/sdcard",
+        "downloads" to "/sdcard/Download",
+        "documents" to "/sdcard/Documents",
+        "pictures" to "/sdcard/Pictures",
+        "music" to "/sdcard/Music",
+        "movies" to "/sdcard/Movies",
+        "dcim" to "/sdcard/DCIM",
+      )
+      for ((name, target) in links) {
+        val link = File(storageDir, name)
+        if (!link.exists()) {
+          runCatching { Os.symlink(target, link.absolutePath) }
+        }
+      }
     }
   }
 
