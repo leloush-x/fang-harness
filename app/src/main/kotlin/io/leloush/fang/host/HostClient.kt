@@ -163,6 +163,12 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     return data.optJSONArray("models").objects().map(ModelConfig::from)
   }
 
+  /** The models [providerId] offers, as the settings screen lists them, or null when the host can't answer. */
+  suspend fun subscriptionModels(providerId: String): List<ModelConfig>? {
+    val data = utilityData("subscription_models", JSONObject().put("providerId", providerId), UTILITY_TIMEOUT_MILLIS)
+    return data.optJSONArray("models")?.objects()?.map(ModelConfig::from)
+  }
+
   suspend fun providerSave(provider: ProviderConfig) {
     utilityData("provider_save", provider.toJson(), UTILITY_TIMEOUT_MILLIS)
   }

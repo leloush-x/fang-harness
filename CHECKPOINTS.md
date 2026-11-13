@@ -62,8 +62,8 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [x] Skipped per user instruction. No local models.
 
 ### Upgrade 6 — Subscriptions / model defaults
-- [ ] Port `subscription-models` mode and tests, `subscription-save` updates.
-- [ ] Merge model-defaults changes.
+- [x] Ported `subscription-models` mode and tests, `subscription-save` updates (host parity merged earlier).
+- [~] Merged model-defaults host changes where applicable; added app `subscriptionModels` host/client API. Full pipkin-style subscription/model-selection UI integration not yet ported (fang UI differs significantly).
 - Verify, commit, tick, log.
 
 ### Upgrade 7 — Termx terminal core (replace old Wolfi terminal)

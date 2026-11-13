@@ -73,6 +73,9 @@ internal class AccountRepository(
 
   suspend fun modelDefaults(ids: List<String>, api: String): List<ModelConfig> = hostClient.modelDefaults(ids, api)
 
+  /** The models [providerId] offers, as the settings screen lists them, or null when the host can't answer. */
+  suspend fun subscriptionModels(providerId: String): List<ModelConfig>? = hostClient.subscriptionModels(providerId)
+
   suspend fun saveProvider(provider: ProviderConfig) {
     hostClient.providerSave(provider)
     changed()
