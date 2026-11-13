@@ -24,6 +24,8 @@ complexity:
     allowedConditions: 9
   LongParameterList:
     allowedFunctionParameters: 8
+    allowedConstructorParameters: 8
+    ignoreDefaultParameters: true
   TooManyFunctions:
     allowedFunctionsPerClass: 25
     allowedFunctionsPerObject: 25
