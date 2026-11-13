@@ -181,6 +181,7 @@ describe("subscription model settings and scope", () => {
       expect.objectContaining({ id: "google", enabled: [], extraIds: [] }),
       expect.objectContaining({ id: "zai", enabled: [], extraIds: [] }),
       expect.objectContaining({ id: "kimi-coding", enabled: [], extraIds: [] }),
+      expect.objectContaining({ id: "openrouter", enabled: [], extraIds: [] }),
     ]);
     expect(data.custom).toEqual([expect.objectContaining({ id: "my-lb" })]);
   });
@@ -189,7 +190,7 @@ describe("subscription model settings and scope", () => {
     await writeFile(settingsPath, "{");
     const data = await status();
     expect(data).toMatchObject({ scope: null, settingsError: expect.any(String) });
-    expect(data.builtin).toEqual(Array.from({ length: 5 }, () => expect.objectContaining({ enabled: null })));
+    expect(data.builtin).toEqual(Array.from({ length: 6 }, () => expect.objectContaining({ enabled: null })));
   });
 
   it("rejects an invalid settings.json without writing either file", async () => {
