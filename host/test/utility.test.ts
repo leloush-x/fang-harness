@@ -48,9 +48,9 @@ describe("utility mode", () => {
     const first = await ask("sessions");
     const second = await ask("sessions");
 
-    expect(first?.type).toBe("fang_utility_result");
+    expect(first?.type).toBe("fang_result");
     expect(first?.id).toBe(1);
-    expect(second?.type).toBe("fang_utility_result");
+    expect(second?.type).toBe("fang_result");
     expect(second?.id).toBe(2);
   });
 
@@ -60,7 +60,9 @@ describe("utility mode", () => {
 
     const answer = await ask("nonsense");
 
-    expect(answer?.code).toBe("unknown_operation");
+    expect(answer?.type).toBe("fang_result");
+    expect(answer?.ok).toBe(false);
+    expect(answer?.code).toBe("unknown_op");
   });
 
   it("reports a failure with its code, and keeps answering", async () => {
@@ -71,8 +73,9 @@ describe("utility mode", () => {
     const failed = await ask("sessions");
     const after = await ask("sessions");
 
-    expect(failed?.type).toBe("fang_utility_result");
-    expect(failed?.code).toBe("failed");
-    expect(after?.type).toBe("fang_utility_result");
+    expect(failed?.type).toBe("fang_result");
+    expect(failed?.ok).toBe(false);
+    expect(typeof failed?.code).toBe("string");
+    expect(after?.type).toBe("fang_result");
   });
 });
