@@ -125,25 +125,41 @@ class AppNavigator(initial: List<Destination>) {
 
     private fun destination(key: String): Destination? = when {
       key == MAIN -> Destination.Main
+
       key == SETTINGS -> Destination.Settings
+
       key == PERMISSIONS -> Destination.Permissions
+
       key == ADVANCED -> Destination.Advanced
+
       key == BACKUPS -> Destination.Backups
+
       key == LICENSES -> Destination.Licenses
+
       key.startsWith(LICENSE) -> Destination.License(key.removePrefix(LICENSE))
+
       key == ONBOARDING -> Destination.Onboarding
+
       key == PROVIDERS -> Destination.Providers
+
       key == ADD_PROVIDER -> Destination.AddProvider
+
       key == ADD_MODELS -> Destination.AddModels
+
       key == ARCHIVE -> Destination.Archive
+
       key.startsWith(ARCHIVED_CHAT) -> Destination.ArchivedChat(key.removePrefix(ARCHIVED_CHAT))
 
       key.startsWith(ARCHIVED_SUBAGENT) -> key.removePrefix(ARCHIVED_SUBAGENT).let { rest ->
         Destination.ArchivedSubagent(path = rest.substringAfter('\n'), toolCallId = rest.substringBefore('\n'))
       }
+
       key.startsWith(MODEL) -> Destination.ModelEditor(key.removePrefix(MODEL))
+
       key.startsWith(SUBSCRIPTION) -> Destination.Subscription(key.removePrefix(SUBSCRIPTION))
+
       key.startsWith(PROVIDER) -> Destination.ProviderEditor(key.removePrefix(PROVIDER).ifEmpty { null })
+
       else -> null
     }
 
