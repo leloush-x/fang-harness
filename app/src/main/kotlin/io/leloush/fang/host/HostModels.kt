@@ -204,3 +204,25 @@ internal fun JSONArray?.objects(): List<JSONObject> =
   if (this == null) emptyList() else List(length()) { getJSONObject(it) }
 
 internal fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else List(length()) { getString(it) }
+
+internal data class SubagentSession(
+  val path: String,
+  val toolCallId: String,
+  val agent: String,
+  val description: String,
+  val created: Long,
+  val modified: Long,
+  val messageCount: Int,
+) {
+  companion object {
+    fun from(json: JSONObject) = SubagentSession(
+      path = json.getString("path"),
+      toolCallId = json.optString("toolCallId"),
+      agent = json.optString("agent"),
+      description = json.optString("description"),
+      created = json.optLong("created"),
+      modified = json.optLong("modified"),
+      messageCount = json.optInt("messageCount"),
+    )
+  }
+}

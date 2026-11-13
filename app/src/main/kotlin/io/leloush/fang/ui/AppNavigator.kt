@@ -51,6 +51,12 @@ sealed interface Destination {
 
   /** The read-only transcript of the archived chat in session file [path]. */
   data class ArchivedChat(val path: String) : Destination
+
+  /**
+   * The read-only transcript of the subagent the archived chat in session file [path] started with its `subagent`
+   * tool call [toolCallId].
+   */
+  data class ArchivedSubagent(val path: String, val toolCallId: String) : Destination
 }
 
 /** The screen stack; never empty. Main thread only. */
@@ -105,8 +111,14 @@ class AppNavigator(initial: List<Destination>) {
       is Destination.ProviderEditor -> PROVIDER + d.id.orEmpty()
       Destination.AddModels -> ADD_MODELS
       is Destination.ModelEditor -> MODEL + d.modelId
-      Destination.Archive -> ARCHIVE
+      Destination.Archive, is Destination.ArchivedChat, is Destination.ArchivedSubagent -> archiveKey(d)
+    }
+
+    private fun archiveKey(d: Destination): String = when (d) {
       is Destination.ArchivedChat -> ARCHIVED_CHAT + d.path
+      // A tool call id has no line break; a path comes last, since it may hold any other character.
+      is Destination.ArchivedSubagent -> ARCHIVED_SUBAGENT + d.toolCallId + "\n" + d.path
+      else -> ARCHIVE
     }
 
     private fun destination(key: String): Destination? = when {
@@ -123,6 +135,10 @@ class AppNavigator(initial: List<Destination>) {
       key == ADD_MODELS -> Destination.AddModels
       key == ARCHIVE -> Destination.Archive
       key.startsWith(ARCHIVED_CHAT) -> Destination.ArchivedChat(key.removePrefix(ARCHIVED_CHAT))
+
+      key.startsWith(ARCHIVED_SUBAGENT) -> key.removePrefix(ARCHIVED_SUBAGENT).let { rest ->
+        Destination.ArchivedSubagent(path = rest.substringAfter('\n'), toolCallId = rest.substringBefore('\n'))
+      }
       key.startsWith(MODEL) -> Destination.ModelEditor(key.removePrefix(MODEL))
       key.startsWith(SUBSCRIPTION) -> Destination.Subscription(key.removePrefix(SUBSCRIPTION))
       key.startsWith(PROVIDER) -> Destination.ProviderEditor(key.removePrefix(PROVIDER).ifEmpty { null })
@@ -145,5 +161,6 @@ class AppNavigator(initial: List<Destination>) {
     private const val MODEL = "model:"
     private const val ARCHIVE = "archive"
     private const val ARCHIVED_CHAT = "archived-chat:"
+    private const val ARCHIVED_SUBAGENT = "archived-subagent:"
   }
 }

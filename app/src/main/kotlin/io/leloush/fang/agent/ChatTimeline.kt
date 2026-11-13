@@ -144,8 +144,11 @@ class ChatTimeline(
    * Each run gets back the [TurnFooter] it had while live. A run starts with a user message and ends with the reply
    * that calls no tool, as a stop, an error or an abort; Pi times each reply, so the footer spans from the user message
    * to that reply's end. Replies Pi didn't time, from before it did, get no footer.
+   *
+   * With [compactions], a compaction's summary among [messages] shows as the notice the live stream shows as Pi
+   * compacts. Without, as for a chat, it's left out: Pi's history holds only the latest one's, at its start.
    */
-  fun seed(messages: JSONArray, ifNoEventsSince: Long? = null): Boolean {
+  fun seed(messages: JSONArray, ifNoEventsSince: Long? = null, compactions: Boolean = false): Boolean {
     synchronized(lock) {
       if (ifNoEventsSince != null && appliedCount != ifNoEventsSince) return false
       items.clear()
@@ -184,6 +187,10 @@ class ChatTimeline(
           }
 
           "toolResult" -> attachToolResult(message)
+
+          "compactionSummary" -> if (compactions) {
+            items += Notice("compacted${message.piTimestamp ?: index}", NoticeKind.Compacted)
+          }
         }
         message.piTimestamp?.let { timestamp ->
           lastMessageAt = timestamp
@@ -191,15 +198,20 @@ class ChatTimeline(
         }
       }
       run?.closeIfReplied()
-      // Pi sent these after the history it just gave, so they follow its end; Pi is idle, so any run is over.
-      val unseeded = firstUnseeded?.let { it until notices.size } ?: IntRange.EMPTY
-      for (index in unseeded) notices[index] = notices[index].copy(after = lastMessageAt, afterRun = true)
-      firstUnseeded = null
-      placeNotices(messageEnds)
-      publish()
-      if (!unseeded.isEmpty()) onNoticesChanged(notices.toList())
+      placeSeededNotices(messageEnds)
       return true
     }
+  }
+
+  /** Puts the session's notices back among the items [seed] just made, those not yet seeded at the end, and publishes. */
+  private fun placeSeededNotices(messageEnds: Map<Long, Int>) {
+    // Pi sent these after the history it just gave, so they follow its end; Pi is idle, so any run is over.
+    val unseeded = firstUnseeded?.let { it until notices.size } ?: IntRange.EMPTY
+    for (index in unseeded) notices[index] = notices[index].copy(after = lastMessageAt, afterRun = true)
+    firstUnseeded = null
+    placeNotices(messageEnds)
+    publish()
+    if (!unseeded.isEmpty()) onNoticesChanged(notices.toList())
   }
 
   /** Puts [notices] back among the seeded items, each where [SavedNotice] says, keeping their order at one place. */
@@ -225,6 +237,7 @@ class ChatTimeline(
   private inner class SeededRun(private val startedAt: Long?, private val openedByExtension: Boolean = false) {
     private var replyKey: String? = null
     private var endedAt: Long? = null
+    private var stopped = false
     private var answered = false
 
     /**
@@ -244,6 +257,7 @@ class ChatTimeline(
       val final = message.optString("stopReason") != "toolUse"
       replyKey = key.takeIf { final }
       endedAt = message.piTimestamp?.let { start -> message.durationMs?.let { start + it } }?.takeIf { final }
+      stopped = final && message.isAborted
     }
 
     /** Adds the run's footer once its final reply came, and returns the run still open, or null once it closed. */
@@ -252,7 +266,9 @@ class ChatTimeline(
       val start = startedAt
       val end = endedAt
       // Keyed by the reply, so reseeding the same history gives the footer the same key.
-      if (start != null && end != null) items += TurnFooter("$key.footer", start, (end - start).coerceAtLeast(0))
+      if (start != null && end != null) {
+        items += TurnFooter("$key.footer", start, (end - start).coerceAtLeast(0), stopped)
+      }
       return null
     }
   }
@@ -334,7 +350,7 @@ class ChatTimeline(
     when (event.optString("type")) {
       "agent_start" -> startRun()
 
-      "agent_settled" -> finishRun()
+      "agent_settled" -> finishRun(stopped = event.optBoolean("aborted"))
 
       // Pi takes the steers for the next turn right after `turn_end` and delivers them before its reply starts.
       "turn_end" -> queueInFlight = true
@@ -379,12 +395,12 @@ class ChatTimeline(
     if (footer == null) footer = TurnFooter("t${itemSeq++}", clock(), null)
   }
 
-  private fun finishRun() {
+  private fun finishRun(stopped: Boolean = false) {
     busy = false
     live = null
     streamingArgs.clear()
     items.replaceAll(::settle)
-    footer?.let { items += it.copy(durationMillis = clock() - it.startedAt) }
+    footer?.let { items += it.copy(durationMillis = clock() - it.startedAt, stopped = stopped) }
     footer = null
     runEnded = true
     clearRetryNotice()
@@ -490,7 +506,13 @@ class ChatTimeline(
       rebuilt.map { item ->
         val old = (item as? ToolCall)?.let { findTool(it.id) }?.let { items[it] as ToolCall }
         if (item is ToolCall && old != null) {
-          item.copy(output = old.output, isError = old.isError, status = old.status)
+          item.copy(
+            output = old.output,
+            isError = old.isError,
+            status = old.status,
+            figure = old.figure,
+            details = old.details,
+          )
         } else {
           item
         }
@@ -500,7 +522,12 @@ class ChatTimeline(
     items.addAll(if (first < 0) items.size else first, merged)
   }
 
+  /**
+   * A top-level tool call's progress. A call with a `parentToolCallId` is one a subagent made through that `subagent`
+   * call: it belongs to the subagent's own transcript, so it never becomes a row of the chat.
+   */
   private fun toolExecution(event: JSONObject) {
+    if (!event.optStringOrNull("parentToolCallId").isNullOrEmpty()) return
     val id = event.optString("toolCallId")
     val args = event.optJSONObject("args")
     val index =
@@ -518,23 +545,30 @@ class ChatTimeline(
             status = ToolStatus.Running,
           )
 
-        else ->
-          tool.copy(
-            output = event.optJSONObject("result")?.optJSONArray("content").text(),
-            isError = event.optBoolean("isError"),
-            status = ToolStatus.Done,
-          )
+        else -> event.optJSONObject("result").let { result ->
+          tool.finished(result?.optJSONArray("content").text(), event.optBoolean("isError"), result)
+        }
       }
   }
 
   private fun attachToolResult(message: JSONObject) {
     val index = findTool(message.optString("toolCallId")) ?: return
     items[index] =
-      (items[index] as ToolCall).copy(
-        output = message.optJSONArray("content").text(),
-        isError = message.optBoolean("isError"),
-        status = ToolStatus.Done,
+      (items[index] as ToolCall).finished(
+        message.optJSONArray("content").text(),
+        message.optBoolean("isError"),
+        message,
       )
+  }
+
+  /**
+   * This call finished with [output], failed or not, and [result], the result holding its `details`. A `subagent`
+   * call keeps them, since they lead its row to the run's transcript once the run is gone.
+   */
+  private fun ToolCall.finished(output: String?, failed: Boolean, result: JSONObject?): ToolCall {
+    val done = withResult(output, failed, result)
+    if (toolName != SUBAGENT_TOOL) return done
+    return done.copy(details = result?.optJSONObject("details"))
   }
 
   private fun compactionEnd(event: JSONObject) {
@@ -644,6 +678,7 @@ class ChatTimeline(
       busy = busy || compacting,
       queue = queue,
       pendingUi = dialogs.firstOrNull(),
+      pendingUiIds = dialogs.map { it.id },
       pendingUiNumber = if (dialogs.isEmpty()) 0 else dialogsDone + 1,
       pendingUiCount = dialogsDone + dialogs.size,
       model = model,
@@ -714,7 +749,23 @@ private fun messageItems(message: JSONObject, prefix: String, settled: Boolean, 
     "bashExecution" -> {
       val exitCode = if (message.isNull("exitCode")) 0 else message.optInt("exitCode")
       val args = JSONObject().put("command", message.optString("command"))
-      listOf(ToolCall(prefix, prefix, "bash", args, message.optString("output"), exitCode != 0, ToolStatus.Done))
+      listOf(
+        ToolCall(
+          prefix,
+          prefix,
+          "bash",
+          args,
+          message.optString("output"),
+          exitCode != 0,
+          ToolStatus.Done,
+          byUser = true,
+          figure = when {
+            message.optBoolean("cancelled") -> StepFigure.Stopped
+            exitCode != 0 -> StepFigure.Exit(exitCode)
+            else -> null
+          },
+        ),
+      )
     }
 
     else -> emptyList()
@@ -772,7 +823,8 @@ private fun assistantItems(message: JSONObject, prefix: String, settled: Boolean
         }
       }
     }
-    if (message.optString("stopReason") == "error") {
+    // Stop ends a run with an error whose message only says it was aborted; the run's footer tells of the stop instead.
+    if (message.optString("stopReason") == "error" && !message.isAborted) {
       add(TimelineItem.Error("$prefix.error", ErrorCause.Request(message.optStringOrNull("errorMessage"))))
     }
   }
@@ -803,3 +855,17 @@ private val JSONObject.piTimestamp: Long? get() = optLong("timestamp").takeIf { 
 
 /** How long Pi took to send a reply, which it measures from the reply's `timestamp`; null when it didn't. */
 private val JSONObject.durationMs: Long? get() = if (has("durationMs")) optLong("durationMs") else null
+
+/**
+ * Whether this assistant message ended a run the user stopped: Pi marks it `aborted`, or, when the request it was
+ * about to make got the abort, an `error` with the abort's own message, whose wording depends on where it came from.
+ */
+private val JSONObject.isAborted: Boolean
+  get() = when (optString("stopReason")) {
+    "aborted" -> true
+    "error" -> optString("errorMessage").trim().matches(ABORT_MESSAGE)
+    else -> false
+  }
+
+/** The messages of Node's, undici's and Pi's own abort errors. */
+private val ABORT_MESSAGE = Regex("""(?i)(this|the) operation was aborted\.?|request was aborted\.?""")

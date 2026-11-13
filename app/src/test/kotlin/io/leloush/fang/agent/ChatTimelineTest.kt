@@ -286,6 +286,74 @@ class ChatTimelineTest {
   fun streamedBlocksKeepKeysThroughMessageEnd() = streamToolCallTurn()
 
   @Test
+  fun aSubagentsToolCallsNeverBecomeRowsOfTheChat() {
+    apply("""{"type":"agent_start"}""")
+    apply("""{"type":"tool_execution_start","toolCallId":"s1","toolName":"subagent","args":{"agent":"Explore"}}""")
+    apply(
+      """{"type":"tool_execution_start","toolCallId":"n1","toolName":"read","args":{"path":"a.ts"},
+        "parentToolCallId":"s1"}""",
+    )
+    apply(
+      """{"type":"tool_execution_update","toolCallId":"n1","toolName":"read","parentToolCallId":"s1",
+        "partialResult":{"content":[{"type":"text","text":"x"}]}}""",
+    )
+    apply(
+      """{"type":"tool_execution_end","toolCallId":"n1","toolName":"read","isError":false,"parentToolCallId":"s1",
+        "result":{"content":[{"type":"text","text":"x"}]}}""",
+    )
+
+    val tools = items.filterIsInstance<ToolCall>()
+    assertEquals(listOf("s1"), tools.map { it.id })
+    assertEquals(ToolStatus.Running, tools.single().status)
+    // An empty parent id is a top-level call, as Pi's own events give none.
+    apply("""{"type":"tool_execution_start","toolCallId":"c2","toolName":"bash","parentToolCallId":""}""")
+    assertEquals(listOf("s1", "c2"), items.filterIsInstance<ToolCall>().map { it.id })
+  }
+
+  @Test
+  fun aSubagentCallKeepsItsResultDetailsThroughMessageEnd() {
+    val details = """{"id":"r1","agent":"Explore","description":"auth flow","sessionFile":"/s/sub.jsonl",
+      "status":"done","usage":{"totalTokens":1200}}"""
+    val call = """{"type":"toolCall","id":"s1","name":"subagent","arguments":{"agent":"Explore"}}"""
+    apply("""{"type":"agent_start"}""")
+    apply("""{"type":"message_start","message":{"role":"assistant","content":[]}}""")
+    update("""{"type":"toolcall_end","contentIndex":0,"toolCall":$call}""")
+    apply(
+      """{"type":"tool_execution_end","toolCallId":"s1","toolName":"subagent","isError":false,
+        "result":{"content":[{"type":"text","text":"found it"}],"details":$details}}""",
+    )
+    val tool = { items.filterIsInstance<ToolCall>().single() }
+    val result = SubagentResult.from(tool().details)
+    assertEquals(SubagentResult("r1", "Explore", "auth flow", "/s/sub.jsonl", SubagentStatus.Done, 1200), result)
+
+    // The message rebuilt at its end keeps what the execution reported.
+    apply("""{"type":"message_end","message":{"role":"assistant","stopReason":"toolUse","content":[$call]}}""")
+    assertEquals("m0.0", tool().key)
+    assertEquals("/s/sub.jsonl", SubagentResult.from(tool().details)?.sessionFile)
+  }
+
+  @Test
+  fun aSeededSubagentCallTakesItsDetailsFromTheToolResult() {
+    timeline.seed(
+      JSONArray(
+        """[{"role":"assistant","stopReason":"toolUse","timestamp":5,
+          "content":[{"type":"toolCall","id":"s1","name":"subagent","arguments":{}},
+            {"type":"toolCall","id":"c1","name":"edit","arguments":{"path":"a"}}]},
+          {"role":"toolResult","toolCallId":"s1","toolName":"subagent","isError":true,
+            "content":[{"type":"text","text":"boom"}],"details":{"status":"failed","sessionFile":"/s/x.jsonl"}},
+          {"role":"toolResult","toolCallId":"c1","toolName":"edit","isError":false,
+            "content":[{"type":"text","text":"ok"}],"details":{"diff":"+1 a"}}]""",
+      ),
+    )
+    val (subagent, edit) = items.filterIsInstance<ToolCall>()
+    assertEquals(SubagentStatus.Failed, SubagentResult.from(subagent.details)?.status)
+    assertTrue(subagent.isError)
+    // Other tools' details aren't kept: only their figure is.
+    assertNull(edit.details)
+    assertEquals(StepFigure.Lines(1, 0), edit.figure)
+  }
+
+  @Test
   fun toolExecutionReplacesCumulativeOutputAndSettleClosesFooter() {
     streamToolCallTurn()
     apply("""{"type":"tool_execution_start","toolCallId":"c1","toolName":"bash","args":{"command":"ls"}}""")
@@ -437,10 +505,13 @@ class ChatTimelineTest {
     apply("""{"type":"extension_ui_request","id":"b","method":"select","title":"Second?","options":["x"]}""")
     apply("""{"type":"extension_ui_request","id":"c","method":"input","title":"Third?"}""")
     assertEquals("a", timeline.state.value.pendingUi?.id)
+    // A stop reads the queue from a state taken earlier; a dialog asked after that isn't in it.
+    val beforeD = timeline.state.value
 
     // Pi can stop waiting on a later dialog first, as when its timeout runs out; the shown one stays.
     timeline.dismissDialog("b")
     assertEquals("a", timeline.state.value.pendingUi?.id)
+    assertEquals(listOf("a", "c"), timeline.state.value.pendingUiIds)
     timeline.dismissDialog("a")
     assertEquals("c", timeline.state.value.pendingUi?.id)
     // An answer that comes after the dialog already went changes nothing.
@@ -448,8 +519,11 @@ class ChatTimelineTest {
     assertEquals("c", timeline.state.value.pendingUi?.id)
 
     apply("""{"type":"extension_ui_request","id":"d","method":"confirm","title":"Fourth?"}""")
+    assertEquals(listOf("c", "d"), timeline.state.value.pendingUiIds)
+    assertEquals(listOf("a", "b", "c"), beforeD.pendingUiIds)
     timeline.clearDialogs()
     assertNull(timeline.state.value.pendingUi)
+    assertEquals(emptyList<String>(), timeline.state.value.pendingUiIds)
   }
 
   @Test

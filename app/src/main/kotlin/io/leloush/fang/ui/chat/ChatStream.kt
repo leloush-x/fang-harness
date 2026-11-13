@@ -360,6 +360,13 @@ private fun StreamItem(
     is TimelineItem.Notice -> NoticeRow(stringResource(item.kind.text), modifier)
     is TimelineItem.TurnFooter -> TurnFooterRow(item, backgroundTasks, modifier)
     is TimelineItem.ExitBanner -> ExitBannerCard(item, onRestart, modifier)
+    is TimelineItem.Steps -> {
+      Column(modifier = modifier) {
+        item.steps.forEach { step ->
+          StreamItem(step, markdownCache, 0, onOpenTool, onRestart, Modifier)
+        }
+      }
+    }
   }
 }
 

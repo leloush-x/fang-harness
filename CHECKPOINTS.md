@@ -48,11 +48,11 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [x] Host build+lint/typecheck green locally and CI green at latest verified commit (`4f14f08`). Non-remote host parity substantially merged; remaining gaps tracked in other upgrades.
 
 ### Upgrade 3 — Subagents
-- [ ] Port `app/.../agent/LiveSubagent.kt`, `StepFigure.kt`, `StepStream.kt`, `SubagentRuns.kt`.
-- [ ] Port `app/.../data/PendingReload.kt`.
-- [ ] Port strings_subagents.xml and related string changes.
-- [ ] Port UI changes for subagents (in chat/agent screens).
-- [ ] Port host `subagent-sessions` mode and tests.
+- [~] Ported core subagent agent/data classes: `app/.../agent/LiveSubagent.kt`, `StepFigure.kt`, `StepStream.kt`, `SubagentRuns.kt`, `data/PendingReload.kt` (rebranded from pipkin, remote/local-models excluded).
+- [~] Updated `TimelineModels`/`ChatTimeline`/`ChatTimelineTest` for subagent/step parity (Steps, pendingUiIds, stopped runs, tool figures/details, child tool filtering, compaction seeding) and `AgentProcess` with subagent channel/state/commands; added `HostClient.subagentSessions` + `SubagentSession`.
+- [~] Ported subagent UI/support files (`ui/chat/StreamSubagents.kt`, `StepFold.kt`, `StreamRows.kt`, `ui/subagents/*`) and added nav/sheet/view/tool-presentation hooks; `ChatStream` handles `Steps` items for compatibility. Full chat screen/composer/dialog/sheet wiring and archived-subagent UI integration still pending.
+- [x] Host `subagent-sessions` mode and host subagent support already present/reviewed in-scope.
+- [~] `strings_subagents.xml` and related subagent strings largely present; further UI/resource parity may be needed.
 - Verify, commit, tick, log.
 
 ### Upgrade 4 — Remote chat (SSH hosts) — SKIPPED (user: not needed)
@@ -99,7 +99,8 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 (none yet)
 
 ## Next
-- Implement Upgrade 3 subagent parity (host/app wiring, agent/timeline models, UI/screens, resources/tests) excluding remote/local-models; verify CI green.
+- Push current Upgrade 3 foundation and verify CI green; fix any compile/test issues.
+- Complete Upgrade 3 UI wiring: integrate subagent tab/sheet/screens into `ChatScreen`/`Composer`/`ChatStream`/dialogs/navigation (`MainActivity`, `AppNavigator`), archived subagent flow, asker attribution, and any missing resources/tests (exclude remote/local-models).
 - Complete Upgrade 6 subscription/model-defaults app/UI integration as needed.
 - Upgrade 8/9: merge remaining UI strings/resources/icons/fonts/app screens, build config, scripts, docs (non-remote/local-models), workflows; keep Wolfi runtime and fang branding.
 - After each coherent step: host build+lint green locally when applicable, commit, push debug, verify CI green + APK/tests, then proceed. Final: push debug to main.

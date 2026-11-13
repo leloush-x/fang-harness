@@ -9,6 +9,8 @@ data class TimelineState(
   val queue: List<String> = emptyList(),
   /** The first of the dialogs Pi waits on; the next shows once this one is answered or expires. */
   val pendingUi: ExtensionUiRequest? = null,
+  /** The ids of every dialog Pi waits on, oldest first, [pendingUi]'s among them. */
+  val pendingUiIds: List<String> = emptyList(),
   /**
    * [pendingUi]'s place among the dialogs asked since none were waiting, counting from 1, and how many of those
    * were shown or still wait, so "2 of 3" grows as more come in while the user answers.
@@ -24,16 +26,13 @@ data class TimelineState(
   val queueInFlight: Boolean = false,
 ) {
   /**
-   * Two states are the same only when they are the same object.
-   *
-   * A [kotlinx.coroutines.flow.StateFlow] compares every new value with the one it holds, and a generated `equals`
-   * would walk the whole chat: every item, and the streamed text with it, on every delta of a reply. That is the
-   * cost a long chat's streaming rests on, paid on the thread that reads Pi's events. The state is replaced whenever
-   * anything changes, so identity tells two states apart, and the screen's own throttle decides how often it draws.
+   * [items] as the stream shows them, with each run of two or more steps folded into [TimelineItem.Steps]. Built once,
+   * on first read; read it off the main thread first, as the screen's timeline does, since it walks every item.
    */
-  override fun equals(other: Any?): Boolean = this === other
+  val stream: StepStream by lazy { StepStream.of(items) }
 
-  override fun hashCode(): Int = System.identityHashCode(this)
+  /** This state with its [stream] built, for a screen to read without walking the items itself. */
+  fun withStream(): TimelineState = apply { stream }
 }
 
 /**
@@ -64,7 +63,10 @@ sealed interface TimelineItem {
 
   /**
    * While [argsStreaming], [args] is only parsed until the argument the chat row shows (`path`, or `command` for
-   * `bash`) is final; [ChatTimeline.streamingArguments] has the raw text that has arrived so far.
+   * `bash`) is final; [ChatTimeline.streamingArguments] has the raw text that has arrived so far. A call [byUser] is
+   * a `!command` the user ran, not a step of the agent's. [figure] is what its row notes about the result. [details]
+   * are the result's `details`, kept only for a `subagent` call ([SUBAGENT_TOOL]), whose row leads to the run's
+   * transcript through them once the run is gone; see [SubagentResult].
    */
   data class ToolCall(
     override val key: String,
@@ -75,6 +77,9 @@ sealed interface TimelineItem {
     val isError: Boolean,
     val status: ToolStatus,
     val argsStreaming: Boolean = false,
+    val byUser: Boolean = false,
+    val figure: StepFigure? = null,
+    val details: JSONObject? = null,
   ) : TimelineItem
 
   data class Error(override val key: String, val cause: ErrorCause) : TimelineItem
@@ -104,10 +109,30 @@ sealed interface TimelineItem {
 
   data class Notice(override val key: String, val kind: NoticeKind) : TimelineItem
 
-  /** Closes a run that started at [startedAt]; [durationMillis] is null while Pi is still working. */
-  data class TurnFooter(override val key: String, val startedAt: Long, val durationMillis: Long?) : TimelineItem
+  /**
+   * Closes a run that started at [startedAt]; [durationMillis] is null while Pi is still working. A run the user
+   * [stopped] ended with Stop.
+   */
+  data class TurnFooter(
+    override val key: String,
+    val startedAt: Long,
+    val durationMillis: Long?,
+    val stopped: Boolean = false,
+  ) : TimelineItem
 
   data class ExitBanner(override val key: String, val code: Int?, val stderr: String) : TimelineItem
+
+  /**
+   * Two or more [steps] in a row, which the stream folds into one line: thinking blocks and the agent's tool calls.
+   * Keyed by its first step, so the key holds as steps arrive. [current] is the step the folded line shows while the
+   * run [outcome] says is still going.
+   */
+  data class Steps(
+    override val key: String,
+    val steps: List<TimelineItem>,
+    val outcome: StepsOutcome,
+    val current: TimelineItem,
+  ) : TimelineItem
 }
 
 /** What a [TimelineItem.Notice] says about Pi's own work on the chat. */
@@ -119,7 +144,7 @@ enum class NoticeKind {
 
 /** A notice of Fang Harness's own among a session's saved notices; it's shown in the app's language, whenever that changed. */
 enum class AppNotice {
-  /** The connection to Wolfi OS dropped without word of Pi exiting. */
+  /** The connection to Termux dropped without word of Pi exiting. */
   ConnectionLost,
 }
 

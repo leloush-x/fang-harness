@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
@@ -123,6 +123,24 @@ internal class AgentProcess(
    */
   private val backgroundTasksState = MutableStateFlow(0)
 
+  /**
+   * The `fang-subagents` extension's runs, as it last listed them over Fang Harness's channel. Not saved: the runs live in
+   * Pi's process, so every new connection starts with none; finished ones stay reachable from their tool rows.
+   */
+  private val subagentRunsState = MutableStateFlow<List<SubagentRun>>(emptyList())
+
+  /**
+   * When each subagent still active as its Pi went away was cut off, by its tool call id: the time an interrupted run
+   * ran until, which its transcript can't tell when it was cut off in a tool call. Kept while this chat's process is.
+   */
+  private val subagentsCutOffState = MutableStateFlow<Map<String, Long>>(emptyMap())
+
+  /**
+   * Whether the `fang-subagents` extension stands aside for another extension's `subagent` tool, as it last said;
+   * reset with the runs, since each connection's Pi says so again.
+   */
+  private val subagentsStandingAsideState = MutableStateFlow(false)
+
   /** Pi's setTitle requests and renames so far, so a cancelled [moveSession] knows whether the title changed since. */
   @Volatile
   private var extensionTitleChanges = 0
@@ -160,15 +178,10 @@ internal class AgentProcess(
     onNoticesChanged = { notices -> sessionFileState.value?.let { sessions.notices.put(it, notices) } },
   )
 
-  /**
-   * [ChatTimeline.state] for the screen, at most once per [STREAM_UPDATE_MILLIS] and always ending on the latest
-   * state. A change after a quiet spell shows at once; while Pi streams, the deltas in between are combined.
-   */
+  /** [ChatTimeline.state] for the screen; see [forScreen]. */
   val screenTimeline: StateFlow<TimelineState> = timeline.state
-    .transform { state ->
-      emit(state)
-      delay(STREAM_UPDATE_MILLIS)
-    }.stateIn(processScope + Dispatchers.Default, SharingStarted.Eagerly, timeline.state.value)
+    .forScreen()
+    .stateIn(processScope + Dispatchers.Default, SharingStarted.Eagerly, timeline.state.value)
 
   val state: StateFlow<AgentProcessState> = stateFlow.asStateFlow()
 
@@ -209,6 +222,18 @@ internal class AgentProcess(
 
   /** The `fang-background` extension's running tasks, plus finished ones whose result the agent hasn't started on. */
   val backgroundTasks: StateFlow<Int> = backgroundTasksState.asStateFlow()
+
+  /** The chat's subagents since the user's last message, running or finished; see [SubagentRun]. */
+  val subagentRuns: StateFlow<List<SubagentRun>> = subagentRunsState.asStateFlow()
+
+  /** When each subagent active as the chat's Pi went away was cut off, by tool call id, in epoch milliseconds. */
+  val subagentsCutOff: StateFlow<Map<String, Long>> = subagentsCutOffState.asStateFlow()
+
+  /** Whether the chat's `subagent` tool is another extension's, whose calls are ordinary tool calls to Fang Harness. */
+  val subagentsStandingAside: StateFlow<Boolean> = subagentsStandingAsideState.asStateFlow()
+
+  /** The runs subagent screens follow, with their transcripts as they run. */
+  val liveSubagents = LiveSubagents(processScope, ::sendSubagents)
 
   /** Whether the chat shows as working: a run is [busy], or the agent waits on [backgroundTasks]. */
   val working: StateFlow<Boolean> = combine(busy, backgroundTasksState) { running, tasks -> running || tasks > 0 }
@@ -252,7 +277,7 @@ internal class AgentProcess(
     startJob?.cancel()
     connection?.close()
     connection = null
-    backgroundTasksState.value = 0
+    forgetChannel()
     timeline.clearDialogs()
     stateFlow.value = AgentProcessState.Starting
   }
@@ -262,7 +287,7 @@ internal class AgentProcess(
     startJob?.cancel()
     connection?.close()
     connection = null
-    backgroundTasksState.value = 0
+    forgetChannel()
     job.cancel()
   }
 
@@ -287,8 +312,12 @@ internal class AgentProcess(
   suspend fun steer(message: String, images: List<ImagePart> = emptyList()): String =
     call("steer", messageParams(message, images), timeoutMillis = null).optString("disposition")
 
+  /**
+   * Stops Pi's run, which stops every subagent with it, and cancels the questions only they could have asked, as
+   * [stopAllSubagents] does. A question the parent may have asked stays for the user.
+   */
   override suspend fun abort() {
-    call("abort")
+    stoppingSubagents(runId = null) { call("abort") }
   }
 
   /** Asks Pi's `fang-background` extension to stop every task it runs; each one's result still reaches the chat. */
@@ -299,6 +328,70 @@ internal class AgentProcess(
     } catch (_: IOException) {
       // Pi is gone, and its tasks with it.
     }
+  }
+
+  /** Sends [text] to the running subagent [runId], which reads it after its current tool call, like a steer. */
+  suspend fun steerSubagent(runId: String, text: String) {
+    sendSubagents(JSONObject().put("action", "steer").put("id", runId).put("text", text))
+  }
+
+  /** Stops subagent [runId]; its `subagent` tool call returns, saying the user stopped it, and the parent carries on. */
+  suspend fun stopSubagent(runId: String) {
+    stoppingSubagents(runId) { sendSubagents(JSONObject().put("action", "stop").put("id", runId)) }
+  }
+
+  /** Stops every subagent the chat runs or has queued. */
+  suspend fun stopAllSubagents() {
+    stoppingSubagents(runId = null) { sendSubagents(JSONObject().put("action", "stopAll")) }
+  }
+
+  /**
+   * Runs [stop], which stops subagent [runId] or every one when it's null, then cancels the questions only the stopped
+   * runs could have asked; see [questionsStopCancels]. The asker and the questions come from one published timeline,
+   * taken before [stop], so a question that arrives meanwhile isn't cancelled. The runs are read after the timeline:
+   * the reader updates both in stream order, so each run that asked one of those questions still has its call in
+   * flight there until the question is answered.
+   */
+  private suspend inline fun stoppingSubagents(runId: String?, stop: () -> Unit) {
+    val shown = timeline.state.value
+    val asker = askingSubagent(shown, subagentRunsState.value)
+    val cancelled = questionsStopCancels(asker, runId, shown.pendingUiIds)
+    stop()
+    cancelled.forEach { respondUi(it, UiAnswer.Cancelled) }
+  }
+
+  private suspend fun sendSubagents(data: JSONObject) = sendChannel(SUBAGENTS_TOPIC, data)
+
+  /** Sends [data] on [topic] to the extension listening there; nothing when no Pi runs. */
+  private suspend fun sendChannel(topic: String, data: JSONObject) {
+    val channel = connection?.channel ?: return
+    val line = JSONObject().put("type", HostProtocol.CHANNEL).put("topic", topic).put("data", data)
+    try {
+      channel.sendLine(line.toString())
+    } catch (_: IOException) {
+      // Pi is gone, and the extensions with it.
+    }
+  }
+
+  /**
+   * State from Fang Harness's channels is per connection and per run: forget what the last connection reported and the
+   * live transcripts it streamed, and record when the subagents still active as it went away were cut off.
+   */
+  private fun forgetChannel() {
+    clearSubagents()
+    liveSubagents.clear()
+  }
+
+  private fun clearSubagents() {
+    val runs = subagentRunsState.value
+    if (runs.isNotEmpty()) {
+      val now = System.currentTimeMillis()
+      val ids = runs.mapTo(HashSet(), SubagentRun::toolCallId)
+      subagentsCutOffState.update { previous -> previous - ids + runs.active().associate { it.toolCallId to now } }
+    }
+    subagentRunsState.value = emptyList()
+    subagentsStandingAsideState.value = false
+    backgroundTasksState.value = 0
   }
 
   suspend fun getMessages(): JSONArray = call("get_messages").optJSONArray("messages") ?: JSONArray()
@@ -457,7 +550,7 @@ internal class AgentProcess(
   /** One connection; returns the host's refusal, or null once [state] is Ready, Exited or Failed. */
   private suspend fun attempt(): HostRejected? {
     stateFlow.value = AgentProcessState.Starting
-    backgroundTasksState.value = 0
+    forgetChannel()
     val disabled = disabledExtensions.value
     if (disabled != extensionUiConfiguration) {
       takeDownExtensionUi()
@@ -549,7 +642,7 @@ internal class AgentProcess(
     Log.w(TAG, "Pi stopped: exitRecord=${exit != null} code=$code signal=$signal")
     val stderr = exit?.optString("stderr").orEmpty()
     stateFlow.value = AgentProcessState.Exited(code, signal, stderr)
-    backgroundTasksState.value = 0
+    forgetChannel()
     timeline.showExit(code, stderr)
   }
 
@@ -573,8 +666,20 @@ internal class AgentProcess(
 
   /** A message from one of Fang Harness's bundled extensions; topics the app doesn't know are left alone. */
   private fun onChannel(line: JSONObject) {
+    val topic = line.optString("topic")
     val data = line.optJSONObject("data") ?: return
-    if (line.optString("topic") == BACKGROUND_TOPIC) backgroundTasksState.value = data.optInt("active")
+    when (topic) {
+      BACKGROUND_TOPIC -> backgroundTasksState.value = data.optInt("active")
+      SUBAGENTS_TOPIC -> {
+        val runs = data.optJSONArray("runs")?.let { SubagentRun.listFrom(it) }
+        if (runs != null) {
+          subagentRunsState.value = runs
+          subagentsStandingAsideState.value = data.optBoolean("standingAside")
+        } else {
+          liveSubagents.onMessage(data)
+        }
+      }
+    }
   }
 
   private fun onEvent(event: JSONObject) {
