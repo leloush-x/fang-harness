@@ -170,6 +170,7 @@ internal fun SteerButton(label: String, enabled: Boolean, filled: Boolean, onCli
   )
 }
 
+@Composable
 internal fun TabsButton(tabs: Int, onClick: () -> Unit) {
   val colors = fangColors
   val description = pluralStringResource(R.plurals.shell_tabs_button, tabs, tabs)
