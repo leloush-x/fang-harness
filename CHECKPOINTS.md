@@ -55,21 +55,11 @@ Step 0 — plan written. Next: Upgrade 1 (Latest versions only).
 - [ ] Port host `subagent-sessions` mode and tests.
 - Verify, commit, tick, log.
 
-### Upgrade 4 — Remote chat (SSH hosts)
-- [ ] Port `app/.../agent/RemoteOutages.kt`, `data/RemoteHosts.kt`, `data/RemotePasswords.kt`.
-- [ ] Port host modes remote-* and tests.
-- [ ] Port UI/screens for remote hosts.
-- [ ] Port docs/remote-hosts.md.
-- [ ] Port strings_remote.xml.
-- Verify, commit, tick, log.
+### Upgrade 4 — Remote chat (SSH hosts) — SKIPPED (user: not needed)
+- [x] Skipped per user instruction. No remote chat feature.
 
-### Upgrade 5 — Local models (LiteRT-LM, llama.cpp, OpenCL)
-- [ ] Port AIDL files, cpp/llama, cpp/opencl, CMakeLists changes.
-- [ ] Port `app/litertlm-rules.pro`, license files.
-- [ ] Port strings_local_models.xml, strings_local_runtime.xml.
-- [ ] Port docs/local-models.md, privacy.md updates.
-- [ ] Port host mode local-models-sync.
-- Verify, commit, tick, log.
+### Upgrade 5 — Local models (LiteRT-LM, llama.cpp, OpenCL) — SKIPPED (user: not needed)
+- [x] Skipped per user instruction. No local models.
 
 ### Upgrade 6 — Subscriptions / model defaults
 - [ ] Port `subscription-models` mode and tests, `subscription-save` updates.

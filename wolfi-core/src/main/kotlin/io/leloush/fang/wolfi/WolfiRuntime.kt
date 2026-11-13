@@ -1,8 +1,11 @@
 package io.leloush.fang.wolfi
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
 import android.system.Os
 import java.io.File
 import java.io.IOException
@@ -100,7 +103,7 @@ class WolfiRuntime(context: Context) {
       val file = File(path)
       if (file.exists()) args += listOf("-b", path)
     }
-    for (path in SHARED_MOUNTS) {
+    for (path in sharedMounts()) {
       val file = File(path)
       if (file.exists()) args += listOf("-b", path)
     }
@@ -113,32 +116,53 @@ class WolfiRuntime(context: Context) {
     return args
   }
 
+  private fun canBindSharedStorage(): Boolean {
+    val api = Build.VERSION.SDK_INT
+    return when {
+      api == 29 -> false
+      api >= 30 -> Environment.isExternalStorageManager()
+      api in 26..28 ->
+        app.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+          app.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+      else -> false
+    }
+  }
+
+  private fun sharedMounts(): List<String> = buildList {
+    if (canBindSharedStorage()) {
+      add(SHARED_STORAGE)
+      add("/storage")
+    }
+    add("/data")
+    add("/dev")
+    add("/proc")
+    add("/sys")
+  }
+
   /**
-   * The files to bind over `/proc`, written when they are missing. Android refuses an app `/proc/stat`, `/proc/uptime`,
-   * `/proc/loadavg` and `/proc/vmstat`, so a tool that reads them fails inside the runtime even as root; the host
-   * fills these in while it runs. `/proc` stays bound as well, for everything Android does allow, such as meminfo.
+   * Termux-style fake /proc files: generated via [FakeProcfs] and bound only when the real proc
+   * entry is blocked/unreadable (bind_if_blocked). Fixes htop/top "Cannot open /proc/stat: Permission denied".
    */
   @Synchronized
   private fun syntheticProcFiles(): Map<String, File> {
-    syntheticProc.mkdirs()
-    val cpus = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
-    val counters = List(CPU_COUNTERS) { "0" }.joinToString(" ")
-    val stat = buildString {
-      append("cpu  ").append(counters).append('\n')
-      for (cpu in 0 until cpus) append("cpu").append(cpu).append(' ').append(counters).append('\n')
-    }
-    val seeds = mapOf(
-      "stat" to stat,
-      // A day of uptime is a placeholder the host replaces within two seconds of starting.
-      "uptime" to "86400.00 0.00\n",
-      "loadavg" to "0.00 0.00 0.00 0/0 0\n",
-      "vmstat" to "nr_free_pages 0\n",
-    )
-    return syntheticProcEntries().associateWith { name ->
-      File(syntheticProc, name).apply {
-        if (!exists()) runCatching { writeText(seeds.getValue(name)) }
+    val sysdataDir = File(syntheticProc.absolutePath).apply { mkdirs() }
+    FakeProcfs.writeSysdata(sysdataDir)
+    val procFiles = listOf("stat", "vmstat", "meminfo", "uptime", "loadavg", "cpuinfo", "version")
+    val binds = linkedMapOf<String, File>()
+    for (name in procFiles) {
+      val real = File("/proc", name)
+      val fake = File(sysdataDir, name)
+      val realReadable = try { real.canRead() && real.readBytes().isNotEmpty() } catch (_: Exception) { false }
+      if (!realReadable && fake.exists() && fake.length() > 0) {
+        if (FakeProcfs.isRegularFile(fake) &&
+          (FakeProcfs.linkCount(fake) == 1 || FakeProcfs.linkCount(fake) == -1) &&
+          fake.absolutePath.startsWith(sysdataDir.absolutePath)
+        ) {
+          binds[name] = fake
+        }
       }
     }
+    return binds
   }
 
   /**
@@ -268,6 +292,7 @@ class WolfiRuntime(context: Context) {
         }
       }
     }
+
   }
 
   private fun ensureNode(onLine: (String) -> Unit) {
@@ -277,7 +302,7 @@ class WolfiRuntime(context: Context) {
       ?: throw IOException("Wolfi OS has no apk")
     onLine(if (node.exists()) "Updating Wolfi OS tools…" else "Installing Wolfi OS tools…")
     val code = run(
-      listOf(apk, "add", "--no-cache", "--upgrade", "bash", "busybox", "git", "nodejs-24", "npm", "script"),
+      listOf(apk, "add", "--no-cache", "--upgrade", "bash", "busybox", "git", "nodejs", "npm", "script"),
       onLine,
     )
     if (code != 0 || !toolsReady()) throw IOException("Wolfi OS could not install its tools")
@@ -288,7 +313,7 @@ class WolfiRuntime(context: Context) {
     val version = capture("/usr/bin/node", "-p", "process.versions.node").trim().split('.')
     val major = version.getOrNull(0)?.toIntOrNull() ?: return false
     val minor = version.getOrNull(1)?.toIntOrNull() ?: 0
-    return major > 22 || (major == 22 && minor >= 19)
+    return major > 24 || (major == 24 && minor >= 0)
   }
 
   private fun run(command: List<String>, onLine: (String) -> Unit): Int {
@@ -387,11 +412,7 @@ class WolfiRuntime(context: Context) {
     /** Under `runtime`: the files bound over the `/proc` entries Android denies an app; `host/src/synthetic-proc.ts` names the same four. */
     private const val SYNTHETIC_PROC_DIR = "proc"
 
-    /** The `cpu` line's ten counters, as `/proc/stat` defines them. */
-    private const val CPU_COUNTERS = 10
-
-    /** The `/proc` entries whose files the runtime writes, in the order the binds are added. */
-    private fun syntheticProcEntries() = listOf("stat", "vmstat", "loadavg", "uptime")
+    // (unused legacy constants removed; FakeProcfs now generates proc files dynamically)
 
     private val SYSTEM_MOUNTS = listOf("/apex", "/odm", "/product", "/system", "/system_ext", "/vendor")
     private val SHARED_MOUNTS = listOf(SHARED_STORAGE, "/storage", "/data", "/dev", "/proc", "/sys")
