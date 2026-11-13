@@ -78,7 +78,7 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - Commit, tick, log.
 
 ### Upgrade 8 — UI, strings, icons, fonts, site
-- [~] Ported `app/src/main/res/xml/data_extraction_rules.xml`; values-night/manrope/most drawables already present or not safely portable without branding conflicts.
+- [~] Updated `data_extraction_rules.xml` for Wolfi runtime, improved day/night themes (window background/accent); values-night colors/manrope/drawables already at parity. Network security config for local models intentionally not added.
 - [~] Merged non-remote missing string resources from pipkin into in-scope `strings_*.xml` (archive/chat/connection/host/inbox/onboarding/settings/shell); existing strings and remote/local-model strings need further careful parity review.
 - [~] Updated site components/theme/scripts/pages/assets/licenses (rebranded, skipped remote/local-model-heavy astro config/content areas); docs kept fang-specific to avoid reintroducing skipped features.
 - [ ] Complete UI parity (icons/drawables/launcher, full strings merge, values-night/colors/launcher icon as needed) and app screen changes; verify, commit, tick, log.
