@@ -100,9 +100,18 @@ export async function installedPiVersion(root: string): Promise<string | null> {
   }
 }
 
-/** The Pi SDK is never bundled: it is loaded from the pinned install so host.mjs stays small. */
+/**
+ * The Pi SDK is never bundled into the host: it is loaded from the pinned install so host.mjs stays small.
+ *
+ * Pi's own prebuilt bundle is preferred over its per-module build: the bundle is a handful of files, while the
+ * per-module build is hundreds, and under PRoot every one of those files costs a syscall. The bundle exports the
+ * same API, so nothing else changes. A Pi without the bundle falls back to the per-module build.
+ */
 export async function loadPi(root: string): Promise<PiSdk> {
-  return (await import(pathToFileURL(join(piPackageDir(root), "dist", "index.js")).href)) as PiSdk;
+  const dir = piPackageDir(root);
+  const bundle = join(dir, "dist", "bundle", "index.js");
+  const entry = (await exists(bundle)) ? bundle : join(dir, "dist", "index.js");
+  return (await import(pathToFileURL(entry).href)) as PiSdk;
 }
 
 export function readHostEnv(): HostEnv | undefined {

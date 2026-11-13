@@ -1,7 +1,6 @@
 package io.leloush.fang.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
 import androidx.compose.foundation.gestures.AnchoredDraggableState
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -51,7 +49,6 @@ import io.leloush.fang.agent.ChatLocation
 import io.leloush.fang.appGraph
 import io.leloush.fang.terminal.TerminalSession
 import io.leloush.fang.ui.chat.ChatScreen
-import io.leloush.fang.ui.components.LocalPotsSimmer
 import io.leloush.fang.ui.components.SnackbarStack
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.files.ExplorerPanel
@@ -75,8 +72,8 @@ import kotlinx.coroutines.launch
 
 private enum class Panel { Sidebar, Chat, Explorer }
 
-/** Paseo's panel slide: 220ms, standard easing. */
-private val PanelAnimation = tween<Float>(durationMillis = 220, easing = FastOutSlowInEasing)
+/** Side panels open instantly; no slide animation. */
+private val PanelAnimation = tween<Float>(durationMillis = 0)
 
 /**
  * Each pane's sliding panels: its sidebar, its screen and its explorer, which slide within that pane's width; which
@@ -390,10 +387,7 @@ private fun WorkspacePanes(
           modifier = Modifier.onTouch { panels.active = pane },
           state = panels[pane],
           sidebar = {
-            // The sidebar stays composed behind the pane, where its working chats' pots would redraw for nothing.
-            CompositionLocalProvider(LocalPotsSimmer provides (panel == Panel.Sidebar)) {
-              sidebar(pane, onShownInSplit)
-            }
+            sidebar(pane, onShownInSplit)
           },
           workspace = {
             WorkspacePane(item, actions, views, controls, onOpenSettings, onOpenProviders, onOpenOnboarding)

@@ -1,17 +1,5 @@
 package io.leloush.fang.ui.chat
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -92,7 +80,6 @@ private val PANEL_TEXT_TOP = 5.dp
 /** How far a tab strip or a panel fades at an edge it scrolls past. */
 private val SCROLL_FADE = 24.dp
 
-private const val TAB_RISE_MILLIS = 220
 private const val SHEET_MAX_HEIGHT = 0.9f
 
 /** A widget with its key, as a tab or panel shows it. */
@@ -148,53 +135,34 @@ internal fun widgetEdge(widgets: Map<String, ExtensionWidget>, tabs: WidgetTabs,
 
 /**
  * The widgets Pi draws on one edge of the editor as tabs hanging from that edge of the composer: its top border for
- * widgets above the editor, its bottom border for those below. The strip unfolds out of the border with its first
- * widget and folds back with its last, a tab added later rises out of the border, and one removed fades. A label
- * stops at 150 dp, and a strip with more tabs than fit scrolls sideways, fading at an edge it continues past. A tab
- * opens its widget's panel, or closes it when open.
+ * widgets above the editor, its bottom border for those below. The strip shows its widgets at once, no unfolding.
+ * A label stops at 150 dp, and a strip with more tabs than fit scrolls sideways, fading at an edge it continues past.
+ * A tab opens its widget's panel, or closes it when open.
  */
 @Composable
 internal fun WidgetTabStrip(edge: WidgetEdge, tabs: WidgetTabs, belowEditor: Boolean, modifier: Modifier = Modifier) {
   val widgets = edge.widgets
-  // Kept while the strip folds away, which it does once there are no widgets left to show.
-  var shown by remember { mutableStateOf(widgets) }
-  if (widgets.isNotEmpty()) shown = widgets
-  val fromBorder = if (belowEditor) -1 else 1
-  AnimatedVisibility(
-    visible = widgets.isNotEmpty(),
-    modifier = modifier,
-    enter = expandVertically(expandFrom = if (belowEditor) Alignment.Top else Alignment.Bottom) +
-      slideInVertically { it * fromBorder },
-    exit = shrinkVertically(shrinkTowards = if (belowEditor) Alignment.Top else Alignment.Bottom) +
-      slideOutVertically { it * fromBorder },
+  if (widgets.isEmpty()) return
+  val state = rememberLazyListState()
+  LazyRow(
+    modifier = modifier
+      .fillMaxWidth()
+      .height(TAB_HEIGHT)
+      .clipToBounds()
+      .fadeScrolledEdges(state, vertical = false),
+    state = state,
+    contentPadding = PaddingValues(horizontal = FangTokens.Spacing.s16),
+    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
   ) {
-    // The tabs the strip showed when it unfolded rose with it; any other rises on its own when it first shows.
-    val risen = remember { shown.mapTo(HashSet()) { it.key } }
-    val state = rememberLazyListState()
-    LazyRow(
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(TAB_HEIGHT)
-        .clipToBounds()
-        .fadeScrolledEdges(state, vertical = false),
-      state = state,
-      contentPadding = PaddingValues(horizontal = FangTokens.Spacing.s16),
-      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
-    ) {
-      items(shown, key = { it.key }) { item ->
-        val rise = remember { Animatable(if (risen.add(item.key)) 1f else 0f) }
-        LaunchedEffect(Unit) { rise.animateTo(0f, tween(TAB_RISE_MILLIS)) }
-        WidgetTab(
-          label = widgetLabel(item.key),
-          open = item.key == edge.shown?.key,
-          changed = tabs.changed(item.key, item.widget),
-          belowEditor = belowEditor,
-          onClick = { tabs.toggle(item.key, belowEditor) },
-          modifier = Modifier
-            .animateItem()
-            .graphicsLayer { translationY = rise.value * size.height * fromBorder },
-        )
-      }
+    items(widgets, key = { it.key }) { item ->
+      WidgetTab(
+        label = widgetLabel(item.key),
+        open = item.key == edge.shown?.key,
+        changed = tabs.changed(item.key, item.widget),
+        belowEditor = belowEditor,
+        onClick = { tabs.toggle(item.key, belowEditor) },
+        modifier = Modifier,
+      )
     }
   }
 }
@@ -302,8 +270,7 @@ private fun Modifier.fadeScrolledEdges(state: ScrollableState, vertical: Boolean
 
 /**
  * The open tab's widget inside the composer: above the text field for a widget above the editor, under the toolbar for
- * one below it. It grows open and folds closed, and switching tabs eases from one widget's height to the other's. The
- * user has seen the widget's lines for as long as they show. A [tight] panel keeps to a few lines.
+ * one below it. The panel shows its widget at once; no growing or folding. A [tight] panel keeps to a few lines.
  */
 @Composable
 internal fun WidgetPanelSlot(
@@ -315,15 +282,8 @@ internal fun WidgetPanelSlot(
   modifier: Modifier = Modifier,
 ) {
   LaunchedEffect(shown?.key, shown?.widget) { shown?.let { tabs.see(it.key, it.widget) } }
-  AnimatedContent(
-    targetState = shown,
-    modifier = modifier,
-    contentKey = { it?.key },
-    transitionSpec = { fadeIn() togetherWith fadeOut() using SizeTransform(clip = true) },
-    contentAlignment = if (belowEditor) Alignment.TopStart else Alignment.BottomStart,
-    label = "widget panel",
-  ) { item ->
-    if (item != null) WidgetPanel(item, belowEditor, tight, onExpand = { onExpand(item.key) })
+  if (shown != null) {
+    WidgetPanel(shown, belowEditor, tight, onExpand = { onExpand(shown.key) })
   }
 }
 
@@ -400,32 +360,32 @@ internal fun WidgetSheet(item: KeyedWidget, tabs: WidgetTabs, onDismiss: () -> U
         tint = colors.accent,
       )
       Text(
-        text = widgetLabel(item.key),
-        modifier = Modifier.weight(1f),
+        text = item.key,
         color = colors.foreground,
-        fontSize = FangTokens.FontSize.lg,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
       )
     }
-    SelectionContainer(modifier = Modifier.weight(1f, fill = false)) {
-      Text(
-        text = text,
+    HorizontalDivider(Modifier.fillMaxWidth(), 1.dp, colors.border)
+    Box(
+      modifier = Modifier.fillMaxSize().padding(vertical = FangTokens.Spacing.s12),
+      contentAlignment = Alignment.TopStart,
+    ) {
+      SelectionContainer(
         modifier = Modifier
-          .verticalScroll(rememberScrollState())
-          .padding(start = FangTokens.Spacing.s16, end = FangTokens.Spacing.s16, bottom = FangTokens.Spacing.s24),
-        color = colors.foreground,
-        fontFamily = FontFamily.Monospace,
-        fontSize = FangTokens.FontSize.code,
-        lineHeight = FangTokens.LineHeight.code,
-      )
+          .fillMaxWidth()
+          .heightIn(max = if (tabs.open(item.widget.belowEditor) == item.key) PANEL_MAX_HEIGHT else PANEL_TIGHT_MAX_HEIGHT)
+          .verticalScroll(rememberScrollState()),
+        enabled = true,
+      ) {
+        Text(
+          text = text,
+          color = colors.foreground,
+          fontFamily = FontFamily.Monospace,
+          fontSize = FangTokens.FontSize.code,
+          lineHeight = FangTokens.LineHeight.code,
+        )
+      }
     }
   }
 }
-
-/**
- * A tab's label: the widget's key with dashes and underscores as spaces and its first letter capitalized, so
- * `plan-todos` reads "Plan todos". Pi gives a widget no title of its own, only the key its extension chose.
- */
-internal fun widgetLabel(key: String): String =
-  key.replace('-', ' ').replace('_', ' ').trim().replaceFirstChar { it.titlecase() }.ifEmpty { key }

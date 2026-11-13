@@ -1,27 +1,16 @@
 package io.leloush.fang.ui.onboarding
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -44,7 +32,6 @@ import io.leloush.fang.ui.auth.LoginSheet
 import io.leloush.fang.ui.components.SimmeringPot
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
-import kotlinx.coroutines.delay
 
 /**
  * First-run setup, one step per page: welcome, then every [SetupStep] that still needs the user, then a closing page.
@@ -106,20 +93,11 @@ internal fun OnboardingScreen(onFinished: () -> Unit, onAddProvider: () -> Unit,
       onBack = if (history.size > 1) ::back else null,
       onClose = onClose,
     )
-    AnimatedContent(
-      targetState = page,
-      modifier = Modifier.weight(1f),
-      transitionSpec = {
-        val forward = order(targetState) >= order(initialState)
-        val shift = { width: Int -> if (forward) width / SLIDE_FRACTION else -width / SLIDE_FRACTION }
-        (slideInHorizontally(tween(PAGE_MILLIS), shift) + fadeIn(tween(PAGE_MILLIS)))
-          .togetherWith(slideOutHorizontally(tween(PAGE_MILLIS)) { -shift(it) } + fadeOut(tween(PAGE_MILLIS / 2)))
-      },
-      label = "onboarding page",
-    ) { shown ->
-      val shownStep = stepOf(shown)
+    // Pages change instantly: no slide or fade animation.
+    Box(modifier = Modifier.weight(1f)) {
+      val shownStep = stepOf(page)
       when {
-        shown == WELCOME -> WelcomePage(onStart = { pass(WELCOME) })
+        page == WELCOME -> WelcomePage(onStart = { pass(WELCOME) })
 
         shownStep == null -> DonePage(signedIn = state.authStatus?.anyConfigured == true, onFinish = ::finish)
 
@@ -136,7 +114,7 @@ internal fun OnboardingScreen(onFinished: () -> Unit, onAddProvider: () -> Unit,
 }
 
 /**
- * Moves on once the shown [step] gets done while it's on screen, after a beat that lets its check settle; a step that
+ * Moves on once the shown [step] gets done while it's on screen, instantly; a step that
  * was already done when the user came back to it waits for Continue. A step this phone or build no longer shows
  * (a permission the phone does not need) moves on right away.
  */
@@ -157,7 +135,6 @@ private fun AdvanceWhenDone(
     if (hidden) {
       currentAdvance(currentState)
     } else if (done && !doneOnArrival) {
-      delay(DONE_PAUSE_MILLIS)
       currentAdvance(currentState)
     }
   }
@@ -165,24 +142,9 @@ private fun AdvanceWhenDone(
 
 @Composable
 private fun WelcomePage(onStart: () -> Unit) {
-  var arrived by remember { mutableStateOf(false) }
-  LaunchedEffect(Unit) { arrived = true }
-  // The pot settles in from slightly smaller once the page appears.
-  val scale by animateFloatAsState(
-    targetValue = if (arrived) 1f else WELCOME_START_SCALE,
-    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-    label = "welcome pot",
-  )
   WizardPage(
     illustration = {
-      SimmeringPot(
-        modifier = Modifier.graphicsLayer {
-          scaleX = scale
-          scaleY = scale
-        },
-        size = POT_SIZE,
-        tint = fangColors.foreground,
-      )
+      SimmeringPot(size = POT_SIZE, tint = fangColors.foreground)
     },
     title = stringResource(R.string.onboarding_welcome_title),
     body = stringResource(R.string.onboarding_welcome_body),
@@ -255,12 +217,6 @@ private fun firstPage(state: OnboardingState): String = when {
 
 private fun stepOf(page: String): SetupStep? = SetupStep.entries.firstOrNull { it.name == page }
 
-/** Page order for the slide direction: welcome first, the steps in setup order, then the closing page. */
-private fun order(page: String): Int = when (page) {
-  WELCOME -> -1
-  else -> stepOf(page)?.ordinal ?: SetupStep.entries.size
-}
-
 private val HistorySaver = listSaver<SnapshotStateList<String>, String>(
   save = { it.toList() },
   restore = { it.toMutableStateList() },
@@ -268,9 +224,5 @@ private val HistorySaver = listSaver<SnapshotStateList<String>, String>(
 
 private const val WELCOME = OnboardingState.WELCOME
 private const val DONE = "done"
-private const val PAGE_MILLIS = 320
-private const val SLIDE_FRACTION = 5
-private const val DONE_PAUSE_MILLIS = 900L
-private const val WELCOME_START_SCALE = 0.85f
 private val POT_SIZE = 112.dp
 private val NOTE_LINE_HEIGHT = 19.sp

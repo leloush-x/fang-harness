@@ -1,13 +1,6 @@
 package io.leloush.fang.ui.chat
 
 import android.content.ClipData
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -71,23 +64,13 @@ internal fun CopyButton(text: String, contentDescription: String, tint: Color, i
       },
     contentAlignment = Alignment.Center,
   ) {
-    AnimatedContent(
-      targetState = showCheck,
-      transitionSpec = {
-        (fadeIn(tween(ICON_SWAP_MILLIS)) + scaleIn(tween(ICON_SWAP_MILLIS), initialScale = 0.5f))
-          .togetherWith(fadeOut(tween(ICON_SWAP_MILLIS)) + scaleOut(tween(ICON_SWAP_MILLIS), targetScale = 0.5f))
-      },
-      label = "copyIcon",
-    ) { check ->
-      LucideIcon(
-        icon = if (check) R.drawable.ic_lucide_check else R.drawable.ic_lucide_copy,
-        contentDescription = if (check) stringResource(R.string.chat_copied) else contentDescription,
-        size = iconSize,
-        tint = tint,
-      )
-    }
+    LucideIcon(
+      icon = if (showCheck) R.drawable.ic_lucide_check else R.drawable.ic_lucide_copy,
+      contentDescription = if (showCheck) stringResource(R.string.chat_copied) else contentDescription,
+      size = iconSize,
+      tint = tint,
+    )
   }
 }
 
 private val COPIED = 1.5.seconds
-private const val ICON_SWAP_MILLIS = 150

@@ -1,13 +1,7 @@
 package io.leloush.fang.ui.components
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -17,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,7 +44,6 @@ private const val RELEASE_THRESHOLD = 0.35f
 /** A rightward fling at least this fast removes the row from any distance. */
 private val FLING_VELOCITY = 900.dp
 
-private const val SLIDE_OUT_MILLIS = 160
 
 /**
  * An inbox-style swipe to remove a row, such as archiving a chat or closing a file. Dragging [content] right reveals
@@ -83,10 +75,10 @@ internal fun SwipeAway(
   LaunchedEffect(leaving, width) {
     if (width == 0) return@LaunchedEffect
     if (leaving) {
-      swipe.offset.animateTo(width.toFloat(), tween(SLIDE_OUT_MILLIS, easing = FastOutLinearInEasing))
+      swipe.offset.snapTo(width.toFloat())
       latestOnLeft()
     } else if (!swipe.dragging) {
-      swipe.springBack()
+      swipe.offset.snapTo(0f)
     }
   }
   val offset = swipe.offset.value
@@ -116,9 +108,6 @@ private class SwipeOffset {
   val offset = Animatable(0f)
   var dragging by mutableStateOf(false)
 
-  suspend fun springBack() {
-    offset.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-  }
 }
 
 /**
@@ -166,7 +155,7 @@ private suspend fun PointerInputScope.swipeDrag(
     val velocity = tracker.calculateVelocity().x
     val flung = velocity >= flingVelocity
     val released = position >= threshold && velocity > -flingVelocity
-    if (ended && position > 0f && (flung || released)) onSwiped() else scope.launch { swipe.springBack() }
+    if (ended && position > 0f && (flung || released)) onSwiped() else scope.launch { swipe.offset.snapTo(0f) }
   }
 }
 
@@ -174,12 +163,8 @@ private suspend fun PointerInputScope.swipeDrag(
 @Composable
 private fun SwipeMark(@DrawableRes icon: Int, armed: Boolean, modifier: Modifier) {
   val colors = fangColors
-  val background by animateColorAsState(if (armed) colors.accent else colors.surface3, label = "swipeMark")
-  val scale by animateFloatAsState(
-    targetValue = if (armed) 1.2f else 0.9f,
-    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-    label = "swipeMarkScale",
-  )
+  val background = if (armed) colors.accent else colors.surface3
+  val scale = if (armed) 1.2f else 0.9f
   Box(
     modifier = modifier.background(background).padding(start = FangTokens.Spacing.s24),
     contentAlignment = Alignment.CenterStart,

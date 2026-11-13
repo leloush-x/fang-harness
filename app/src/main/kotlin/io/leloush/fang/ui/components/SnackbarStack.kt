@@ -1,11 +1,5 @@
 package io.leloush.fang.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,7 +11,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -25,7 +18,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AccessibilityManager
@@ -38,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -68,8 +59,8 @@ internal class SnackbarStackState {
     return try {
       withTimeoutOrNull(millis) { entry.outcome.await() } ?: false
     } finally {
-      // The stack drops the entry once it has animated out.
-      entry.visibility.targetState = false
+      // The stack drops the entry at once; with no exit animation there is nothing to wait for.
+      entries -= entry
     }
   }
 
@@ -81,7 +72,6 @@ internal class SnackbarStackState {
 /** One snackbar in a [SnackbarStackState]; [outcome] is true once its action is taken, false once dismissed. */
 internal class SnackbarEntry(val message: String, val actionLabel: String?) {
   val outcome = CompletableDeferred<Boolean>()
-  val visibility = MutableTransitionState(false).apply { targetState = true }
 
   fun performAction() {
     outcome.complete(true)
@@ -130,44 +120,34 @@ private fun StackColumn(state: SnackbarStackState, modifier: Modifier) {
 @Composable
 private fun StackedSnackbar(state: SnackbarStackState, entry: SnackbarEntry) {
   val colors = fangColors
-  LaunchedEffect(entry) {
-    snapshotFlow { entry.visibility.isIdle && !entry.visibility.currentState }.first { it }
-    state.entries.remove(entry)
-  }
-  AnimatedVisibility(
-    visibleState = entry.visibility,
-    enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+  SwipeToDismissBox(
+    state = rememberSwipeToDismissBoxState(),
+    backgroundContent = {},
+    modifier = Modifier
+      .padding(start = MATERIAL_INSET, end = MATERIAL_INSET, top = FangTokens.Spacing.s8)
+      .semantics {
+        liveRegion = LiveRegionMode.Polite
+        // TalkBack users cannot swipe it away, so they get Material's dismiss action instead.
+        dismiss {
+          entry.dismiss()
+          true
+        }
+      },
+    onDismiss = { entry.dismiss() },
   ) {
-    SwipeToDismissBox(
-      state = rememberSwipeToDismissBoxState(),
-      backgroundContent = {},
-      modifier = Modifier
-        .padding(start = MATERIAL_INSET, end = MATERIAL_INSET, top = FangTokens.Spacing.s8)
-        .semantics {
-          liveRegion = LiveRegionMode.Polite
-          // TalkBack users cannot swipe it away, so they get Material's dismiss action instead.
-          dismiss {
-            entry.dismiss()
-            true
-          }
-        },
-      onDismiss = { entry.dismiss() },
-    ) {
-      Snackbar(
-        action = entry.actionLabel?.let { label ->
-          {
-            TextButton(
-              onClick = entry::performAction,
-              colors = ButtonDefaults.textButtonColors(contentColor = colors.accent),
-            ) { Text(label) }
-          }
-        },
-        shape = RoundedCornerShape(FangTokens.Radius.lg),
-        containerColor = colors.surface3,
-        contentColor = colors.foreground,
-      ) { Text(entry.message) }
-    }
+    Snackbar(
+      action = entry.actionLabel?.let { label ->
+        {
+          TextButton(
+            onClick = entry::performAction,
+            colors = ButtonDefaults.textButtonColors(contentColor = colors.accent),
+          ) { Text(label) }
+        }
+      },
+      shape = RoundedCornerShape(FangTokens.Radius.lg),
+      containerColor = colors.surface3,
+      contentColor = colors.foreground,
+    ) { Text(entry.message) }
   }
 }
 

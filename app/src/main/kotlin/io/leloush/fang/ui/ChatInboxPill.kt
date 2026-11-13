@@ -2,12 +2,6 @@ package io.leloush.fang.ui
 
 import android.text.format.DateUtils
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -92,7 +86,7 @@ internal fun ChatInboxOverlay(shown: Boolean, onOpen: (ChatLocation) -> Unit, ab
     onOpen(entry.location)
   }
   Box(modifier = Modifier.fillMaxSize()) {
-    AnimatedVisibility(visible = trayShown, enter = fadeIn(), exit = fadeOut()) {
+    if (trayShown) {
       Box(
         modifier = Modifier
           .fillMaxSize()
@@ -110,7 +104,7 @@ internal fun ChatInboxOverlay(shown: Boolean, onOpen: (ChatLocation) -> Unit, ab
       verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
     ) {
       above()
-      AnimatedVisibility(visible = pillShown, enter = fadeIn() + slideInVertically { -it }, exit = fadeOut()) {
+      if (pillShown) {
         // Keyed on the oldest chat, so after a swipe clears the pill the next one starts unswiped.
         key(entries.lastOrNull()) {
           InboxPill(
@@ -121,11 +115,7 @@ internal fun ChatInboxOverlay(shown: Boolean, onOpen: (ChatLocation) -> Unit, ab
           )
         }
       }
-      AnimatedVisibility(
-        visible = trayShown,
-        enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-        exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
-      ) {
+      if (trayShown) {
         InboxTray(entries = entries, onOpen = open, onClearAll = inbox::clear)
       }
     }

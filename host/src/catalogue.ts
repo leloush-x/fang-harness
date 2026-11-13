@@ -8,12 +8,24 @@ const PREFERRED_PROVIDERS = ["openai", "openai-codex", "anthropic", "google"];
 
 export type Catalogue = (id: string) => ModelDef | undefined;
 
+/** Catalogues by requested API, built once per process: Pi's built-in models don't change under this host. */
+const catalogues = new Map<string, Promise<Catalogue>>();
+
 /**
  * Looks model ids up in Pi's built-in catalogue (never `models.json`). When several built-in
  * providers list an id, the copy with the requested `api` wins, then `PREFERRED_PROVIDERS` order,
  * then catalogue order.
  */
 export async function loadCatalogue(ctx: ModeContext, api: string): Promise<Catalogue> {
+  let hit = catalogues.get(api);
+  if (hit === undefined) {
+    hit = buildCatalogue(ctx, api);
+    catalogues.set(api, hit);
+  }
+  return hit;
+}
+
+async function buildCatalogue(ctx: ModeContext, api: string): Promise<Catalogue> {
   const runtime = await createRuntime(ctx, { builtinOnly: true });
   const best = new Map<string, { rank: number; def: ModelDef }>();
   for (const model of runtime.getModels()) {

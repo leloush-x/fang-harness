@@ -1,8 +1,5 @@
 package io.leloush.fang.ui.chat
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -138,14 +135,12 @@ internal fun ChatStream(
     if (timeline.items.isEmpty() && processState == AgentProcessState.Ready) {
       EmptyState(noModel = timeline.model == null, onOpenProviders, Modifier.align(Alignment.Center))
     }
-    AnimatedVisibility(
-      visible = loadingOverHistory,
-      modifier = Modifier.align(Alignment.TopCenter).padding(top = FangTokens.Spacing.s8),
-      enter = fadeIn(),
-      exit = fadeOut(),
-    ) {
+    if (loadingOverHistory) {
       val installing = processState is AgentProcessState.Installing
-      LoadingPill(stringResource(if (installing) R.string.chat_installing else R.string.chat_loading))
+      LoadingPill(
+        stringResource(if (installing) R.string.chat_installing else R.string.chat_loading),
+        modifier = Modifier.align(Alignment.TopCenter).padding(top = FangTokens.Spacing.s8),
+      )
     }
     ScrollToBottomButton(
       visible = showScrollButton,
@@ -414,17 +409,16 @@ private fun EmptyState(noModel: Boolean, onOpenProviders: () -> Unit, modifier: 
 
 @Composable
 private fun ScrollToBottomButton(visible: Boolean, onClick: () -> Unit, modifier: Modifier) {
-  AnimatedVisibility(visible = visible, modifier = modifier, enter = fadeIn(), exit = fadeOut()) {
-    Box(
-      modifier = Modifier.size(48.dp).clip(CircleShape).background(fangColors.surface2).clickable(onClick = onClick),
-      contentAlignment = Alignment.Center,
-    ) {
-      LucideIcon(
-        icon = R.drawable.ic_lucide_chevron_down,
-        contentDescription = stringResource(R.string.chat_scroll_to_bottom),
-        size = 24.dp,
-      )
-    }
+  if (!visible) return
+  Box(
+    modifier = modifier.size(48.dp).clip(CircleShape).background(fangColors.surface2).clickable(onClick = onClick),
+    contentAlignment = Alignment.Center,
+  ) {
+    LucideIcon(
+      icon = R.drawable.ic_lucide_chevron_down,
+      contentDescription = stringResource(R.string.chat_scroll_to_bottom),
+      size = 24.dp,
+    )
   }
 }
 

@@ -39,15 +39,27 @@ export function hiddenUntilPicked(providerId: string): boolean {
   return modelListPath(providerId) !== undefined;
 }
 
+/** The builtinOnly runtime, built once per process: its catalogue is fixed for the lifetime of the Pi install,
+ * which the app changes only by restarting this host.
+ */
+let builtinOnlyRuntime: Promise<ModelRuntime> | undefined;
+
 /**
  * Pi's model/auth runtime over `PI_CODING_AGENT_DIR`, without a model catalog refresh.
  * `builtinOnly` skips `models.json`, leaving only Pi's built-in providers and catalogue.
  */
 export async function createRuntime(ctx: ModeContext, { builtinOnly = false } = {}): Promise<ModelRuntime> {
   const pi = await loadPi(ctx.env.root);
+  if (builtinOnly) {
+    builtinOnlyRuntime ??= pi.ModelRuntime.create({
+      signal: ctx.signal,
+      refreshOnCreate: false,
+      modelsPath: null,
+    });
+    return builtinOnlyRuntime;
+  }
   return await pi.ModelRuntime.create({
     signal: ctx.signal,
     refreshOnCreate: false,
-    ...(builtinOnly ? { modelsPath: null } : {}),
   });
 }

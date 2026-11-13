@@ -112,7 +112,7 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
 
   /** Deletes the session files at [paths]; one that is already gone counts as deleted. */
   suspend fun deleteSessions(paths: List<String>) {
-    call("delete_sessions", JSONObject().put("paths", JSONArray(paths)))
+    utilityData("delete_sessions", JSONObject().put("paths", JSONArray(paths)), UTILITY_TIMEOUT_MILLIS)
   }
 
   /** A session's messages as Pi's RPC `get_messages` reports them, read without starting Pi. */
@@ -216,12 +216,12 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     files.forEach { (name, bytes) ->
       array.put(JSONObject().put("name", name).put("data", encoder.encodeToString(bytes)))
     }
-    return call("save_attachments", JSONObject().put("files", array)).optJSONArray("paths").strings()
+    return utilityData("save_attachments", JSONObject().put("files", array), UTILITY_TIMEOUT_MILLIS).optJSONArray("paths").strings()
   }
 
   /** The backups folder in Wolfi OS and its backups, newest first. */
   suspend fun backups(): Backups {
-    val data = call("backups", JSONObject())
+    val data = utilityData("backups", JSONObject(), UTILITY_TIMEOUT_MILLIS)
     return Backups(data.optString("dir"), data.optJSONArray("backups").objects().map(BackupInfo::from))
   }
 
@@ -236,7 +236,7 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
   }
 
   suspend fun deleteBackup(name: String) {
-    call("backup_delete", JSONObject().put("name", name))
+    utilityData("backup_delete", JSONObject().put("name", name), UTILITY_TIMEOUT_MILLIS)
   }
 
   /** Runs `pi update --extensions`, which updates every package in Pi's settings that isn't pinned to a version. */

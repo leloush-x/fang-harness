@@ -8,7 +8,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -85,8 +84,8 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Shows the top of the navigator's stack; onboarding is the root until setup completes. Pushed
- * screens slide in from the end edge over the one below, and slide back out when popped.
+ * Shows the top of the navigator's stack; onboarding is the root until setup completes. Screens
+ * swap instantly, with no slide or fade.
  */
 @Composable
 private fun FangApp(graph: AppGraph, requestedChat: MutableStateFlow<ChatLocation?>) {
@@ -255,15 +254,16 @@ private fun ArchivePage(
 }
 
 /**
- * Same timing as the sidebar panels. The screen underneath shifts a quarter width for depth; the
- * popped screen stays on top while it leaves. Replacing the whole stack cross-fades.
+ * Screens swap with no animation, so navigation feels instant. The screen underneath shifts a
+ * quarter width for depth; the popped screen stays on top while it leaves. Replacing the whole
+ * stack cross-fades.
  *
  * AnimatedContent keeps the z-index a screen entered with, so every transition sets it to the
  * screen's stack depth: a deeper screen always draws over a shallower one, however it got there.
  */
 private fun stackTransition(from: Int, to: Int): ContentTransform {
-  val slide = tween<IntOffset>(durationMillis = SCREEN_SLIDE_MILLIS, easing = FastOutSlowInEasing)
-  val fade = tween<Float>(durationMillis = SCREEN_SLIDE_MILLIS, easing = FastOutSlowInEasing)
+  val slide = tween<IntOffset>(durationMillis = 0)
+  val fade = tween<Float>(durationMillis = 0)
   val transform = when {
     to > from -> slideInHorizontally(slide) { it } togetherWith slideOutHorizontally(slide) { -it / 4 }
     to < from -> slideInHorizontally(slide) { -it / 4 } togetherWith slideOutHorizontally(slide) { it }
@@ -271,8 +271,6 @@ private fun stackTransition(from: Int, to: Int): ContentTransform {
   }
   return transform.apply { targetContentZIndex = to.toFloat() }
 }
-
-private const val SCREEN_SLIDE_MILLIS = 220
 
 /** Drops the saved UI state of screens that left the stack, so reopening one starts fresh. */
 @Composable

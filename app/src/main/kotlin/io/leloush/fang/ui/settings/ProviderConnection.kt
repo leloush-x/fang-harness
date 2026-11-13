@@ -2,7 +2,6 @@ package io.leloush.fang.ui.settings
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +40,7 @@ internal fun ConnectionSection(form: ProviderForm, onCheck: () -> Unit) {
   val failure = form.lastFailure
   Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
     FieldLabel(stringResource(R.string.provider_connection))
-    SettingsSection(title = null, modifier = Modifier.animateContentSize()) {
+    SettingsSection(title = null) {
       ConnectionStatusRow(form = form, onCheck = onCheck)
       if (failure != null) {
         SettingsDivider()
