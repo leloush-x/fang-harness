@@ -44,9 +44,9 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [~] Port `host/src/pipkin-extensions.ts` → `host/src/fang-extensions.ts` and `pipkin-channel.ts` → `fang-channel.ts` (non-remote parity parts merged/updated; remote-extension handling still pending careful merge).
 - [~] Port host modes: `subagent-sessions.ts`, `subscription-models.ts` added; `local-models-sync.ts` and `remote-*` modes skipped per scope.
 - [~] Port `host/src/subagent-folders.ts`; `host/src/termux-session.ts` skipped (Wolfi runtime, not Termux).
-- [~] Merged pipkin host changes into many differing in-scope files (catalogue/channel/config-lock/connection/detect/env/folder-search/mode/model-def/model-list/models-json/runtime/scope/session-file/tar, several modes, fang-channel, most fang-web-access modules + new providers). Remote-dependent files left on Wolfi/fang-safe implementation pending careful merge: main/prompt/fang-extensions, browse/ensure/files/git/rpc/save-attachments/sessions/terminal/utility, fang-background, fang-subagents/runs.
+- [~] Merged pipkin host changes into many differing in-scope files (catalogue/channel/config-lock/connection/detect/env/folder-search/mode/model-def/model-list/models-json/runtime/scope/session-file/tar, several modes, fang-channel, most fang-web-access modules + new providers). `ensure` merged with install-lock/completion-marker improvements (no remote). Remote-dependent files still pending careful non-remote merge: main/prompt/fang-extensions, browse/ensure/files/git/rpc/save-attachments/sessions/terminal/utility, fang-background, fang-subagents/runs.
 - [ ] Port host tests: emulator-fixtures, helper-daemon, helper-protocol, local-models-sync, pipkin-background-records, pipkin-background, pipkin-remote, pipkin-subagents, pipkin-todo, remote-*, sshd, subagents-harness, subscription-models (skip remote/local-models-only tests).
-- [~] Host build+lint green locally (`cd host && OUT=/tmp/fh node build.ts && pnpm run lint`); full CI verification pending.
+- [~] Host build+lint green locally (`cd host && OUT=/tmp/fh node build.ts && pnpm run lint`); commits pushed in progress, full CI/APK/tests verification pending.
 
 ### Upgrade 3 — Subagents
 - [ ] Port `app/.../agent/LiveSubagent.kt`, `StepFigure.kt`, `StepStream.kt`, `SubagentRuns.kt`.
@@ -104,4 +104,8 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 (none yet)
 
 ## Next
-Continue Upgrade 2/3/6/8/9: merge pipkin host/app changes, port subagents/subscription features, update UI/docs/build while preserving Wolfi/Termx runtime and skipping remote/local-models.
+- Continue Upgrade 2: carefully merge non-remote pipkin changes into remaining host files (prompt stays Wolfi-specific; merge non-remote parts of utility/sessions/terminal/save-attachments/browse/files/git/rpc, fang-extensions, fang-background, fang-subagents/runs) and port applicable host tests.
+- Upgrade 3/6: port subagents (app agent/UI/data/tests + host wiring) and subscription/model-defaults integration, excluding remote/local-models.
+- Upgrade 7: add/adapt Termx tests (BindTable/FakeProcfs/StorageAccess) for wolfi-core where feasible.
+- Upgrade 8/9: merge UI strings/resources/fonts/icons, site, build config, scripts, docs (non-remote/local-models), workflows; rebrand and keep Wolfi runtime.
+- After each coherent step: host build+lint green, commit, push debug, verify CI green + APK/tests, then proceed. Final: push debug to main.
