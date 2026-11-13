@@ -44,9 +44,9 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [~] Port `host/src/pipkin-extensions.ts` → `host/src/fang-extensions.ts` and `pipkin-channel.ts` → `fang-channel.ts` (non-remote parity parts merged/updated; remote-extension handling still pending careful merge).
 - [~] Port host modes: `subagent-sessions.ts`, `subscription-models.ts` added; `local-models-sync.ts` and `remote-*` modes skipped per scope.
 - [~] Port `host/src/subagent-folders.ts`; `host/src/termux-session.ts` skipped (Wolfi runtime, not Termux).
-- [~] Merged pipkin host changes into many differing in-scope files (catalogue/channel/config-lock/connection/detect/env/folder-search/mode/model-def/model-list/models-json/runtime/scope/session-file/tar, several modes, fang-channel, most fang-web-access modules + new providers). `ensure` merged with install-lock/completion-marker improvements (no remote). Remote-dependent files still pending careful non-remote merge: main/prompt/fang-extensions, browse/ensure/files/git/rpc/save-attachments/sessions/terminal/utility, fang-background, fang-subagents/runs.
-- [ ] Port host tests: emulator-fixtures, helper-daemon, helper-protocol, local-models-sync, pipkin-background-records, pipkin-background, pipkin-remote, pipkin-subagents, pipkin-todo, remote-*, sshd, subagents-harness, subscription-models (skip remote/local-models-only tests).
-- [~] Host build+lint green locally (`cd host && OUT=/tmp/fh node build.ts && pnpm run lint`); commits pushed in progress, full CI/APK/tests verification pending.
+- [~] Merged pipkin host changes into many differing in-scope files (catalogue/channel/config-lock/connection/detect/env/folder-search/mode/model-def/model-list/models-json/runtime/scope/session-file/tar, several modes, fang-channel, most fang-web-access modules + new providers). `ensure` merged with install-lock/completion-marker improvements (no remote). `sessions`/`utility` merged with in-scope parity (subagent counts, unified utility protocol/ops) excluding remote/local-models ops. Restored Wolfi-specific `env` behavior (`FANG_HOME`, comments) after parity port. Remote-dependent files still pending careful non-remote merge: main/prompt/fang-extensions, browse/files/git/rpc/save-attachments/terminal, fang-background, fang-subagents/runs.
+- [~] Port host tests: aligned `scope`, `channel`, `provider-save`, `subscription`, `login` tests with pipkin parity; removed obsolete `folder-search.test.ts`; added `subscription-models.test.ts` and `harness.runOp`; existing fang-named background/subagents/todo tests already match pipkin rebranded. Remote/local-models/helper/ssh tests intentionally skipped.
+- [~] Host build+lint/typecheck green locally; multiple fixes pushed to debug. CI runs repeatedly cancelled by newer pushes; latest run pending/needs verification for green check/tests/APK.
 
 ### Upgrade 3 — Subagents
 - [ ] Port `app/.../agent/LiveSubagent.kt`, `StepFigure.kt`, `StepStream.kt`, `SubagentRuns.kt`.
@@ -79,19 +79,15 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - Commit, tick, log.
 
 ### Upgrade 8 — UI, strings, icons, fonts, site
-- [ ] Port new drawables (openrouter brand, launcher foregrounds, lucide icons).
-- [ ] Port manrope font + OFL.
-- [ ] Port values-night/colors.xml, launcher_icon.xml.
-- [ ] Merge all strings_*.xml changes (archive, chat, connection, files, host, inbox, onboarding, settings, shell).
-- [ ] Port site changes (favicons, manrope, components, theme).
-- Verify, commit, tick, log.
+- [~] Ported `app/src/main/res/xml/data_extraction_rules.xml`; values-night/manrope/most drawables already present or not safely portable without branding conflicts.
+- [~] Merged non-remote missing string resources from pipkin into in-scope `strings_*.xml` (archive/chat/connection/host/inbox/onboarding/settings/shell); existing strings and remote/local-model strings need further careful parity review.
+- [~] Updated site components/theme/scripts/pages/assets/licenses (rebranded, skipped remote/local-model-heavy astro config/content areas); docs kept fang-specific to avoid reintroducing skipped features.
+- [ ] Complete UI parity (icons/drawables/launcher, full strings merge, values-night/colors/launcher icon as needed) and app screen changes; verify, commit, tick, log.
 
 ### Upgrade 9 — Build config, scripts, docs, plans
-- [ ] Merge build.gradle.kts, settings.gradle.kts, gradle.properties, gradle/wrapper, CMakeLists, AndroidManifest, syntax.c.
-- [ ] Port scripts: sign-play-bundle.sh, ssh-test-host.sh, upload-play-bundle.sh.
-- [ ] Port docs: local-models, privacy, remote-hosts, acknowledgements updates, etc.
-- [ ] Port plans/ directory.
-- [ ] Merge .github/workflows/release.yml.
+- [~] Ported `scripts/sign-play-bundle.sh`, `scripts/upload-play-bundle.sh` (skipped ssh-test-host). Attempted AGP/Kotlin bump reverted due CI JDK/lint toolchain mismatch; build config merges still pending.
+- [ ] Merge build.gradle.kts, settings.gradle.kts, gradle.properties, gradle/wrapper, CMakeLists, AndroidManifest, syntax.c (preserve fang/Wolfi, exclude remote/local-model deps).
+- [ ] Port non-remote docs/acknowledgements/privacy updates and plans; merge workflows (`ci.yml`/`release.yml`) as appropriate.
 - Verify, commit, tick, log.
 
 ### Upgrade 10 — Final verification and merge

@@ -1,12 +1,12 @@
-/* Fang Harness's fonts and themes, shared by the landing page (global.css) and the guide (docs.css). The colors are those of
-   app/src/main/kotlin/io/leloush/fang/ui/theme/Fang HarnessColors.kt.
+/* Fang's fonts and themes, shared by the landing page (global.css) and the guide (docs.css). The colors are those of
+   app/src/main/kotlin/io/jeph/fang/ui/theme/FangColors.kt.
 
    With no theme picked, the page follows the system like the app's System theme: Porcelain in light mode, Stone in
    dark mode, through light-dark(). A picked theme sets data-palette on the root (see scripts/theme-init.js): Porcelain
    and Stone only pin the color scheme, and the other themes replace every color. */
 
 /* Manrope 4.505 (https://github.com/googlefonts/manrope), SIL Open Font License 1.1: see assets/fonts/OFL.txt, served
-   with the site's other notices in public/licenses.txt. Subset to Latin from the variable copy Fang Harness bundles in
+   with the site's other notices in public/licenses.txt. Subset to Latin from the variable copy Fang bundles in
    app/src/main/res/font. */
 @font-face {
   font-family: "Manrope";
@@ -17,7 +17,7 @@
 }
 
 /* JetBrains Mono 2.304 (https://github.com/JetBrains/JetBrainsMono), SIL Open Font License 1.1, subset to Latin from
-   the copy Fang Harness bundles in app/src/main/res/font. */
+   the copy Fang bundles in app/src/main/res/font. */
 @font-face {
   font-family: "JetBrains Mono";
   font-style: normal;
