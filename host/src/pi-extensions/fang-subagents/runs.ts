@@ -14,15 +14,13 @@ import {
   DefaultResourceLoader,
   type ExtensionToolContext,
   getAgentDir,
-  type InlineExtension,
   ModelRuntime,
   SessionManager,
   SettingsManager,
   type ToolDefinition,
   type ToolInfo,
 } from "@earendil-works/pi-coding-agent";
-import { remoteSystemAppend, SYSTEM_APPEND } from "../../prompt.js";
-import { remoteWorkspace } from "../fang-remote/workspace.js";
+import { SYSTEM_APPEND } from "../../prompt.js";
 import type { AgentDefinition, ThinkingLevel } from "./agents.js";
 import { newLog } from "./live.js";
 import {
@@ -232,17 +230,13 @@ async function createChild(
   const cwd = ctx.cwd;
   const agentDir = getAgentDir();
   const settingsManager = SettingsManager.create(cwd, agentDir, { projectTrusted: ctx.isProjectTrusted() });
-  // The child gets the parent's Fang prompt, then its agent's. In a remote chat its tools run on the remote, so like
-  // the parent's, its prompt names the remote folder as its working directory, not the stand-in it runs in.
-  const workspace = await remoteWorkspace(cwd);
-  const fangPrompt = workspace === null ? SYSTEM_APPEND : remoteSystemAppend(workspace.host, workspace.path);
-  const appended = request.agent.prompt === "" ? [fangPrompt] : [fangPrompt, request.agent.prompt];
+  // The child gets the parent's Fang prompt, then its agent's.
+  const appended = request.agent.prompt === "" ? [SYSTEM_APPEND] : [SYSTEM_APPEND, request.agent.prompt];
   const resourceLoader = new DefaultResourceLoader({
     cwd,
     agentDir,
     settingsManager,
     noExtensions: true,
-    ...(workspace === null ? {} : { extensionFactories: [remoteCwd(workspace.path)] }),
     appendSystemPromptOverride: (base: string[]) => [...base, ...appended],
   });
   await resourceLoader.reload();
@@ -267,18 +261,6 @@ async function createChild(
   };
   session.sessionManager.appendCustomEntry(ENTRY_TYPE, entry);
   return session;
-}
-
-/** Names remote folder [path] as the child's working directory in its prompt, as `fang-remote` does for the parent. */
-function remoteCwd(path: string): InlineExtension {
-  return {
-    name: "fang-subagent-remote-cwd",
-    factory: (pi) => {
-      pi.on("before_agent_start", (event) => {
-        event.systemPromptOptions.cwd = path;
-      });
-    },
-  };
 }
 
 /** `subagents/<parent id>/` beside the parent's file, or memory when the parent has no file either. */
