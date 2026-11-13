@@ -216,7 +216,12 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     files.forEach { (name, bytes) ->
       array.put(JSONObject().put("name", name).put("data", encoder.encodeToString(bytes)))
     }
-    return utilityData("save_attachments", JSONObject().put("files", array), UTILITY_TIMEOUT_MILLIS).optJSONArray("paths").strings()
+    val data = utilityData(
+      "save_attachments",
+      JSONObject().put("files", array),
+      UTILITY_TIMEOUT_MILLIS,
+    )
+    return data.optJSONArray("paths").strings()
   }
 
   /** The backups folder in Wolfi OS and its backups, newest first. */

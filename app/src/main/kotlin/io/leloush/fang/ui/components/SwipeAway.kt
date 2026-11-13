@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +44,6 @@ private const val RELEASE_THRESHOLD = 0.35f
 
 /** A rightward fling at least this fast removes the row from any distance. */
 private val FLING_VELOCITY = 900.dp
-
 
 /**
  * An inbox-style swipe to remove a row, such as archiving a chat or closing a file. Dragging [content] right reveals
@@ -107,7 +107,6 @@ internal fun SwipeAway(
 private class SwipeOffset {
   val offset = Animatable(0f)
   var dragging by mutableStateOf(false)
-
 }
 
 /**
