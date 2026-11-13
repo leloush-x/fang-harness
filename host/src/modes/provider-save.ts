@@ -2,7 +2,7 @@ import { HostError, loadPi } from "../env.js";
 import { isObject, type JsonObject } from "../framing.js";
 import type { ModeContext } from "../mode.js";
 import { mergeManagedFields, modelDefsParam, objectsById } from "../model-def.js";
-import { readModelsJson, writeModelsJson } from "../models-json.js";
+import { NO_API_KEY, readModelsJson, writeModelsJson } from "../models-json.js";
 import { stringParam } from "../params.js";
 import { createRuntime } from "../runtime.js";
 import { keepProviderInScope, replaceProviderModels, scopeResolver, scopeUniverse } from "../scope.js";
@@ -34,8 +34,6 @@ export async function providerSave(ctx: ModeContext): Promise<JsonObject> {
   if (builtin.getProviders().some((provider) => provider.id === id)) {
     throw new HostError("builtin_id", `"${id}" is a built-in provider; choose another ID`, { key: "provider_id_builtin", args: { id } });
   }
-  if (apiKey === "") throw new HostError("bad_params", "An API key is required");
-
   const pi = await loadPi(ctx.env.root);
   const settings = openSettingsIfValid(ctx, pi);
   const runtime = await createRuntime(ctx);
@@ -47,15 +45,16 @@ export async function providerSave(ctx: ModeContext): Promise<JsonObject> {
     ...entry,
     baseUrl,
     api,
-    apiKey,
+    apiKey: apiKey === "" ? NO_API_KEY : apiKey,
     models: models.map((model) => mergeManagedFields(model, existingModels.get(model.id))),
   };
   await writeModelsJson(ctx.env.configDir, document);
 
   if (settings !== undefined && settings.enabledModels.length > 0) {
     const saved = models.map((model) => ({ provider: id, id: model.id, name: model.name ?? model.id }));
-    const resolve = scopeResolver(pi, replaceProviderModels(await scopeUniverse(runtime, ctx.signal), id, saved));
-    const patterns = await keepProviderInScope(settings.enabledModels, id, settings.defaultRef, resolve);
+    const universe = replaceProviderModels(await scopeUniverse(runtime, ctx.signal), id, saved);
+    const resolve = scopeResolver(pi, universe);
+    const patterns = await keepProviderInScope(settings.enabledModels, id, settings.defaultRef, universe, resolve);
     if (patterns !== undefined) await saveEnabledModels(settings, patterns);
   }
   return {};

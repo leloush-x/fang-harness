@@ -40,15 +40,13 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [~] Commit done; tick fully after verification, log in AGENT.md.
 
 ### Upgrade 2 — Host core additions (pipkin → fang, rebranded)
-- [ ] Port `host/src/install-lock.ts`, `host/src/pid-lock.ts`, `host/src/model-list.ts`, `host/src/string-enum.ts`.
-- [ ] Port `host/src/pipkin-extensions.ts` → `host/src/fang-extensions.ts` (merge with existing).
-- [ ] Port `host/src/pi-extensions/pipkin-channel.ts` → `host/src/pi-extensions/fang-channel.ts` (merge).
-- [ ] Port `host/src/pi-extensions/string-enum.ts`.
-- [ ] Port host modes: `local-models-sync.ts`, `remote-connect.ts`, `remote-folder.ts`, `remote-hosts.ts`, `remote-install.ts`, `subagent-sessions.ts`, `subscription-models.ts`.
-- [ ] Port `host/src/subagent-folders.ts`, `host/src/termux-session.ts` (adapt: fang uses Wolfi, not Termux — keep only generic parts).
-- [ ] Merge pipkin host changes into differing host files (catalogue, channel, config-lock, detect, env, folder-search, main, mode, models-json, prompt, runtime, scope, tar, all modes/*, framing, connection, params, etc.).
-- [ ] Port host tests: emulator-fixtures, helper-daemon, helper-protocol, local-models-sync, pipkin-background-records, pipkin-background, pipkin-remote, pipkin-subagents, pipkin-todo, remote-*, sshd, subagents-harness, subscription-models.
-- Verify, commit, tick, log.
+- [~] Port `host/src/install-lock.ts`, `host/src/pid-lock.ts`, `host/src/model-list.ts`, `host/src/pi-extensions/string-enum.ts`; `host/src/string-enum.ts` N/A in pipkin root.
+- [~] Port `host/src/pipkin-extensions.ts` → `host/src/fang-extensions.ts` and `pipkin-channel.ts` → `fang-channel.ts` (non-remote parity parts merged/updated; remote-extension handling still pending careful merge).
+- [~] Port host modes: `subagent-sessions.ts`, `subscription-models.ts` added; `local-models-sync.ts` and `remote-*` modes skipped per scope.
+- [~] Port `host/src/subagent-folders.ts`; `host/src/termux-session.ts` skipped (Wolfi runtime, not Termux).
+- [~] Merged pipkin host changes into many differing in-scope files (catalogue/channel/config-lock/connection/detect/env/folder-search/mode/model-def/model-list/models-json/runtime/scope/session-file/tar, several modes, fang-channel, most fang-web-access modules + new providers). Remote-dependent files left on Wolfi/fang-safe implementation pending careful merge: main/prompt/fang-extensions, browse/ensure/files/git/rpc/save-attachments/sessions/terminal/utility, fang-background, fang-subagents/runs.
+- [ ] Port host tests: emulator-fixtures, helper-daemon, helper-protocol, local-models-sync, pipkin-background-records, pipkin-background, pipkin-remote, pipkin-subagents, pipkin-todo, remote-*, sshd, subagents-harness, subscription-models (skip remote/local-models-only tests).
+- [~] Host build+lint green locally (`cd host && OUT=/tmp/fh node build.ts && pnpm run lint`); full CI verification pending.
 
 ### Upgrade 3 — Subagents
 - [ ] Port `app/.../agent/LiveSubagent.kt`, `StepFigure.kt`, `StepStream.kt`, `SubagentRuns.kt`.

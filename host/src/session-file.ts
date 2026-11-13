@@ -20,7 +20,7 @@ export async function sessionFile(configDir: string, path: string): Promise<stri
   const target = await resolveExisting(path);
   const inside = relative(base, target);
   if (inside === "" || inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
-    throw new HostError("outside_sessions", "That file is not inside Fang Harness's sessions folder");
+    throw new HostError("outside_sessions", "That file is not inside Fang's sessions folder");
   }
   return target;
 }

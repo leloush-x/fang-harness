@@ -3,8 +3,8 @@ import { loadPi } from "./env.js";
 import type { ModeContext } from "./mode.js";
 
 /**
- * Pi's own providers Fang Harness connects, and how: OAuth for the Claude and ChatGPT subscriptions, an
- * API key for Gemini, the Z.ai Coding Plan and Kimi Code.
+ * Pi's own providers Fang connects, and how: OAuth for the Claude and ChatGPT subscriptions, an
+ * API key for Gemini, the Z.ai Coding Plan, Kimi Code and OpenRouter.
  */
 const LOGIN_TYPES: Record<string, "oauth" | "api_key"> = {
   anthropic: "oauth",
@@ -18,11 +18,16 @@ const LOGIN_TYPES: Record<string, "oauth" | "api_key"> = {
 export const BUILTIN_PROVIDERS: readonly string[] = Object.keys(LOGIN_TYPES);
 
 /**
- * Where the providers Fang Harness connects with an API key list the models their key may use, under their base
+ * Where the providers Fang connects with an API key list the models their key may use, under their base
  * URL. Gemini's list has its own shape, so it has none here. These providers' models stay out of scope
  * after sign-in until the user picks some from the list.
  */
 const MODEL_LIST_PATHS: Record<string, string> = { zai: "/models", "kimi-coding": "/models", openrouter: "/models/user" };
+
+/** How Fang signs in to one of `BUILTIN_PROVIDERS`; undefined for any other provider. */
+export function loginType(providerId: string): "oauth" | "api_key" | undefined {
+  return Object.hasOwn(LOGIN_TYPES, providerId) ? LOGIN_TYPES[providerId] : undefined;
+}
 
 /** The path of the provider's list of models its key may use, or undefined when it has none. */
 export function modelListPath(providerId: string): string | undefined {
@@ -32,11 +37,6 @@ export function modelListPath(providerId: string): string | undefined {
 /** True for a provider whose models show only once the user picks them from its list. */
 export function hiddenUntilPicked(providerId: string): boolean {
   return modelListPath(providerId) !== undefined;
-}
-
-/** How Fang Harness signs in to one of `BUILTIN_PROVIDERS`; undefined for any other provider. */
-export function loginType(providerId: string): "oauth" | "api_key" | undefined {
-  return Object.hasOwn(LOGIN_TYPES, providerId) ? LOGIN_TYPES[providerId] : undefined;
 }
 
 /**

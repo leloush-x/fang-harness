@@ -34,7 +34,7 @@ export class Connection {
       this.receive(line);
     });
     const hangUp = (): void => {
-      this.abort.abort(new Error("Fang Harness closed the connection"));
+      this.abort.abort(new Error("Fang closed the connection"));
     };
     socket.on("data", this.onData);
     socket.on("error", () => {

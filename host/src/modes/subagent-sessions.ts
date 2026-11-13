@@ -5,7 +5,7 @@ import { stringParam } from "../params.js";
 import { sessionFile } from "../session-file.js";
 import { containedFolder, sessionId, subagentFolder, transcriptFiles } from "../subagent-folders.js";
 
-/** The custom entry the Fang Harness subagents extension writes into each transcript, linking it to the parent's call. */
+/** The custom entry the Fang subagents extension writes into each transcript, linking it to the parent's call. */
 const ENTRY_TYPE = "fang-subagent";
 
 /** What one transcript says about its run, or undefined when it isn't a subagent's. */

@@ -13,7 +13,7 @@ const HTML_BODY = /^\s*<(!doctype|html|head|body)/i;
  * Fetches an OpenAI-style `/models` list at `url` and reads each entry's capabilities, keyed by id in
  * the server's order. `baseUrl` names the server in messages. Failures carry a code per cause
  * (`network`, `timeout`, `unauthorized`, `not_found`, `rate_limited`, `server_error`, `http_error`,
- * `bad_response`) and a message with what the server said, for Fang Harness to explain.
+ * `bad_response`) and a message with what the server said, for Fang to explain.
  */
 export async function fetchModelList(ctx: ModeContext, baseUrl: string, url: string, apiKey: string): Promise<Map<string, ModelDef>> {
   let response: Response;

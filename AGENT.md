@@ -80,7 +80,8 @@ Proc config: FakeProcfs generates /proc/* content so the environment behaves lik
 
 ### Parity port progress (partial)
 - Copied/rebranded selected pipkin-only host utilities/modes/tests and app/site assets (subagent-sessions, subscription-models, install/pid locks, string-enum, subagent-folders, icons/fonts, docs/privacy, site components), skipping remote chat and local models per user instruction.
-- Many differing files (host core/modes, app Kotlin, UI, build config, docs, site) still need merge/adaptation to Wolfi runtime and fang branding.
-
+- Host core parity (in progress): merged pipkin versions (rebranded) into many in-scope host files and fang-web-access modules, added new web-access provider modules (cloudflare-search, deepseek, duckduckgo-rate-limit, field-extract, linkup, ninerouter, offtopic-judge, searchapi, tabstack, upgrade-notice). Remote-dependent host files intentionally kept on Wolfi/fang-safe implementations pending careful non-remote merge (main, prompt, fang-extensions, browse/ensure/files/git/rpc/save-attachments/sessions/terminal/utility, fang-background, fang-subagents/runs). `termux-session.ts` not adopted (Wolfi runtime).
+- Host build and lint green locally after partial port; full CI (APK/tests) still required.
+- Many differing files (app Kotlin, UI, build config, docs, site) still need merge/adaptation to Wolfi runtime and fang branding.
 ### Known constraints
 - This environment cannot run `./gradlew check` (no Android SDK) and host `tsc`/vitest have known arm64 limitations; CI must verify CLI green, APK build, and all tests.

@@ -1,4 +1,4 @@
-// Vendored from pi-web-access 0.39.0 (https://github.com/nicobailon/pi-web-access), MIT License: see LICENSE and UPSTREAM.md.
+// Vendored from pi-web-access 0.46.0 (https://github.com/nicobailon/pi-web-access), MIT License: see LICENSE and UPSTREAM.md.
 import { lookup as dnsLookup } from "node:dns/promises";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import net from "node:net";
@@ -67,15 +67,57 @@ export interface DomainPolicy {
 
 const DEFAULT_DOMAIN_POLICY: DomainPolicy = { allow: [], deny: [] };
 
-export function loadFetchContentDomainPolicy(): DomainPolicy {
+export type RedirectPolicy = "same-origin";
+
+function loadFetchContentConfig(): Record<string, unknown> | undefined {
 	const parsed = loadConfigRoot();
-	if (!parsed) return { ...DEFAULT_DOMAIN_POLICY };
+	if (!parsed) return undefined;
 	const fetchContent = parsed.fetchContent;
-	if (fetchContent === undefined || fetchContent === null) return { ...DEFAULT_DOMAIN_POLICY };
+	if (fetchContent === undefined || fetchContent === null) return undefined;
 	if (typeof fetchContent !== "object" || Array.isArray(fetchContent)) {
 		throw new Error(`fetchContent in ${WEB_SEARCH_CONFIG_PATH} must be an object`);
 	}
-	const policy = (fetchContent as { domainPolicy?: unknown }).domainPolicy;
+	return fetchContent as Record<string, unknown>;
+}
+
+export function loadFetchContentRedirectPolicy(): RedirectPolicy | undefined {
+	const redirects = loadFetchContentConfig()?.redirects;
+	if (redirects === undefined || redirects === null) return undefined;
+	if (redirects !== "same-origin") {
+		throw new Error(`fetchContent.redirects in ${WEB_SEARCH_CONFIG_PATH} must be "same-origin"`);
+	}
+	return redirects;
+}
+
+const DEFAULT_FETCH_CONTENT_USER_AGENT = "OpenAI File Downloader, XaiImageApiFetch/1.0";
+
+export function loadFetchContentUserAgent(): string {
+	return loadConfiguredFetchContentUserAgent() ?? DEFAULT_FETCH_CONTENT_USER_AGENT;
+}
+
+/** fetchContent.userAgent when it is set, without the default. */
+export function loadConfiguredFetchContentUserAgent(): string | undefined {
+	const userAgent = loadFetchContentConfig()?.userAgent;
+	if (userAgent === undefined || userAgent === null) return undefined;
+	if (typeof userAgent !== "string" || userAgent.trim().length === 0 || !/^[\t\x20-\x7e]+$/.test(userAgent)) {
+		throw new Error(`fetchContent.userAgent in ${WEB_SEARCH_CONFIG_PATH} must be a non-empty string of printable ASCII characters`);
+	}
+	return userAgent.trim();
+}
+
+/** fetchContent.curl as an executable plus leading arguments, or null to use Node's fetch. */
+export function loadFetchContentCurl(): string[] | null {
+	const curl = loadFetchContentConfig()?.curl;
+	if (curl === undefined || curl === null) return null;
+	const command: unknown[] | null = typeof curl === "string" ? [curl] : Array.isArray(curl) ? curl : null;
+	if (!command || command.length === 0 || command.some((part) => typeof part !== "string" || part.trim().length === 0 || part.includes("\0"))) {
+		throw new Error(`fetchContent.curl in ${WEB_SEARCH_CONFIG_PATH} must be a command name or path, or a non-empty array of a command and its arguments`);
+	}
+	return command.map((part) => (part as string).trim());
+}
+
+export function loadFetchContentDomainPolicy(): DomainPolicy {
+	const policy = loadFetchContentConfig()?.domainPolicy;
 	if (policy === undefined || policy === null) return { ...DEFAULT_DOMAIN_POLICY };
 	if (typeof policy !== "object" || Array.isArray(policy)) {
 		throw new Error(`fetchContent.domainPolicy in ${WEB_SEARCH_CONFIG_PATH} must be an object`);
@@ -180,6 +222,8 @@ interface FetchRemoteOptions extends ValidationOptions {
 	fetch?: Fetch;
 	maxRedirects?: number;
 	onRedirect?: (args: RedirectRequestInitArgs) => RequestInit;
+	/** "same-origin" refuses any redirect that leaves the original URL's origin. */
+	redirects?: RedirectPolicy;
 }
 
 async function defaultLookup(hostname: string): Promise<LookupAddress[]> {
@@ -258,6 +302,9 @@ export async function fetchRemoteUrl(
 
 		const from = current;
 		const next = new URL(location, current);
+		if (options.redirects === "same-origin" && next.origin !== configuredOrigin) {
+			throw new Error(`Refused cross-origin redirect by fetch_content redirect policy: ${configuredOrigin} -> ${next.origin}`);
+		}
 		// allowLoopback exempts an explicitly configured endpoint, never a redirect target: a loopback
 		// base must not be able to pivot the request onto a different loopback origin.
 		current = await validateRemoteUrl(next, next.origin === configuredOrigin ? options : { ...options, allowLoopback: false });
@@ -350,6 +397,14 @@ function shouldTrustEnvProxy(url: URL, enabled: boolean): boolean {
 	const port = url.port || (url.protocol === "https:" ? "443" : "80");
 	const noProxy = process.env.NO_PROXY || process.env.no_proxy || "";
 	return !noProxy.split(",").some(entry => hostnameMatchesNoProxy(hostname, port, entry));
+}
+
+/** The env proxy validateRemoteUrl trusts to resolve this URL instead of checking DNS locally, or null.
+ * A fetch that skipped the local check because of it must connect through it. */
+export function trustedEnvProxyFor(url: URL, trustEnvProxy: boolean): string | null {
+	// IP literals are always checked locally, so they keep connecting directly.
+	if (net.isIP(normalizeHostname(url.hostname))) return null;
+	return shouldTrustEnvProxy(url, trustEnvProxy) ? getProxyForProtocol(url.protocol) : null;
 }
 
 /** Only the operator's configured proxy qualifies: a model-supplied per-call proxy must not skip DNS validation. */

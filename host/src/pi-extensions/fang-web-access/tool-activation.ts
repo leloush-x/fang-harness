@@ -1,4 +1,4 @@
-// Vendored from pi-web-access 0.39.0 (https://github.com/nicobailon/pi-web-access), MIT License: see LICENSE and UPSTREAM.md.
+// Vendored from pi-web-access 0.46.0 (https://github.com/nicobailon/pi-web-access), MIT License: see LICENSE and UPSTREAM.md.
 import type { ExtensionAPI, ExtensionContext, SessionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
@@ -125,7 +125,7 @@ export function registerWebToolActivation(pi: ExtensionAPI, tools: ReadonlyArray
 	function selectFromSession(ctx: ExtensionContext): void {
 		if (!loaderAvailable()) return;
 		try {
-			// Fang Harness: read the branch through the session manager. Importing buildSessionContext from Pi made Node load a
+			// Fang: read the branch through the session manager. Importing buildSessionContext from Pi made Node load a
 			// second, unbundled copy of Pi when the extension loaded.
 			const messages = ctx.sessionManager.buildSessionProjection().messages;
 			const declared = transcriptToolNames(messages);

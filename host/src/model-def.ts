@@ -10,7 +10,7 @@ export type ModelInput = ["text"] | ["text", "image"];
 /** USD per million tokens, as in Pi's `models.json`. */
 export type ModelCost = { input: number; output: number; cacheRead: number; cacheWrite: number };
 
-/** The per-model settings Fang Harness reads and writes; a field is absent when unknown. */
+/** The per-model settings Fang reads and writes; a field is absent when unknown. */
 export type ModelDef = {
   id: string;
   name?: string;
@@ -61,7 +61,7 @@ function parseInput(value: unknown): ModelInput | undefined {
   return value.includes("image") ? TEXT_AND_IMAGE : TEXT_ONLY;
 }
 
-/** The four rates only: Pi's `tiers` are not edited by Fang Harness. */
+/** The four rates only: Pi's `tiers` are not edited by Fang. */
 function parseCost(value: unknown): ModelCost | undefined {
   if (!isObject(value)) return undefined;
   const input = rate(value.input);
@@ -137,20 +137,20 @@ export function objectsById(list: unknown): Map<string, JsonObject> {
   return byId;
 }
 
-/** A copy of a stored model or override without the fields Fang Harness owns. */
+/** A copy of a stored model or override without the fields Fang owns. */
 export function withoutManagedFields(stored: JsonObject | undefined): JsonObject {
   const kept: JsonObject = { ...stored };
   for (const field of MANAGED_FIELDS) delete kept[field];
   return kept;
 }
 
-/** The stored `cost.tiers`, which Fang Harness never edits but keeps whenever it writes a cost. */
+/** The stored `cost.tiers`, which Fang never edits but keeps whenever it writes a cost. */
 export function storedCostTiers(stored: JsonObject | undefined): unknown[] | undefined {
   return isObject(stored?.cost) && Array.isArray(stored.cost.tiers) ? stored.cost.tiers : undefined;
 }
 
 /**
- * Fang Harness owns the managed fields; everything else the agent or user put on the model
+ * Fang owns the managed fields; everything else the agent or user put on the model
  * (headers, compat, samplingParams, cost tiers, …) is kept.
  */
 export function mergeManagedFields(def: ModelDef, existing: JsonObject | undefined): JsonObject {

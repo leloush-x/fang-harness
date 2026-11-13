@@ -1,5 +1,5 @@
 /**
- * The extensions' end of Fang Harness's channel (see `../channel.ts`): the socket the host starts Pi with on fd CHANNEL_FD.
+ * The extensions' end of Fang's channel (see `../channel.ts`): the socket the host starts Pi with on fd CHANNEL_FD.
  * Every bundled extension shares one, kept on `globalThis`, since each is bundled with its own copy of this module and
  * Pi loads an extension again for each session and `/reload`.
  */
@@ -14,7 +14,7 @@ import {
 } from "../channel.js";
 
 export interface FangChannel {
-  /** Sends [data] on [topic] to the app; dropped when Pi doesn't run under Fang Harness's host. */
+  /** Sends [data] on [topic] to the app; dropped when Pi doesn't run under Fang's host. */
   send(topic: string, data: unknown): void;
   /** Calls [handler] with each message the app sends on [topic], until the returned function is called. */
   on(topic: string, handler: (data: unknown) => void): () => void;

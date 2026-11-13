@@ -1,4 +1,4 @@
-// Vendored from pi-web-access 0.39.0 (https://github.com/nicobailon/pi-web-access), MIT License: see LICENSE and UPSTREAM.md.
+// Vendored from pi-web-access 0.46.0 (https://github.com/nicobailon/pi-web-access), MIT License: see LICENSE and UPSTREAM.md.
 import { normalizeProxyUrl } from "./utils.ts";
 
 export interface FetchContentParams {
@@ -11,8 +11,10 @@ export interface FetchContentParams {
 	model?: unknown;
 	mode?: unknown;
 	answerModel?: unknown;
+	fields?: unknown;
 	auth?: unknown;
 	proxy?: unknown;
+	redirects?: unknown;
 }
 
 export interface NormalizedFetchContentParams {
@@ -23,10 +25,11 @@ export interface NormalizedFetchContentParams {
 		timestamp?: string;
 		frames?: number;
 		model?: string;
-		mode?: "readable" | "raw" | "answer";
+		mode?: "readable" | "raw" | "answer" | "extract";
 		answerModel?: string;
 		auth?: true | string;
 		proxy?: string;
+		redirects?: "same-origin";
 	};
 }
 
@@ -45,6 +48,7 @@ export function normalizeFetchContentParams(params: FetchContentParams): Normali
 	const answerModel = normalizeOptionalString(params.answerModel);
 	const auth = normalizeAuth(params.auth);
 	const proxy = normalizeProxy(params.proxy);
+	const redirects = normalizeRedirects(params.redirects);
 
 	return {
 		urlList,
@@ -58,6 +62,7 @@ export function normalizeFetchContentParams(params: FetchContentParams): Normali
 			...(answerModel !== undefined ? { answerModel } : {}),
 			...(auth !== undefined ? { auth } : {}),
 			...(proxy !== undefined ? { proxy } : {}),
+			...(redirects !== undefined ? { redirects } : {}),
 		},
 	};
 }
@@ -79,10 +84,16 @@ function normalizeOptionalString(value: unknown): string | undefined {
 	return trimmed || undefined;
 }
 
-function normalizeMode(value: unknown): "readable" | "raw" | "answer" | undefined {
+function normalizeMode(value: unknown): "readable" | "raw" | "answer" | "extract" | undefined {
 	if (value === undefined) return undefined;
-	if (value === "readable" || value === "raw" || value === "answer") return value;
-	throw new Error('mode must be "readable", "raw", or "answer"');
+	if (value === "readable" || value === "raw" || value === "answer" || value === "extract") return value;
+	throw new Error('mode must be "readable", "raw", "answer", or "extract"');
+}
+
+function normalizeRedirects(value: unknown): "same-origin" | undefined {
+	if (value === undefined) return undefined;
+	if (value === "same-origin") return value;
+	throw new Error('redirects must be "same-origin"');
 }
 
 function normalizeAuth(value: unknown): true | string | undefined {

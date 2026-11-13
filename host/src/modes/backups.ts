@@ -75,9 +75,9 @@ function progress(ctx: ModeContext, verb: string, key: string): (count: number) 
   };
 }
 
-/** The failure of a file whose manifest doesn't make it a Fang Harness backup. */
+/** The failure of a file whose manifest doesn't make it a Fang backup. */
 function notBackup(): HostError {
-  return new HostError("not_backup", "This file is not a Fang Harness configuration backup", { key: "backup_not_fang" });
+  return new HostError("not_backup", "This file is not a Fang configuration backup", { key: "backup_not_fang" });
 }
 
 /** Reads the first `size` bytes of an open file, then closes it. */
@@ -184,7 +184,7 @@ async function parseManifest(entry: TarEntry): Promise<Manifest> {
   }
   if (manifest === null || typeof manifest !== "object" || !("format" in manifest) || manifest.format !== FORMAT) throw notBackup();
   if (!("version" in manifest) || manifest.version !== VERSION) {
-    throw new HostError("backup_version", "This backup is from a newer Fang Harness; update Fang Harness to restore it", {
+    throw new HostError("backup_version", "This backup is from a newer Fang; update Fang to restore it", {
       key: "backup_from_newer_fang",
     });
   }

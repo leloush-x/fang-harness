@@ -1,5 +1,5 @@
 /**
- * A chat's subagent transcripts, which the Fang Harness subagents extension saves in `subagents/<session id>/` beside the
+ * A chat's subagent transcripts, which the Fang subagents extension saves in `subagents/<session id>/` beside the
  * chat's own file. Pi's session list reads only the files directly in a sessions folder, so they never show as chats.
  */
 import { type FileHandle, open, readdir, realpath } from "node:fs/promises";
@@ -29,7 +29,7 @@ export async function containedFolder(configDir: string, folder: string): Promis
   }
   const inside = relative(await realpath(join(configDir, "sessions")), target);
   if (inside === "" || inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
-    throw new HostError("outside_sessions", "That folder is not inside Fang Harness's sessions folder");
+    throw new HostError("outside_sessions", "That folder is not inside Fang's sessions folder");
   }
   return target;
 }

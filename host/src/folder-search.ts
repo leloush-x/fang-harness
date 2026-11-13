@@ -4,7 +4,7 @@
  * packages/protocol/src/search/text-match.ts. Copyright (c) 2025-present Mohamed Boudra,
  * licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * Changed for Fang Harness: folders only, as Paseo's add-project picker asks for; several roots (Wolfi OS
+ * Changed for Fang: folders only, as Paseo's add-project picker asks for; several roots (Termux
  * home and each storage volume) instead of one; results keep each root's own spelling; no Git
  * ignore rules, file matches, suffix mode or shared filesystem-call limiter; a search stops early
  * once a newer one starts.
@@ -20,7 +20,8 @@ export interface SearchRoot {
 
 export const SEARCH_LIMIT = 30;
 
-const MAX_DEPTH = 12;
+/** How deep a search walks below its root. */
+export const MAX_DEPTH = 12;
 const MAX_FOLDERS_SCANNED = 20_000;
 /** Past this many folders a root stops as soon as one result is a confident match. */
 const CONFIDENT_RESULT_SCAN_THRESHOLD = 5_000;
@@ -31,7 +32,8 @@ const NO_SEGMENT_INDEX = Number.MAX_SAFE_INTEGER;
 const NO_MATCH_OFFSET = Number.MAX_SAFE_INTEGER;
 const NO_FUZZY_SCORE = Number.MAX_SAFE_INTEGER;
 const NO_MATCH_TIER = 5;
-const IGNORED_FOLDER_NAMES = new Set([
+/** Folders a search never enters or offers, besides hidden ones. */
+export const IGNORED_FOLDER_NAMES = new Set([
   "node_modules",
   "venv",
   "env",
@@ -230,33 +232,8 @@ function staysInsideRoot(folder: Folder, resolvedRoot: string): boolean {
   return !folder.viaSymlink || isInside(resolvedRoot, folder.resolvedPath);
 }
 
-/**
- * The folders a search never walks: the virtual filesystems, which hold kernel plumbing, and Android's system images,
- * which the launcher binds in. Neither can hold a project, and both are large enough that a walk into one would spend
- * the search's whole budget doing it — and under PRoot, which intercepts every syscall, take seconds over it.
- *
- * Matched on the resolved path rather than a folder's name: a project may still keep a folder called `dev`, and a
- * repository one called `vendor`.
- */
-const UNSEARCHABLE_PATHS = new Set([
-  "/proc",
-  "/sys",
-  "/dev",
-  "/apex",
-  "/odm",
-  "/product",
-  "/system",
-  "/system_ext",
-  "/vendor",
-]);
-
-/** Whether a folder that resolved to [resolvedPath] may be walked. */
-export function isSearchablePath(resolvedPath: string): boolean {
-  return !UNSEARCHABLE_PATHS.has(resolvedPath);
-}
-
 function isDiscoverable(folder: Folder): boolean {
-  return isSearchablePath(folder.resolvedPath) && !folder.name.startsWith(".") && !IGNORED_FOLDER_NAMES.has(folder.name);
+  return !folder.name.startsWith(".") && !IGNORED_FOLDER_NAMES.has(folder.name);
 }
 
 function rank(folder: Walked, search: Search): Ranked {

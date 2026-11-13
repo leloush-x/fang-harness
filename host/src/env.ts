@@ -10,18 +10,17 @@ export const PI_PACKAGE = "@earendil-works/pi-coding-agent";
 
 export type PiSdk = typeof PiModule;
 
-/** Values the Wolfi launcher exports before exec'ing node. */
+/** Values the Termux bootstrap exports before exec'ing node. */
 export interface HostEnv {
   token: string;
-  /** Fang Harness-managed state, including the pinned Pi install. */
+  /** `$HOME/.local/share/fang` (`fang-dev` for the debug build): Fang-managed state, including the pinned Pi install. */
   root: string;
-  /** `PI_CODING_AGENT_DIR`: Pi's config, sessions and user-installed packages. */
+  /** `PI_CODING_AGENT_DIR`, `$HOME/.fang/pi` (`.fang-dev` for the debug build): Pi's config, sessions and user-installed packages. */
   configDir: string;
-  /** The folder the app treats as home (`/` — the root of Wolfi OS), for `~` expansion and the folder picker. */
   home: string;
-  /** The root of Wolfi's packages, `/usr`. */
+  /** Termux's `$PREFIX`, the root of its packages. */
   prefix: string;
-  /** Android's shared storage, `$EXTERNAL_STORAGE` (`/sdcard`); the runtime reaches it only with All files access. */
+  /** Android's shared storage, `$EXTERNAL_STORAGE` (`/sdcard`); Termux reaches it only with All files access. */
   sharedStorage: string;
 }
 
@@ -66,7 +65,29 @@ export async function piEntry(root: string): Promise<string> {
   return join(dir, entry);
 }
 
-/** The installed Pi version, or null when Fang Harness has not installed Pi yet. */
+/**
+ * Present while `ensure` installs the runtime, from before it writes the runtime's manifests until `npm ci` succeeds, so
+ * an install that was cut off counts as unfinished even though the manifests already match.
+ */
+export function piInstallingMarker(root: string): string {
+  return join(root, "pi", ".fang-installing");
+}
+
+/** Whether the last install of the runtime finished and Pi's CLI script is still on disk. */
+export async function piInstallComplete(root: string): Promise<boolean> {
+  if (await exists(piInstallingMarker(root))) return false;
+  const entry = await piEntry(root).catch(() => null);
+  return entry !== null && (await exists(entry));
+}
+
+function exists(path: string): Promise<boolean> {
+  return access(path).then(
+    () => true,
+    () => false,
+  );
+}
+
+/** The installed Pi version, or null when Fang has not installed Pi yet. */
 export async function installedPiVersion(root: string): Promise<string | null> {
   try {
     const manifest = JSON.parse(await readFile(join(piPackageDir(root), "package.json"), "utf8")) as unknown;
@@ -94,14 +115,14 @@ export function readHostEnv(): HostEnv | undefined {
     token,
     root,
     configDir,
-    home: process.env.FANG_HOME || process.env.HOME || os.homedir(),
+    home: process.env.HOME ?? os.homedir(),
     prefix,
     sharedStorage: process.env.EXTERNAL_STORAGE || "/sdcard",
   };
 }
 
 /**
- * Shared storage's real folder when the app has storage access, else null. Without access Android still lets an app
+ * Shared storage's real folder when Termux has storage access, else null. Without access Android still lets an app
  * list the folder's top level, so this asks for write access. Granting access in Android's settings creates no
  * `~/storage` links, so this goes to the folder itself rather than through them.
  */
@@ -117,7 +138,7 @@ export async function grantedSharedStorage(env: HostEnv): Promise<string | null>
 
 /** The host's own variables, which Pi, shells and the commands they run never inherit. */
 export function withoutHostVariables(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const { FANG_TOKEN: _token, FANG_ROOT: _root, FANG_HOME: _home, PI_CODING_AGENT_DIR: _configDir, ...rest } = environment;
+  const { FANG_TOKEN: _token, FANG_ROOT: _root, PI_CODING_AGENT_DIR: _configDir, ...rest } = environment;
   return rest;
 }
 

@@ -9,27 +9,11 @@ const PREFERRED_PROVIDERS = ["openai", "openai-codex", "anthropic", "google"];
 export type Catalogue = (id: string) => ModelDef | undefined;
 
 /**
- * The catalogue per api, kept for as long as the process lives. It is Pi's built-in catalogue, which never changes,
- * and loading it means starting Pi's model runtime, which takes a while under PRoot.
- */
-const CACHE = new Map<string, Promise<Catalogue>>();
-
-/**
  * Looks model ids up in Pi's built-in catalogue (never `models.json`). When several built-in
  * providers list an id, the copy with the requested `api` wins, then `PREFERRED_PROVIDERS` order,
  * then catalogue order.
  */
 export async function loadCatalogue(ctx: ModeContext, api: string): Promise<Catalogue> {
-  const cached = CACHE.get(api);
-  if (cached !== undefined) return cached;
-  const loading = build(ctx, api);
-  CACHE.set(api, loading);
-  // A failure is not kept, so the next call tries again.
-  void loading.catch(() => CACHE.delete(api));
-  return loading;
-}
-
-async function build(ctx: ModeContext, api: string): Promise<Catalogue> {
   const runtime = await createRuntime(ctx, { builtinOnly: true });
   const best = new Map<string, { rank: number; def: ModelDef }>();
   for (const model of runtime.getModels()) {

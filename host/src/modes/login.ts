@@ -3,8 +3,8 @@ import { HostError, loadPi } from "../env.js";
 import type { JsonObject } from "../framing.js";
 import type { ModeContext } from "../mode.js";
 import { stringParam } from "../params.js";
-import { createRuntime, loginType } from "../runtime.js";
-import { keepProviderInScope, scopeResolver, scopeUniverse } from "../scope.js";
+import { createRuntime, hiddenUntilPicked, loginType } from "../runtime.js";
+import { hideUnpickedProvider, keepProviderInScope, scopeResolver, scopeUniverse } from "../scope.js";
 import { openSettingsIfValid, saveEnabledModels } from "../settings.js";
 
 type AuthInteraction = Parameters<ModelRuntime["login"]>[2];
@@ -80,10 +80,10 @@ function bridge(ctx: ModeContext): AuthInteraction {
 export async function login(ctx: ModeContext): Promise<JsonObject> {
   const providerId = stringParam(ctx.params, "providerId");
   const type = loginType(providerId);
-  if (type === undefined) throw new HostError("bad_params", `Fang Harness cannot sign in to ${providerId}`);
+  if (type === undefined) throw new HostError("bad_params", `Fang cannot sign in to ${providerId}`);
   const pi = await loadPi(ctx.env.root);
   const runtime = await createRuntime(ctx);
-  // ChatGPT sign-in needs a stable device ID, kept in Fang Harness's own Pi settings.
+  // ChatGPT sign-in needs a stable device ID, kept in Fang's own Pi settings.
   const settings = pi.SettingsManager.create(ctx.env.home, ctx.env.configDir);
   try {
     // An API-key login is Pi prompting for the key, which the app answers like any other prompt.
@@ -91,12 +91,17 @@ export async function login(ctx: ModeContext): Promise<JsonObject> {
   } finally {
     await settings.flush();
   }
-  // A scope written before sign-in may match none of this provider's models; they must show now.
   const scope = openSettingsIfValid(ctx, pi);
-  if (scope !== undefined && scope.enabledModels.length > 0) {
-    const resolve = scopeResolver(pi, await scopeUniverse(runtime, ctx.signal));
-    const patterns = await keepProviderInScope(scope.enabledModels, providerId, scope.defaultRef, resolve);
-    if (patterns !== undefined) await saveEnabledModels(scope, patterns);
-  }
+  if (scope === undefined) return {};
+  const hidden = hiddenUntilPicked(providerId);
+  // An empty scope shows every model, which is already right unless this provider's stay hidden.
+  if (!hidden && scope.enabledModels.length === 0) return {};
+  const universe = await scopeUniverse(runtime, ctx.signal);
+  const resolve = scopeResolver(pi, universe);
+  // Otherwise a scope written before sign-in may match none of this provider's models; they must show now.
+  const patterns = hidden
+    ? await hideUnpickedProvider(scope.enabledModels, providerId, scope.defaultRef, universe, resolve)
+    : await keepProviderInScope(scope.enabledModels, providerId, scope.defaultRef, universe, resolve);
+  if (patterns !== undefined) await saveEnabledModels(scope, patterns);
   return {};
 }
