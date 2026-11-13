@@ -14,7 +14,7 @@ import io.leloush.fang.ui.subagents.SubagentPhase
 import io.leloush.fang.ui.subagents.rowLabel
 import io.leloush.fang.ui.subagents.runTime
 import io.leloush.fang.ui.subagents.subagentFacts
-import io.leloush.fang.ui.theme.Fang HarnessFonts
+import io.leloush.fang.ui.theme.FangFonts
 import io.leloush.fang.ui.theme.fangColors
 
 /**
@@ -64,8 +64,8 @@ internal fun SubagentToolRow(call: TimelineItem.ToolCall, subagents: StreamSubag
       text = statusText,
       color = if (facts.phase == SubagentPhase.Asking) fangColors.dotWarning else fangColors.foregroundMuted,
       fontSize = 11.5.sp,
-      fontFamily = Fang HarnessFonts.mono,
-      style = LocalTextStyle.current.copy(fontFeatureSettings = Fang HarnessFonts.TABULAR),
+      fontFamily = FangFonts.mono,
+      style = LocalTextStyle.current.copy(fontFeatureSettings = FangFonts.TABULAR),
       maxLines = 1,
       softWrap = false,
     )

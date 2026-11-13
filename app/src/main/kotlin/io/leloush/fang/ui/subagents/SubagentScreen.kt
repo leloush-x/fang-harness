@@ -59,7 +59,7 @@ import io.leloush.fang.ui.components.HeaderButton
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.PillButton
 import io.leloush.fang.ui.components.SimmeringPot
-import io.leloush.fang.ui.theme.Fang HarnessFonts
+import io.leloush.fang.ui.theme.FangFonts
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import java.io.IOException
@@ -366,7 +366,7 @@ private fun StatusLine(facts: SubagentFacts, stats: TranscriptStats?) {
     ),
     color = colors.foregroundMuted,
     fontSize = FangTokens.FontSize.sm,
-    style = LocalTextStyle.current.copy(fontFeatureSettings = Fang HarnessFonts.TABULAR),
+    style = LocalTextStyle.current.copy(fontFeatureSettings = FangFonts.TABULAR),
     maxLines = 1,
     overflow = TextOverflow.Ellipsis,
   )

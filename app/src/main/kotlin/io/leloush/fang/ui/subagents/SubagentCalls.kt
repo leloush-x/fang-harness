@@ -42,7 +42,7 @@ internal enum class SubagentPhase {
  */
 internal enum class SubagentTool {
   /** Fang Harness subagents', in a chat Pi runs, or not known, as in an archived chat. */
-  Fang Harness,
+  Fang,
 
   /** Another extension's, which Fang Harness subagents stands aside for: its calls are ordinary tool calls. */
   Other,
@@ -59,7 +59,7 @@ internal class ChatSubagents(
   val runs: List<SubagentRun>,
   val asker: SubagentAsker,
   val working: Boolean,
-  val tool: SubagentTool = SubagentTool.Fang Harness,
+  val tool: SubagentTool = SubagentTool.Fang,
   val cutOff: Map<String, Long> = emptyMap(),
 ) {
   /** The run [toolCallId] started, while the extension still lists it. */
@@ -84,7 +84,7 @@ internal class ChatSubagents(
   /** Whether [call] is the agent's call starting one of Fang Harness's subagents, rather than an ordinary tool call. */
   fun startsSubagent(call: TimelineItem.ToolCall): Boolean {
     if (call.toolName != SUBAGENT_TOOL || call.byUser) return false
-    if (call.output == null) return tool == SubagentTool.Fang Harness
+    if (call.output == null) return tool == SubagentTool.Fang
     return SubagentResult.from(call.details)?.fangs == true
   }
 

@@ -45,8 +45,8 @@ import io.leloush.fang.agent.TimelineState
 import io.leloush.fang.agent.askingSubagent
 import io.leloush.fang.ui.components.CapsLabel
 import io.leloush.fang.ui.components.LucideIcon
-import io.leloush.fang.ui.components.Fang HarnessSheet
-import io.leloush.fang.ui.theme.Fang HarnessFonts
+import io.leloush.fang.ui.components.FangSheet
+import io.leloush.fang.ui.theme.FangFonts
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import java.text.NumberFormat
@@ -66,7 +66,7 @@ internal fun rememberChatSubagents(process: AgentProcess, timeline: TimelineStat
   val standingAside by process.subagentsStandingAside.collectAsStateWithLifecycle()
   val cutOff by process.subagentsCutOff.collectAsStateWithLifecycle()
   return remember(runs, timeline, busy, standingAside, cutOff) {
-    val tool = if (standingAside) SubagentTool.Other else SubagentTool.Fang Harness
+    val tool = if (standingAside) SubagentTool.Other else SubagentTool.Fang
     ChatSubagents(runs, askingSubagent(timeline, runs), busy, tool, cutOff)
   }
 }
@@ -87,7 +87,7 @@ internal fun SubagentsSheet(
   onDismiss: () -> Unit,
 ) {
   val groups = subagents.groups()
-  Fang HarnessSheet(onDismissRequest = onDismiss, maxHeightFraction = SHEET_MAX_HEIGHT) { dismiss ->
+  FangSheet(onDismissRequest = onDismiss, maxHeightFraction = SHEET_MAX_HEIGHT) { dismiss ->
     LaunchedEffect(subagents.runs.isEmpty()) { if (subagents.runs.isEmpty()) dismiss {} }
     SheetHeader(subagents)
     LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
@@ -228,7 +228,7 @@ private fun RunRow(run: SubagentRun, subagents: ChatSubagents, question: String?
       text = runTime(run).orEmpty(),
       color = colors.foregroundMuted,
       fontSize = FangTokens.FontSize.sm,
-      style = LocalTextStyle.current.copy(fontFeatureSettings = Fang HarnessFonts.TABULAR),
+      style = LocalTextStyle.current.copy(fontFeatureSettings = FangFonts.TABULAR),
       maxLines = 1,
     )
     LucideIcon(
@@ -282,7 +282,7 @@ private fun RunLine(run: SubagentRun, phase: SubagentPhase, question: String?) {
     text = text,
     color = color,
     fontSize = if (code) 11.5.sp else FangTokens.FontSize.sm,
-    fontFamily = if (code) Fang HarnessFonts.mono else null,
+    fontFamily = if (code) FangFonts.mono else null,
     maxLines = 1,
     overflow = TextOverflow.Ellipsis,
   )

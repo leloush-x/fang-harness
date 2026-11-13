@@ -63,10 +63,10 @@ import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.agent.text
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.MarkdownCache
-import io.leloush.fang.ui.components.Fang HarnessMarkdown
+import io.leloush.fang.ui.components.FangMarkdown
 import io.leloush.fang.ui.components.RoundIconButton
 import io.leloush.fang.ui.components.SimmeringPot
-import io.leloush.fang.ui.theme.Fang HarnessFonts
+import io.leloush.fang.ui.theme.FangFonts
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import java.text.NumberFormat
@@ -116,7 +116,7 @@ internal fun ToolRow(
       modifier = Modifier.weight(1f),
       color = if (presentation.isError) colors.destructive else colors.foregroundMuted,
       fontSize = if (presentation.code) 11.5.sp else 12.5.sp,
-      fontFamily = if (presentation.code) Fang HarnessFonts.mono else null,
+      fontFamily = if (presentation.code) FangFonts.mono else null,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
     )
@@ -155,7 +155,7 @@ private fun FigureText(figure: StepFigure) {
     StepFigure.Stopped -> colored(stringResource(R.string.chat_figure_stopped), colors.foregroundMuted)
   }
   if (text.isEmpty()) return
-  Text(text = text, fontSize = 11.5.sp, fontFamily = Fang HarnessFonts.mono, maxLines = 1, softWrap = false)
+  Text(text = text, fontSize = 11.5.sp, fontFamily = FangFonts.mono, maxLines = 1, softWrap = false)
 }
 
 private fun colored(text: String, color: Color) = AnnotatedString(text, SpanStyle(color = color))
@@ -307,7 +307,7 @@ private fun FooterText(text: String, modifier: Modifier = Modifier, maxLines: In
     fontSize = FangTokens.FontSize.sm,
     maxLines = maxLines,
     overflow = TextOverflow.Ellipsis,
-    style = LocalTextStyle.current.copy(fontFeatureSettings = Fang HarnessFonts.TABULAR),
+    style = LocalTextStyle.current.copy(fontFeatureSettings = FangFonts.TABULAR),
   )
 }
 
