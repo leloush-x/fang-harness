@@ -1,5 +1,5 @@
 /**
- * Fang test model: a scripted model for testing Fang subagents on an emulator, with no network or API key.
+ * Fang Harness test model: a scripted model for testing Fang subagents on an emulator, with no network or API key.
  *
  * Install it by copying this folder to `~/.fang-dev/pi/extensions/fang-test-model/` (for example through a
  * Fang terminal tab), reload the chat, and pick the model `fang-test/scripted`. It registers the provider
@@ -132,7 +132,7 @@ function parentTurn(messages: Message[]): AssistantMessage {
   const latest = messages.findLastIndex((message) => message.role === "user");
   const found = keyword(text(messages[latest]));
   if (!found) {
-    return fauxAssistantMessage(`Fang test model. Send one of these keywords: ${KEYWORDS.join(", ")}.`);
+    return fauxAssistantMessage(`Fang Harness test model. Send one of these keywords: ${KEYWORDS.join(", ")}.`);
   }
   const answered = messages.slice(latest + 1).some((message) => message.role === "assistant");
   if (answered) {
@@ -161,7 +161,7 @@ function sample(property: unknown): Arguments[string] {
   if (type === "number" || type === "integer") return 1;
   if (type === "boolean") return true;
   if (type === "object") return {};
-  return "Fang test question: which do you pick?";
+  return "Fang Harness test question: which do you pick?";
 }
 
 /** Arguments for a tool from its parameter schema: a value of the right type for every property. */
@@ -195,7 +195,7 @@ function subagentTurn(task: string, messages: Message[]): AssistantMessage {
     case "sa-eight":
       return call("bash", { command: `${sleep(4 + number)}; echo done-${number}` });
     case "sa-eight-fail":
-      if (number === 5) throw new Error("Fang test model: scripted provider failure");
+      if (number === 5) throw new Error("Fang Harness test model: scripted provider failure");
       return call("bash", { command: `${sleep(2 + number)}; echo done-${number}` });
     case "sa-parent-bash-while-sub":
       return call("bash", { command: `${sleep(5)}; echo sub` });
@@ -211,7 +211,7 @@ function subagentTurn(task: string, messages: Message[]): AssistantMessage {
       return call("ask_user", argumentsFor(ask));
     }
     case "sa-general-edit":
-      return call("write", { path: "fang-subagent-test.txt", content: "Written by a Fang test subagent.\n" });
+      return call("write", { path: "fang-subagent-test.txt", content: "Written by a Fang Harness test subagent.\n" });
     case "sa-explore-bash":
       return call("bash", { command: "echo should not run" });
     default:
@@ -229,10 +229,10 @@ export default function fangTestModel(pi: ExtensionAPI): void {
   const core = createFauxCore({
     api: "fang-test-scripted",
     provider: PROVIDER,
-    models: [{ id: MODEL, name: "Fang test (scripted)", reasoning: false, input: ["text"], contextWindow: 200_000 }],
+    models: [{ id: MODEL, name: "Fang Harness test (scripted)", reasoning: false, input: ["text"], contextWindow: 200_000 }],
   });
   pi.registerProvider(PROVIDER, {
-    name: "Fang test",
+    name: "Fang Harness test",
     baseUrl: "http://127.0.0.1",
     apiKey: "fang-test",
     api: core.api,
@@ -245,7 +245,7 @@ export default function fangTestModel(pi: ExtensionAPI): void {
     models: [
       {
         id: MODEL,
-        name: "Fang test (scripted)",
+        name: "Fang Harness test (scripted)",
         reasoning: false,
         input: ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },

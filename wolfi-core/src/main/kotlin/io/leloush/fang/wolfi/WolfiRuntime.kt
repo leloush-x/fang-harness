@@ -120,7 +120,7 @@ class WolfiRuntime(context: Context) {
     val api = Build.VERSION.SDK_INT
     return when {
       api == 29 -> false
-      api >= 30 -> Environment.isExternalStorageManager()
+      api >= 30 -> @Suppress("NewApi") Environment.isExternalStorageManager()
       api in 26..28 ->
         app.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
           app.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED

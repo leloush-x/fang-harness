@@ -87,7 +87,7 @@ describe("modes backed by the Pi SDK", () => {
     expect(await runMode("session_messages", dirs, { path: gone })).toMatchObject({ ok: false, code: "not_found" });
   });
 
-  const BUILTIN = ["anthropic", "openai-codex", "google", "zai", "kimi-coding"].map((id) => ({
+  const BUILTIN = ["anthropic", "openai-codex", "google", "zai", "kimi-coding", "openrouter"].map((id) => ({
     id,
     name: expect.any(String),
     configured: false,

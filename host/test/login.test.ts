@@ -57,6 +57,6 @@ describe("login", () => {
   });
 
   it("rejects a provider Fang Harness does not connect", async () => {
-    expect(await runMode("login", dirs, { providerId: "openrouter" })).toMatchObject({ ok: false, code: "bad_params" });
+    expect(await runMode("login", dirs, { providerId: "openai" })).toMatchObject({ ok: false, code: "bad_params" });
   });
 });
