@@ -53,6 +53,7 @@ internal fun Modifier.roundButton(size: Dp, background: Color, enabled: Boolean,
     .clip(CircleShape)
     .background(background)
     .clickable(enabled = enabled, onClick = onClick)
+
 @Composable
 internal fun CapsLabel(
   text: String,
