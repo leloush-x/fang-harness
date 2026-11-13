@@ -10,17 +10,17 @@ export const PI_PACKAGE = "@earendil-works/pi-coding-agent";
 
 export type PiSdk = typeof PiModule;
 
-/** Values the Termux bootstrap exports before exec'ing node. */
+/** Values the Wolfi launcher exports before exec'ing node. */
 export interface HostEnv {
   token: string;
-  /** `$HOME/.local/share/fang` (`fang-dev` for the debug build): Fang-managed state, including the pinned Pi install. */
+  /** Fang Harness-managed state, including the pinned Pi install. */
   root: string;
-  /** `PI_CODING_AGENT_DIR`, `$HOME/.fang/pi` (`.fang-dev` for the debug build): Pi's config, sessions and user-installed packages. */
+  /** `PI_CODING_AGENT_DIR`: Pi's config, sessions and user-installed packages. */
   configDir: string;
   home: string;
-  /** Termux's `$PREFIX`, the root of its packages. */
+  /** The root of Wolfi's packages, `/usr`. */
   prefix: string;
-  /** Android's shared storage, `$EXTERNAL_STORAGE` (`/sdcard`); Termux reaches it only with All files access. */
+  /** Android's shared storage, `$EXTERNAL_STORAGE` (`/sdcard`); the runtime reaches it only with All files access. */
   sharedStorage: string;
 }
 
@@ -115,14 +115,14 @@ export function readHostEnv(): HostEnv | undefined {
     token,
     root,
     configDir,
-    home: process.env.HOME ?? os.homedir(),
+    home: process.env.FANG_HOME || process.env.HOME || os.homedir(),
     prefix,
     sharedStorage: process.env.EXTERNAL_STORAGE || "/sdcard",
   };
 }
 
 /**
- * Shared storage's real folder when Termux has storage access, else null. Without access Android still lets an app
+ * Shared storage's real folder when the app has storage access, else null. Without access Android still lets an app
  * list the folder's top level, so this asks for write access. Granting access in Android's settings creates no
  * `~/storage` links, so this goes to the folder itself rather than through them.
  */
@@ -138,7 +138,7 @@ export async function grantedSharedStorage(env: HostEnv): Promise<string | null>
 
 /** The host's own variables, which Pi, shells and the commands they run never inherit. */
 export function withoutHostVariables(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const { FANG_TOKEN: _token, FANG_ROOT: _root, PI_CODING_AGENT_DIR: _configDir, ...rest } = environment;
+  const { FANG_TOKEN: _token, FANG_ROOT: _root, FANG_HOME: _home, PI_CODING_AGENT_DIR: _configDir, ...rest } = environment;
   return rest;
 }
 

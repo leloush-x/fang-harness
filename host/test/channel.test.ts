@@ -3,8 +3,8 @@ import {
   AppInputRouter,
   type ChannelMessage,
   ChannelReader,
-  CHANNEL_TYPE,
   MAX_CHANNEL_LINE,
+  MAX_SOCKET_LINE,
   OutputMerger,
 } from "../src/channel.js";
 
@@ -71,13 +71,10 @@ describe("AppInputRouter", () => {
   it("gives Pi the held back start of a line when the input ends", () => {
     const toPi: Buffer[] = [];
     const router = new AppInputRouter((data) => toPi.push(Buffer.from(data)), () => {}, () => {});
-    // A prefix shorter than the whole channel prefix, so the router cannot
-    // tell yet whether this is a channel line.
-    const start = `{"type":"${CHANNEL_TYPE}`.slice(0, 13);
-    router.push(Buffer.from(start));
+    router.push(Buffer.from(`{"type":"pip`));
     expect(toPi).toEqual([]);
     router.end();
-    expect(Buffer.concat(toPi).toString()).toBe(start);
+    expect(Buffer.concat(toPi).toString()).toBe(`{"type":"pip`);
   });
 
   it("drops a channel line that is too long or not a message, and goes on with the next lines", () => {
@@ -160,7 +157,7 @@ describe("ChannelReader", () => {
       (reason) => dropped.push(reason),
     );
     reader.push(Buffer.from(`{"topic":"a","data":{"x":1}}\n{"type":"fang_exit","topic":"a"}\n`));
-    reader.push(Buffer.from(`{"topic":"b","data":"${"q".repeat(MAX_CHANNEL_LINE)}"}\n`));
+    reader.push(Buffer.from(`{"topic":"b","data":"${"q".repeat(MAX_SOCKET_LINE)}"}\n`));
     reader.push(Buffer.from(`{"topic":"c"}\n`));
 
     expect(received).toEqual([
@@ -168,6 +165,6 @@ describe("ChannelReader", () => {
       { topic: "c", data: null },
     ]);
     expect(dropped[0]).toBe("not a channel message");
-    expect(dropped[1]).toBe(`Line exceeds ${MAX_CHANNEL_LINE} bytes`);
+    expect(dropped[1]).toBe(`Line exceeds ${MAX_SOCKET_LINE} bytes`);
   });
 });

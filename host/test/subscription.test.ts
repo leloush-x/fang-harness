@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { isObject, type JsonObject } from "../src/framing.js";
-import { type Dirs, installRealPi, makeDirs, removeDirs, runMode } from "./harness.js";
+import { type Dirs, installRealPi, makeDirs, removeDirs, runOp } from "./harness.js";
 
 const LB = { baseUrl: "https://example.test/v1", api: "openai-responses", apiKey: "k", models: [{ id: "lb-1" }] };
 const TIERS = [{ inputTokensAbove: 200_000, input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 }];
@@ -32,7 +32,7 @@ describe("subscription model settings and scope", () => {
   });
 
   async function status(): Promise<JsonObject> {
-    const result = await runMode("auth_status", dirs, {});
+    const result = await runOp("auth_status", dirs, {});
     if (!isObject(result.data)) throw new Error(`auth_status failed: ${JSON.stringify(result)}`);
     return result.data;
   }
@@ -46,7 +46,7 @@ describe("subscription model settings and scope", () => {
   }
 
   async function save(providerId: string, enabled: string[], models: JsonObject[]): Promise<JsonObject> {
-    return await runMode("subscription_save", dirs, { providerId, enabled, models });
+    return await runOp("subscription_save", dirs, { providerId, enabled, models });
   }
 
   async function enabledModels(): Promise<unknown> {
@@ -54,7 +54,7 @@ describe("subscription model settings and scope", () => {
     return isObject(settings) ? settings.enabledModels : undefined;
   }
 
-  it("writes only overrides that differ from Pi's catalogue and keeps what Fang Harness doesn't manage", async () => {
+  it("writes only overrides that differ from Pi's catalogue and keeps what Fang doesn't manage", async () => {
     await writeJson(modelsPath, {
       providers: {
         anthropic: {
@@ -125,7 +125,7 @@ describe("subscription model settings and scope", () => {
     expect(await providerIds("anthropic")).not.toContain("gone");
   });
 
-  it("builds a scope from an empty one, default model first, keeping settings Fang Harness doesn't manage", async () => {
+  it("builds a scope from an empty one, default model first, keeping settings Fang doesn't manage", async () => {
     await writeJson(modelsPath, { providers: { "my-lb": LB } });
     await writeJson(settingsPath, { theme: "dark", defaultProvider: "my-lb", defaultModel: "lb-1" });
     expect(await save("anthropic", ["claude-opus-4-8"], [])).toMatchObject({ ok: true });
@@ -133,7 +133,7 @@ describe("subscription model settings and scope", () => {
       theme: "dark",
       defaultProvider: "my-lb",
       defaultModel: "lb-1",
-      enabledModels: ["my-lb/lb-1", "google/*", "kimi-coding/*", "openai-codex/*", "openrouter/*", "zai/*", "my-lb/*", "anthropic/claude-opus-4-8"],
+      enabledModels: ["my-lb/lb-1", "google/*", "openai-codex/*", "my-lb/*", "anthropic/claude-opus-4-8"],
     });
   });
 
@@ -157,6 +157,53 @@ describe("subscription model settings and scope", () => {
     await writeJson(settingsPath, { enabledModels: ["anthropic/claude-opus-4-8", "openai-codex/*"] });
     expect(await save("anthropic", await providerIds("anthropic"), [])).toMatchObject({ ok: true });
     expect(await enabledModels()).toEqual(["openai-codex/*", "anthropic/*"]);
+  });
+
+  it("names each model instead of provider/* while OpenRouter's copies of its ids would match", async () => {
+    await writeJson(path.join(dirs.configDir, "auth.json"), {
+      anthropic: { type: "api_key", key: "key-123" },
+      openrouter: { type: "api_key", key: "key-123" },
+    });
+    await writeJson(settingsPath, { enabledModels: ["anthropic/claude-opus-4-8", "openrouter/google/gemma-4-31b-it:free"] });
+    const ids = await providerIds("anthropic");
+    expect(await save("anthropic", ids, [])).toMatchObject({ ok: true });
+    expect(await enabledModels()).toEqual(["openrouter/google/gemma-4-31b-it:free", ...ids.map((id) => `anthropic/${id}`)]);
+  });
+
+  it("shows every OpenRouter model with a glob that reaches past the slash in its ids", async () => {
+    await writeJson(path.join(dirs.configDir, "auth.json"), { openrouter: { type: "api_key", key: "key-123" } });
+    await writeJson(settingsPath, { enabledModels: ["openai-codex/*"] });
+    const ids = await providerIds("openrouter");
+    expect(await save("openrouter", ids, [])).toMatchObject({ ok: true });
+    expect(await enabledModels()).toEqual(["openai-codex/*", "openrouter/**"]);
+    const { builtin } = await status();
+    expect(builtin).toEqual(expect.arrayContaining([expect.objectContaining({ id: "openrouter", enabled: expect.arrayContaining(ids) })]));
+  });
+
+  it("keeps OpenRouter's models hidden when its last picked model is taken off", async () => {
+    await writeJson(path.join(dirs.configDir, "auth.json"), { openrouter: { type: "api_key", key: "key-123" } });
+    await writeJson(settingsPath, { enabledModels: ["openrouter/google/gemma-4-31b-it:free"] });
+    expect(await save("openrouter", [], [])).toMatchObject({ ok: true });
+    expect(await enabledModels()).toEqual(expect.arrayContaining([expect.any(String)]));
+    const { builtin } = await status();
+    expect(builtin).toEqual(expect.arrayContaining([expect.objectContaining({ id: "openrouter", enabled: [] })]));
+  });
+
+  it("keeps OpenRouter's models hidden when the only other provider's last model is taken off", async () => {
+    // Codex is the only signed-in provider with models in scope; Anthropic's and Google's ids would name OpenRouter's copies.
+    await writeJson(path.join(dirs.configDir, "auth.json"), {
+      "openai-codex": { type: "oauth", access: "access", refresh: "refresh", expires: Date.now() + 3_600_000 },
+      openrouter: { type: "api_key", key: "key-123" },
+    });
+    const [codexId] = await providerIds("openai-codex");
+    if (codexId === undefined) throw new Error("Pi lists no Codex model");
+    await writeJson(settingsPath, { enabledModels: [`openai-codex/${codexId}`] });
+    expect(await save("openai-codex", [], [])).toMatchObject({ ok: true });
+    const data = await status();
+    expect(data.scope).toEqual([]);
+    expect(data.builtin).toEqual(expect.arrayContaining([expect.objectContaining({ id: "openrouter", enabled: [] })]));
+    expect(await save("openai-codex", [codexId], [])).toMatchObject({ ok: true });
+    expect(await enabledModels()).toEqual([`openai-codex/${codexId}`]);
   });
 
   it("reports the scope, enabled ids, extra ids and overridden settings", async () => {
@@ -207,16 +254,16 @@ describe("subscription model settings and scope", () => {
     { providerId: "anthropic", enabled: ["not-a-model"], models: [] },
     { providerId: "anthropic", enabled: [], models: [{ id: "claude-opus-4-8", contextWindow: "big" }] },
   ])("rejects bad params %j", async (params) => {
-    expect(await runMode("subscription_save", dirs, params)).toMatchObject({ ok: false, code: "bad_params" });
+    expect(await runOp("subscription_save", dirs, params)).toMatchObject({ ok: false, code: "bad_params" });
   });
 
   it("keeps a saved custom provider in a non-empty scope, default model first", async () => {
     await writeJson(settingsPath, { enabledModels: ["anthropic/*"], defaultProvider: "anthropic", defaultModel: "claude-opus-4-8" });
     const params = { id: "my-lb", baseUrl: LB.baseUrl, api: LB.api, apiKey: "k", models: [{ id: "lb-1" }] };
-    expect(await runMode("provider_save", dirs, params)).toMatchObject({ ok: true });
+    expect(await runOp("provider_save", dirs, params)).toMatchObject({ ok: true });
     expect(await enabledModels()).toEqual(["anthropic/claude-opus-4-8", "anthropic/*", "my-lb/*"]);
     // Already in scope: nothing changes.
-    expect(await runMode("provider_save", dirs, params)).toMatchObject({ ok: true });
+    expect(await runOp("provider_save", dirs, params)).toMatchObject({ ok: true });
     expect(await enabledModels()).toEqual(["anthropic/claude-opus-4-8", "anthropic/*", "my-lb/*"]);
   });
 
@@ -230,7 +277,7 @@ describe("subscription model settings and scope", () => {
   it("drops a removed provider's patterns", async () => {
     await writeJson(modelsPath, { providers: { "my-lb": LB } });
     await writeJson(settingsPath, { enabledModels: ["my-lb/lb-1", "anthropic/*", "my-lb/*"] });
-    expect(await runMode("provider_remove", dirs, { id: "my-lb" })).toMatchObject({ ok: true });
+    expect(await runOp("provider_remove", dirs, { id: "my-lb" })).toMatchObject({ ok: true });
     expect(await enabledModels()).toEqual(["anthropic/*"]);
   });
 });
