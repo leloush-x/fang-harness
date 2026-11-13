@@ -135,9 +135,9 @@ internal fun widgetEdge(widgets: Map<String, ExtensionWidget>, tabs: WidgetTabs,
 
 /**
  * The widgets Pi draws on one edge of the editor as tabs hanging from that edge of the composer: its top border for
- * widgets above the editor, its bottom border for those below. The strip shows its widgets at once, no unfolding.
- * A label stops at 150 dp, and a strip with more tabs than fit scrolls sideways, fading at an edge it continues past.
- * A tab opens its widget's panel, or closes it when open.
+ * widgets above the editor, its bottom border for those below. The strip shows its widgets at once and removes them
+ * at once, with no unfolding. A label stops at 150 dp, and a strip with more tabs than fit scrolls sideways, fading
+ * at an edge it continues past. A tab opens its widget's panel, or closes it when open.
  */
 @Composable
 internal fun WidgetTabStrip(edge: WidgetEdge, tabs: WidgetTabs, belowEditor: Boolean, modifier: Modifier = Modifier) {
@@ -270,7 +270,8 @@ private fun Modifier.fadeScrolledEdges(state: ScrollableState, vertical: Boolean
 
 /**
  * The open tab's widget inside the composer: above the text field for a widget above the editor, under the toolbar for
- * one below it. The panel shows its widget at once; no growing or folding. A [tight] panel keeps to a few lines.
+ * one below it. It grows open and folds closed, and switching tabs eases from one widget's height to the other's. The
+ * user has seen the widget's lines for as long as they show. A [tight] panel keeps to a few lines.
  */
 @Composable
 internal fun WidgetPanelSlot(
@@ -283,7 +284,9 @@ internal fun WidgetPanelSlot(
 ) {
   LaunchedEffect(shown?.key, shown?.widget) { shown?.let { tabs.see(it.key, it.widget) } }
   if (shown != null) {
-    WidgetPanel(shown, belowEditor, tight, onExpand = { onExpand(shown.key) })
+    Box(modifier) {
+      WidgetPanel(shown, belowEditor, tight, onExpand = { onExpand(shown.key) })
+    }
   }
 }
 
@@ -360,32 +363,32 @@ internal fun WidgetSheet(item: KeyedWidget, tabs: WidgetTabs, onDismiss: () -> U
         tint = colors.accent,
       )
       Text(
-        text = item.key,
+        text = widgetLabel(item.key),
+        modifier = Modifier.weight(1f),
         color = colors.foreground,
+        fontSize = FangTokens.FontSize.lg,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
       )
     }
-    HorizontalDivider(Modifier.fillMaxWidth(), 1.dp, colors.border)
-    Box(
-      modifier = Modifier.fillMaxSize().padding(vertical = FangTokens.Spacing.s12),
-      contentAlignment = Alignment.TopStart,
-    ) {
-      SelectionContainer(
+    SelectionContainer(modifier = Modifier.weight(1f, fill = false)) {
+      Text(
+        text = text,
         modifier = Modifier
-          .fillMaxWidth()
-          .heightIn(max = if (tabs.open(item.widget.belowEditor) == item.key) PANEL_MAX_HEIGHT else PANEL_TIGHT_MAX_HEIGHT)
-          .verticalScroll(rememberScrollState()),
-        enabled = true,
-      ) {
-        Text(
-          text = text,
-          color = colors.foreground,
-          fontFamily = FontFamily.Monospace,
-          fontSize = FangTokens.FontSize.code,
-          lineHeight = FangTokens.LineHeight.code,
-        )
-      }
+          .verticalScroll(rememberScrollState())
+          .padding(start = FangTokens.Spacing.s16, end = FangTokens.Spacing.s16, bottom = FangTokens.Spacing.s24),
+        color = colors.foreground,
+        fontFamily = FontFamily.Monospace,
+        fontSize = FangTokens.FontSize.code,
+        lineHeight = FangTokens.LineHeight.code,
+      )
     }
   }
 }
+
+/**
+ * A tab's label: the widget's key with dashes and underscores as spaces and its first letter capitalized, so
+ * `plan-todos` reads "Plan todos". Pi gives a widget no title of its own, only the key its extension chose.
+ */
+internal fun widgetLabel(key: String): String =
+  key.replace('-', ' ').replace('_', ' ').trim().replaceFirstChar { it.titlecase() }.ifEmpty { key }

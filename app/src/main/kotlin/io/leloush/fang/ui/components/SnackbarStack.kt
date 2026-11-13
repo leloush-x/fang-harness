@@ -18,7 +18,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.LocalAccessibilityManager
@@ -112,13 +111,13 @@ private fun StackColumn(state: SnackbarStackState, modifier: Modifier) {
   SideEffect { state.accessibility = accessibility }
   Column(modifier = modifier.padding(bottom = MATERIAL_INSET)) {
     for (entry in state.entries) {
-      key(entry) { StackedSnackbar(state, entry) }
+      key(entry) { StackedSnackbar(entry) }
     }
   }
 }
 
 @Composable
-private fun StackedSnackbar(state: SnackbarStackState, entry: SnackbarEntry) {
+private fun StackedSnackbar(entry: SnackbarEntry) {
   val colors = fangColors
   SwipeToDismissBox(
     state = rememberSwipeToDismissBoxState(),
