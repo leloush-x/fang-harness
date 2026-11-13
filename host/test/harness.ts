@@ -62,7 +62,7 @@ export async function holdConfigLock(dirs: Dirs): Promise<void> {
   await symlink(String(holder.pid), path.join(dirs.root, "config.lock"));
 }
 
-function piDir(dirs: Dirs): string {
+export function piDir(dirs: Dirs): string {
   return path.join(dirs.root, "pi/node_modules/@earendil-works/pi-coding-agent");
 }
 
@@ -204,4 +204,25 @@ export async function runMode(
       return message;
     }
   }
+}
+
+
+/**
+ * Runs one-off operation [op] on a `utility` host the way the app's shared host asks it, and returns its
+ * `fang_result` without the `id` that matched it to the request.
+ */
+export async function runOp(op: string, dirs: Dirs, params: JsonObject, extraEnv: Record<string, string> = {}): Promise<JsonObject> {
+  const { run } = await startHost("utility", dirs, extraEnv);
+  await run.next();
+  run.send({ type: "fang_request", params: {} });
+  const ready = await run.next();
+  if (ready?.type !== "fang_utility_ready") throw new Error(`utility sent ${JSON.stringify(ready)} instead of its ready line`);
+  run.send({ type: "fang_utility_request", id: 1, op, params });
+  const reply = await run.next();
+  if (reply === undefined) throw new Error(`utility closed without answering ${op}`);
+  run.socket.end();
+  await run.exited;
+  const { id, ...result } = reply;
+  if (id !== 1) throw new Error(`utility answered ${op} with id ${String(id)}`);
+  return result;
 }
