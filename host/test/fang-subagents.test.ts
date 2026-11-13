@@ -141,7 +141,7 @@ const parentRunningBash: Script = (turn) => {
   return fauxAssistantMessage("parent done");
 };
 
-/** Registers stand-ins for Fang Harness todo and background, and a read-only extension tool. */
+/** Registers stand-ins for Fang todo and background, and a read-only extension tool. */
 const otherTools: ExtensionFactory = (pi) => {
   for (const [name, readOnly] of [
     ["todo", false],
@@ -209,7 +209,7 @@ describe("permission questions", () => {
     const extensions = (factory: ExtensionFactory): ExtensionFactory[] =>
       order === "before" ? [factory, fangSubagents] : [fangSubagents, factory];
 
-    it(`come from a subagent with exactly its run in flight, with the gate loaded ${order} Fang Harness subagents`, async () => {
+    it(`come from a subagent with exactly its run in flight, with the gate loaded ${order} Fang subagents`, async () => {
       const ui = fakeUi(channel, () => true);
       const { session } = await start(parentCalling([{ id: "sub1", task: "CHILD run" }], childRunning("echo hi")), {
         extensions: extensions(gate("ask", ["bash"])),
@@ -223,7 +223,7 @@ describe("permission questions", () => {
       session.dispose();
     });
 
-    it(`come from the parent with no run in flight, with the gate loaded ${order} Fang Harness subagents`, async () => {
+    it(`come from the parent with no run in flight, with the gate loaded ${order} Fang subagents`, async () => {
       const ui = fakeUi(channel, () => true);
       const { session } = await start(parentRunningBash, { extensions: extensions(gate("ask", ["bash"])), ui });
       await session.prompt("PARENT go");
@@ -232,7 +232,7 @@ describe("permission questions", () => {
       session.dispose();
     });
 
-    it(`about a subagent call come before its run exists, with the gate loaded ${order} Fang Harness subagents`, async () => {
+    it(`about a subagent call come before its run exists, with the gate loaded ${order} Fang subagents`, async () => {
       const ui = fakeUi(channel, () => true);
       const { session } = await start(parentCalling([{ id: "sub1", task: "CHILD work" }], childDone), {
         extensions: extensions(gate("ask", ["subagent"])),
@@ -859,7 +859,7 @@ describe("agents", () => {
     const result = subagentResults(session).get("sub1");
     expect(result?.isError).toBe(true);
     expect(messageText(result)).toBe('Unknown agent "Nope". Available agents: Explore, General.');
-    // The app tells Fang Harness subagents' results from another `subagent` tool's by this marker alone.
+    // The app tells Fang subagents' results from another `subagent` tool's by this marker alone.
     expect(result?.details).toEqual({ extension: "fang-subagents", agent: "Nope", description: "a task", status: "failed" });
     expect(channel.sent.flatMap((message) => message.runs)).toEqual([]);
     session.dispose();
@@ -886,7 +886,7 @@ describe("agents", () => {
     session.dispose();
   });
 
-  it("use a user agent's tools and prompt after Fang Harness's, with the project's AGENTS.md and the user's skills", async () => {
+  it("use a user agent's tools and prompt after Fang's, with the project's AGENTS.md and the user's skills", async () => {
     await mkdir(path.join(dir.agentDir, "agents"), { recursive: true });
     await writeFile(
       path.join(dir.agentDir, "agents", "reviewer.md"),

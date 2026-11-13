@@ -289,7 +289,7 @@ describe("background task records", () => {
       expect(await eventually(() => pi.sent.length > 0)).toBe(true);
       expect(pi.sent[0]?.options).toEqual({ triggerTurn: false });
       expect(pi.sent[0]?.message.content).toMatch(
-        /^Fang Harness stopped background task bg1 \(server\) when this chat's agent moved to another session; it ended by SIGTERM after \d+s, at /,
+        /^Fang stopped background task bg1 \(server\) when this chat's agent moved to another session; it ended by SIGTERM after \d+s, at /,
       );
     });
 
@@ -328,7 +328,7 @@ describe("background task records", () => {
         {
           message: {
             customType: REPORT_TYPE,
-            content: `Background task bg1 (build) exit 0 after 2m 5s, at ${when(exitAt, Date.now())}. Fang Harness couldn't pass this result on until now.\nLast output:\n\`\`\`\ncompiled\n\`\`\`\nFull output: ${written.logPath}`,
+            content: `Background task bg1 (build) exit 0 after 2m 5s, at ${when(exitAt, Date.now())}. Fang couldn't pass this result on until now.\nLast output:\n\`\`\`\ncompiled\n\`\`\`\nFull output: ${written.logPath}`,
             display: true,
             details: { tasks: [{ key: "k1", id: "bg1", label: "build" }] },
           },
@@ -370,7 +370,7 @@ describe("background task records", () => {
       expect(alive(group.pid)).toBe(false);
       expect(alive(child)).toBe(false);
       expect(pi.sent[0]?.message.content).toMatch(
-        /^Background task bg1 \(build\) was still running at \d\d:\d\d, with no agent tracking it, so Fang Harness stopped it\.\n/,
+        /^Background task bg1 \(build\) was still running at \d\d:\d\d, with no agent tracking it, so Fang stopped it\.\n/,
       );
     });
 
@@ -391,7 +391,7 @@ describe("background task records", () => {
       await pi.emit("session_start");
       expect(await eventually(() => pi.sent.length > 0)).toBe(true);
       expect(pi.sent[0]?.message.content).toBe(
-        `Fang Harness lost track of background task bg1 (build) when the agent process running it stopped. How it ended is unknown. No process in its group is running now. Its log was last written at ${when(Date.now(), Date.now())}.\nLast output:\n\`\`\`\nlistening on :3000\n\`\`\`\nFull output: ${written.logPath}`,
+        `Fang lost track of background task bg1 (build) when the agent process running it stopped. How it ended is unknown. No process in its group is running now. Its log was last written at ${when(Date.now(), Date.now())}.\nLast output:\n\`\`\`\nlistening on :3000\n\`\`\`\nFull output: ${written.logPath}`,
       );
     });
 
@@ -443,7 +443,7 @@ describe("background task records", () => {
       process.kill(-owner.pid, "SIGKILL");
       expect(await eventually(() => pi.sent.length > 0, 8000)).toBe(true);
       expect(alive(task.pid)).toBe(false);
-      expect(pi.sent[0]?.message.content).toMatch(/was still running at .*, so Fang Harness stopped it\./);
+      expect(pi.sent[0]?.message.content).toMatch(/was still running at .*, so Fang stopped it\./);
     });
 
     it("takes a Pi it couldn't identify as running while any process has its id", async () => {
@@ -585,34 +585,34 @@ describe("report wording", () => {
   };
   const gone = "Its log file /nowhere/k1.log is gone.";
 
-  it("names the stop Fang Harness began, and the exit it got", () => {
+  it("names the stop Fang began, and the exit it got", () => {
     const exit = { status: "stopped" as const, exitCode: null, signal: "SIGTERM", at: new Date(2026, 9, 18, 14, 30).getTime() };
     expect(reportText({ ...base, stop: { reason: "quit", at: exit.at }, exit }, false, now)).toBe(
-      `Fang Harness stopped background task bg1 (server) when this chat's agent shut down; it ended by SIGTERM after 30m 0s, at 14:30.\n${gone}`,
+      `Fang stopped background task bg1 (server) when this chat's agent shut down; it ended by SIGTERM after 30m 0s, at 14:30.\n${gone}`,
     );
     expect(reportText({ ...base, stop: { reason: "user", at: exit.at }, exit }, false, now)).toBe(
-      `Background task bg1 (server) stopped by the user after 30m 0s, at 14:30. Fang Harness couldn't pass this result on until now.\n${gone}`,
+      `Background task bg1 (server) stopped by the user after 30m 0s, at 14:30. Fang couldn't pass this result on until now.\n${gone}`,
     );
   });
 
   it("says a stop was under way, not that it worked, when no exit came", () => {
     expect(reportText({ ...base, stop: { reason: "timeout", at: now } }, false, now)).toBe(
-      `Fang Harness was stopping background task bg1 (server) because its timeout passed when the agent process running it stopped, so how it ended is unknown. No process in its group is running now.\n${gone}`,
+      `Fang was stopping background task bg1 (server) because its timeout passed when the agent process running it stopped, so how it ended is unknown. No process in its group is running now.\n${gone}`,
     );
     expect(reportText({ ...base, stop: { reason: "exit", at: now } }, false, now)).toBe(
-      `Fang Harness began stopping background task bg1 (server) when the agent process running it exited. How it ended is unknown. No process in its group is running now.\n${gone}`,
+      `Fang began stopping background task bg1 (server) when the agent process running it exited. How it ended is unknown. No process in its group is running now.\n${gone}`,
     );
   });
 
   it("claims nothing about the group when it can't be told apart", () => {
     expect(reportText(base, undefined, now)).toBe(
-      `Fang Harness lost track of background task bg1 (server) when the agent process running it stopped. How it ended is unknown.\n${gone}`,
+      `Fang lost track of background task bg1 (server) when the agent process running it stopped. How it ended is unknown.\n${gone}`,
     );
   });
 
   it("owns up to a group that outlived its stop", () => {
     expect(reportText({ ...base, orphan: { at: new Date(2026, 9, 18, 14, 59).getTime(), stopped: false } }, true, now)).toBe(
-      `Background task bg1 (server) was still running at 14:59, with no agent tracking it. Fang Harness tried to stop it, but processes in its group (100) kept running.\n${gone}`,
+      `Background task bg1 (server) was still running at 14:59, with no agent tracking it. Fang tried to stop it, but processes in its group (100) kept running.\n${gone}`,
     );
   });
 

@@ -1,6 +1,6 @@
 /**
- * Fang Harness todo: the `todo` tool of @juicesharp/rpiv-todo (see ./todo.ts) with the list shown as an extension widget,
- * which Fang Harness draws as a tab on the composer. Each session keeps its own list, saved as a custom entry on its branch
+ * Fang todo: the `todo` tool of @juicesharp/rpiv-todo (see ./todo.ts) with the list shown as an extension widget,
+ * which Fang draws as a tab on the composer. Each session keeps its own list, saved as a custom entry on its branch
  * with every change, so the list follows `/resume`, `/tree` and compaction, and a restarted Pi replays it.
  */
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -22,7 +22,7 @@ import {
   widgetLines,
 } from "./todo.js";
 
-/** The widget's key, which Fang Harness names its tab after. */
+/** The widget's key, which Fang names its tab after. */
 export const WIDGET_KEY = "todos";
 
 /** The custom entry each change saves the list in. */

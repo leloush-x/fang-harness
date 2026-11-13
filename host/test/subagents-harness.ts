@@ -1,6 +1,6 @@
 /**
- * Real Pi SDK sessions for the Fang Harness subagents tests: pi-ai's faux provider answers for the parent and its
- * subagents through a script, and a fake Fang Harness channel records what the extension tells the app.
+ * Real Pi SDK sessions for the Fang subagents tests: pi-ai's faux provider answers for the parent and its
+ * subagents through a script, and a fake Fang channel records what the extension tells the app.
  */
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -49,7 +49,7 @@ export interface LiveMessage {
   unsteered?: { id: string; steering: string[] };
 }
 
-/** Stands in for Fang Harness's channel: records what the extension sends on `subagents` and passes on the app's messages. */
+/** Stands in for Fang's channel: records what the extension sends on `subagents` and passes on the app's messages. */
 export interface FakeChannel {
   sent: RunsMessage[];
   /** The `live` logs and `event`s sent for followed runs, in order. */
@@ -186,7 +186,7 @@ export async function makeDir(): Promise<Dir> {
   await mkdir(cwd, { recursive: true });
   await mkdir(agentDir, { recursive: true });
   await writeFile(path.join(cwd, "hello.txt"), "hello from the project\n");
-  // The child reads Pi's config folder through getAgentDir(), as it does under Fang Harness.
+  // The child reads Pi's config folder through getAgentDir(), as it does under Fang.
   process.env.PI_CODING_AGENT_DIR = agentDir;
   return { cwd, agentDir, sessionsDir: path.join(agentDir, "sessions", "--project--") };
 }
@@ -261,7 +261,7 @@ export interface Parent {
   runtime: ModelRuntime;
 }
 
-/** A parent session with Fang Harness subagents loaded, bound to [options.ui] as Fang Harness's RPC mode would be. */
+/** A parent session with Fang subagents loaded, bound to [options.ui] as Fang's RPC mode would be. */
 export async function makeParent(dir: Dir, script: Script, options: ParentOptions): Promise<Parent> {
   const faux = scriptedProvider(script);
   const runtime = await ModelRuntime.create({

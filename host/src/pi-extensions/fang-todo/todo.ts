@@ -4,11 +4,11 @@
  * Everything the model sees is copied from @juicesharp/rpiv-todo 2.13.8 (https://github.com/juicesharp/rpiv-mono,
  * MIT licence, Copyright (c) 2026 juicesharp), so a model that knows that tool uses this one the same way: the tool's
  * name, description, prompt snippet and guidelines, its parameter schema, the status rules, and the result and error
- * texts. The `/todos` command's texts come from it too. The code is Fang Harness's own; the widget follows rpiv-todo's
- * overlay but lists every task, since Fang Harness's widget panel scrolls instead of truncating.
+ * texts. The `/todos` command's texts come from it too. The code is Fang's own; the widget follows rpiv-todo's
+ * overlay but lists every task, since Fang's widget panel scrolls instead of truncating.
  */
-import { StringEnum } from "@earendil-works/pi-ai";
 import { type Static, Type } from "typebox";
+import { StringEnum } from "../string-enum.js";
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "deleted";
 

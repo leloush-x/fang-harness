@@ -1,6 +1,6 @@
 /**
- * What Fang Harness keeps on disk about each background task, so that a later Pi can tell the agent what became of tasks
- * whose Pi stopped without passing on their results, as when Android stops Fang Harness. A record holds only what its Pi saw:
+ * What Fang keeps on disk about each background task, so that a later Pi can tell the agent what became of tasks
+ * whose Pi stopped without passing on their results, as when Android ends Termux. A record holds only what its Pi saw:
  * that the task started, a stop it began and the exit it got. A later Pi adds what it checks itself, that the task's
  * process group still ran and was stopped; whatever no record shows is reported as unknown.
  */
@@ -8,13 +8,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { StringEnum } from "@earendil-works/pi-ai";
 import { type Static, Type } from "typebox";
 import { Value } from "typebox/value";
 import { isObject } from "../../framing.js";
+import { StringEnum } from "../string-enum.js";
 import { clockTime, formatDuration, outcome, outputText, TaskStatus, taskDir } from "./tasks.js";
 
-/** Why Fang Harness began stopping a task: the agent's `stop`, the user's Stop, its timeout, its session being left or its Pi exiting. */
+/** Why Fang began stopping a task: the agent's `stop`, the user's Stop, its timeout, its session being left or its Pi exiting. */
 const StopReason = StringEnum(["agent", "user", "timeout", "quit", "switch", "exit"] as const);
 export type StopReason = Static<typeof StopReason>;
 
@@ -53,7 +53,7 @@ export type TaskRecord = Static<typeof TaskRecord>;
 /** Records older than this whose Pi is gone are deleted, with logs no record names. */
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-/** How long an orphaned group gets after SIGTERM before SIGKILL, and after SIGKILL before Fang Harness gives up on it. */
+/** How long an orphaned group gets after SIGTERM before SIGKILL, and after SIGKILL before Fang gives up on it. */
 const TERM_WAIT_MS = 3000;
 const KILL_WAIT_MS = 1000;
 const POLL_MS = 100;
@@ -320,8 +320,8 @@ export function reportText(record: TaskRecord, running: boolean | undefined, now
   if (record.orphan) {
     const found = `${capitalize(name)} was still running at ${when(record.orphan.at, now)}, with no agent tracking it`;
     const head = record.orphan.stopped
-      ? `${found}, so Fang Harness stopped it.`
-      : `${found}. Fang Harness tried to stop it, but processes in its group (${record.pid}) kept running.`;
+      ? `${found}, so Fang stopped it.`
+      : `${found}. Fang tried to stop it, but processes in its group (${record.pid}) kept running.`;
     return `${head}\n${outputText(record.logPath)}`;
   }
   if (record.exit) {
@@ -330,10 +330,10 @@ export function reportText(record: TaskRecord, running: boolean | undefined, now
     const after = `after ${formatDuration(exit.at - record.startedAt)}, at ${when(exit.at, now)}`;
     let head: string;
     if (stop === undefined || stop.reason === "user" || stop.reason === "timeout") {
-      head = `${capitalize(name)} ${outcome(exit)} ${after}. Fang Harness couldn't pass this result on until now.`;
+      head = `${capitalize(name)} ${outcome(exit)} ${after}. Fang couldn't pass this result on until now.`;
     } else {
       const how = exit.exitCode === null ? `ended by ${exit.signal ?? "a signal"}` : `exited with code ${exit.exitCode}`;
-      head = `Fang Harness stopped ${name} ${STOPPED_BECAUSE[stop.reason]}; it ${how} ${after}.`;
+      head = `Fang stopped ${name} ${STOPPED_BECAUSE[stop.reason]}; it ${how} ${after}.`;
     }
     return `${head}\n${outputText(record.logPath)}`;
   }
@@ -341,11 +341,11 @@ export function reportText(record: TaskRecord, running: boolean | undefined, now
   const group = running === false ? " No process in its group is running now." : "";
   let head: string;
   if (stop === undefined) {
-    head = `Fang Harness lost track of ${name} when the agent process running it stopped. How it ended is unknown.${group}`;
+    head = `Fang lost track of ${name} when the agent process running it stopped. How it ended is unknown.${group}`;
   } else if (stop.reason === "user" || stop.reason === "timeout") {
-    head = `Fang Harness was stopping ${name} ${STOPPED_BECAUSE[stop.reason]} when the agent process running it stopped, so how it ended is unknown.${group}`;
+    head = `Fang was stopping ${name} ${STOPPED_BECAUSE[stop.reason]} when the agent process running it stopped, so how it ended is unknown.${group}`;
   } else {
-    head = `Fang Harness began stopping ${name} ${STOPPED_BECAUSE[stop.reason]}. How it ended is unknown.${group}`;
+    head = `Fang began stopping ${name} ${STOPPED_BECAUSE[stop.reason]}. How it ended is unknown.${group}`;
   }
   const written = statSync(record.logPath, { throwIfNoEntry: false })?.mtimeMs;
   const lastWritten = written === undefined ? "" : ` Its log was last written at ${when(written, now)}.`;
