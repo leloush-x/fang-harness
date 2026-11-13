@@ -71,10 +71,10 @@ describe("AppInputRouter", () => {
   it("gives Pi the held back start of a line when the input ends", () => {
     const toPi: Buffer[] = [];
     const router = new AppInputRouter((data) => toPi.push(Buffer.from(data)), () => {}, () => {});
-    router.push(Buffer.from(`{"type":"pip`));
+    router.push(Buffer.from(`{"type":"fan`));
     expect(toPi).toEqual([]);
     router.end();
-    expect(Buffer.concat(toPi).toString()).toBe(`{"type":"pip`);
+    expect(Buffer.concat(toPi).toString()).toBe(`{"type":"fan`);
   });
 
   it("drops a channel line that is too long or not a message, and goes on with the next lines", () => {
