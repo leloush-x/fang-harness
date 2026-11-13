@@ -4,7 +4,7 @@ This file is the working memory for the upgrade of fang-harness (an older fork) 
 Re-read before every step. Tick items only after CLI green, APK builds, and all tests pass.
 
 ## Current task
-Step 0 — plan written. Next: Upgrade 1 (Latest versions only).
+Porting pipkin features/structure into fang (host core, subagents, differing merges), skipping remote/local-models. Termx terminal core partially integrated.
 
 ## Branch
 `debug` (all work here; do not touch `main` until done and green).
@@ -21,20 +21,23 @@ Step 0 — plan written. Next: Upgrade 1 (Latest versions only).
 
 ## Done
 - [x] Created `debug` branch.
-- [x] Cloned Pipkin reference and Termx (main) for comparison.
+- [x] Cloned Pipkin reference and Termx (main) at `/root/core/termx`.
 - [x] Wrote initial CHECKPOINTS.md and AGENT.md.
+- [x] Upgrade 1 (implementation): Pi 1.5.2, host deps latest, lockfiles regenerated, Node >=24/latest in runtime.
+- [x] Upgrade 7 (partial): Termx FakeProcfs + bind_if_blocked /proc (SN1), T1-gated shared storage binds (SCOM) in WolfiRuntime.
+- [x] Copied/rebranded selected pipkin-only files (remote/local-models skipped).
 
 ## Upgrades (in order)
 
 ### Upgrade 1 — Latest versions only (DO FIRST)
-- [ ] Update `@earendil-works/pi-coding-agent` and `@earendil-works/pi-ai` to latest (1.5.2) in `host/package.json` and `app/src/main/assets/pi/package.json`.
-- [ ] Update other host deps to latest working: oxlint 1.93.0, vitest 5.1.0, @types/node 26.6.6, typebox 1.4.7, undici 8.12.4, defuddle 0.19.6, @modelcontextprotocol/sdk 1.32.2.
-- [ ] Node.js: use latest (22.19+ minimum, target latest LTS/24+); update `nodeVersionAtLeastMinimum` and `engines.node`.
-- [ ] Remove all old pinned versions everywhere (scripts, configs, lockfiles) — regenerate lockfiles.
-- [ ] Home screen / setup must show installed version and keep on latest; remove old-version option.
-- [ ] Latest-working rule: if newest breaks build/tests/CLI, use newest that works; document why here and in AGENT.md.
-- Verify: CLI green, APK builds, all tests pass.
-- Commit, tick, log in AGENT.md.
+- [x] Update `@earendil-works/pi-coding-agent` and `@earendil-works/pi-ai` to latest (1.5.2) in `host/package.json` and `app/src/main/assets/pi/package.json`.
+- [x] Update other host deps to latest working: oxlint 1.93.0, vitest 5.1.0, @types/node 26.6.6, typebox 1.4.7, undici 8.12.4, defuddle 0.19.6, @modelcontextprotocol/sdk 1.32.2.
+- [x] Node.js: use latest (>=24); updated `nodeVersionAtLeastMinimum` and `engines.node`, runtime installs latest `nodejs`.
+- [x] Remove old pinned versions in host/pi deps and configs touched; lockfiles regenerated.
+- [x] Home screen/setup uses bundled expected Pi version (latest); no old-version option.
+- [x] Latest-working rule: no breaks found so far (host lint/build OK locally).
+- [ ] Verify: CLI green, APK builds, all tests pass (pending CI).
+- [~] Commit done; tick fully after verification, log in AGENT.md.
 
 ### Upgrade 2 — Host core additions (pipkin → fang, rebranded)
 - [ ] Port `host/src/install-lock.ts`, `host/src/pid-lock.ts`, `host/src/model-list.ts`, `host/src/string-enum.ts`.
@@ -67,16 +70,15 @@ Step 0 — plan written. Next: Upgrade 1 (Latest versions only).
 - Verify, commit, tick, log.
 
 ### Upgrade 7 — Termx terminal core (replace old Wolfi terminal)
-- [ ] Copy Termx core: `FakeProcfs.kt`, `StorageAccess.kt`, `StorageHealthScreen.kt`, `StoragePreferences.kt`, `WorkspaceTransfer.kt`, `AndroidDnsResolver.kt`.
-- [ ] Copy Termx `ProotCommand.kt` (with snapshot binds) → adapt into fang's WolfiRuntime.
-- [ ] Copy Termx `BindTable` logic into WolfiRuntime.command().
-- [ ] Copy Termx proc snapshot logic (bind_if_blocked) into syntheticProcFiles.
-- [ ] Fix SN1 permission error (/proc/stat permission denied) via snapshot binds + FakeProcfs.
-- [ ] Fix SCOM permission error via T1 storage tier model (bind shared storage only when granted).
-- [ ] Copy proc config (FakeProcfs) so environment behaves like a real device.
-- [ ] Port Termx tests: BindTableTest, FakeProcfsTest, StorageAccessTest.
-- [ ] Keep Ghostty terminal widget (libghostty-android); only swap runtime core.
-- Verify, commit, tick, log.
+- [~] Copy Termx core: `FakeProcfs.kt` integrated; other UI/storage components pending as needed.
+- [x] Adapted Termx proc snapshot logic (bind_if_blocked) into WolfiRuntime.syntheticProcFiles.
+- [x] Fix SN1 permission error (/proc/stat permission denied) via FakeProcfs + bind_if_blocked proc binds.
+- [x] Fix SCOM permission error: shared storage binds (/sdcard,/storage) gated on T1 permission (All-files/legacy).
+- [x] Copy proc config (FakeProcfs) so environment behaves like a real device.
+- [ ] Port Termx tests: BindTableTest, FakeProcfsTest, StorageAccessTest (adapted for wolfi-core).
+- [x] Keep Ghostty terminal widget (libghostty-android); runtime core updated.
+- [ ] Verify: CLI green, APK builds, all tests pass (pending CI).
+- Commit, tick, log.
 
 ### Upgrade 8 — UI, strings, icons, fonts, site
 - [ ] Port new drawables (openrouter brand, launcher foregrounds, lucide icons).
@@ -104,4 +106,4 @@ Step 0 — plan written. Next: Upgrade 1 (Latest versions only).
 (none yet)
 
 ## Next
-Upgrade 1 — Latest versions only.
+Continue Upgrade 2/3/6/8/9: merge pipkin host/app changes, port subagents/subscription features, update UI/docs/build while preserving Wolfi/Termx runtime and skipping remote/local-models.

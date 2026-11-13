@@ -1,0 +1,86 @@
+---
+title: Privacy policy
+description: What data Fang Harness keeps on your phone, what leaves it, and where it goes.
+---
+
+_Last updated: November 4, 2026_
+
+Fang Harness is an app for running the [Pi](https://pi.dev) coding agent in [Termux](https://termux.dev) on your Android phone. It's made by Jeph, an independent developer, and is open source, so you can check everything on this page in [its code](https://github.com/jeph/fang).
+
+## In short
+
+- Fang Harness has no accounts and no servers of its own. The developer doesn't receive your chats, files, sign-ins, or any other data from the app.
+- Fang Harness has no analytics, crash reporting, advertising, or tracking.
+- What you send to the agent goes to the AI model provider you connect, and to the other services you or the agent use. Those services' own privacy policies cover what they do with it. A [local model](/docs/local-models/) you download runs on the phone, and what you send it stays there. A [remote host](/docs/remote-hosts/) you add is a computer of your own that the agent works on over SSH.
+
+## What stays on your phone
+
+Fang Harness keeps its own settings, such as the theme and the folders you've opened as workspaces, in its private app storage. It also keeps there which chats you've archived, and when you last opened each chat, which auto-archive uses to find chats you haven't used in a while.
+
+If you turn on [local models](/docs/local-models/) under **Settings → Providers and models**, the models you download are kept in Fang Harness's private app storage too, and aren't included in Android's backup. A local model runs entirely on the phone: your messages, the files and command output the agent reads, and the model's replies never leave it. The agent reaches the model over a connection that only accepts requests from the phone itself and only with a key Fang Harness gives the agent, so other apps and devices can't use it.
+
+If you add [remote hosts](/docs/remote-hosts/) in **Settings → Remote hosts**, their names, addresses, ports, and how each signs in are kept in Termux, with the SSH key Fang Harness makes for itself and the host keys you've trusted, in `~/.fang/ssh`. Fang Harness's app storage keeps a copy of the host list and Fang Harness's public key, so it can label remote workspaces before Termux answers. Key passphrases you type when connecting are handed to SSH for that sign-in and never saved.
+
+A host's password is saved only if you leave **Remember password** ticked when you type it, and only once it signs in. It's kept in Fang Harness's own app storage, never in Termux, encrypted with a key in Android's Keystore that can't leave the phone, and tied to that host's address and port. Fang Harness sends it only to answer that host's own password prompt when it connects, and never if the host's key isn't the one you trusted. Each time, the password is handed to SSH in Termux for that sign-in, so a program running in Termux at that moment could read it, as it could a password you type. Fang Harness deletes a saved password when you tap **Forget**, remove the host, change its address or port, or switch it to another way of signing in; uninstalling Fang Harness or clearing its data deletes it too. Android's backup and phone transfer don't copy it.
+
+Everything else lives in Termux's storage on your phone, which you can also open from Android's Files app:
+
+- your chats and their history, including the transcripts of the subagents a chat runs
+- the agent's configuration, including your subscription sign-ins and API keys
+- extensions, skills, and prompt templates you add
+- backups you make in **Settings → Configuration → Backups**, which are written to a folder in Termux and aren't uploaded anywhere
+- the files and projects you and the agent work on
+
+[Configure the agent](/docs/configure/) lists where each of these is kept.
+
+Fang Harness opts out of Android's backup to your Google account and of the transfer to a new phone, so neither copies its settings. Chats, sign-ins, and API keys are in Termux, not in Fang Harness's app storage, so Fang Harness's settings don't include them either way.
+
+## What leaves your phone
+
+Fang Harness sends data off the phone only to do what you ask, and only to these services:
+
+- **Your AI model provider.** The agent sends your messages, the photos you attach, and the parts of your files and command output it reads to the provider you connect, such as Anthropic, OpenAI, Google, Z.ai, Moonshot AI, OpenRouter, or an OpenAI-compatible API you add. OpenRouter passes requests on to the company that runs the model you pick. When you sign in with a subscription, you sign in on the provider's own website. Fang Harness also asks a provider you add for its list of models, using the API key you gave it, if any; for Z.ai, Kimi and OpenRouter, that's the list of models your key can use.
+- **Web search and page fetching.** When the agent searches the web, the bundled web access extension sends the search query to a search service. By default that's [Exa](https://exa.ai), which needs no account, or OpenAI's web search if you've connected OpenAI; you can choose others in its settings. When the agent reads a web page, PDF, or video, it downloads it from the site that hosts it. Depending on the extraction services and credentials you've set up for the extension, such as Gemini or Datalab, it may also send the whole page, PDF, or video link to one of them to read it, separately from your chat's model provider. You can turn the extension off in **Settings → Extensions**.
+- **Your remote hosts.** In a chat on a remote host, the agent's commands run on that host, and the files it reads and writes, and files you attach, travel between the phone and the host over SSH. The file explorer, git, and terminals do the same for a remote workspace. These connections go only to the hosts you add. What the agent reads there goes to your model provider like any other file.
+- **Downloads during setup and updates.** Setup downloads Node.js from Termux's package mirrors and Pi from the [npm registry](https://www.npmjs.com). Adding your first remote host installs OpenSSH from Termux's package mirrors. Installing or updating extensions downloads them from where they're published.
+- **Local model downloads.** When you tap **Download** in **Settings → Providers and models → Local models**, Fang Harness downloads that model's file from [Hugging Face](https://huggingface.co). Nothing about you or your chats is sent with the request.
+- **Commands and extensions.** The agent runs commands in Termux, and those can reach any service, for example when it runs `git push` or installs a package. Extensions you install run with the same access. What they send is up to the command or extension, not Fang Harness.
+
+Like any download or request, these services see your phone's IP address.
+
+## Permissions
+
+Fang Harness asks for these Android permissions:
+
+- **Run commands in Termux**, to start the agent and its helper in Termux.
+- **Network access**, which Android requires even for Fang Harness to talk to its helper in Termux on the same phone.
+- **Notifications**, to tell you when a chat finishes or needs your answer.
+- **Running in the background and keeping the phone awake**, so a chat can keep working while you use other apps or lock the screen.
+- **Asking to uninstall an app**, used only to offer removing a copy of Termux that Fang Harness can't use. Android asks you to confirm.
+
+When you attach a photo, Android's photo picker gives Fang Harness only the photos you choose. Fang Harness itself doesn't ask for access to your contacts, location, camera, microphone, or the rest of your photos and files.
+
+Setup also asks you to give Termux two permissions in Termux's own name:
+
+- **Access to your phone's shared storage**, such as Downloads, Documents, and your photos, so the agent can work on files outside Termux. With it, the agent can read and change files there when a chat calls for it, and send what it reads to your model provider like any other file. You can turn it off in Android's settings for Termux.
+- **Running in the background without battery limits**, so the agent keeps working while the screen is off.
+
+## Deleting your data
+
+Uninstalling Fang Harness deletes its settings and any local models you downloaded, but not what's in Termux. To delete your chats, sign-ins, backups, remote hosts and Fang Harness's SSH key, and the agent, delete the `~/.fang` and `~/.local/share/fang` folders in Termux, or uninstall Termux, which deletes everything in it. Files you attached in a remote chat stay on that host in `~/.cache/fang/attachments` until you delete them there. To delete data a model provider or other service holds, use that service's own settings or contact it.
+
+## Children
+
+Fang Harness is a developer tool that isn't directed at children under 13.
+
+## Changes
+
+If Fang Harness's handling of data changes, this page is updated with a new date at the top.
+
+## This website
+
+This website has no analytics, cookies, or tracking. It's hosted by [Vercel](https://vercel.com), which, like any web host, receives your IP address and browser details when you open a page. Fang Harness's releases are downloaded from [GitHub](https://github.com/jeph/fang/releases).
+
+## Contact
+
+Send questions about privacy to [github@jeph.ph](mailto:github@jeph.ph).
