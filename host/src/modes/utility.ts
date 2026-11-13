@@ -10,6 +10,8 @@ import { providerRemove } from "./provider-remove.js";
 import { providerSave } from "./provider-save.js";
 import { sessionMessages } from "./session-messages.js";
 import { sessions } from "./sessions.js";
+import { subagentSessions } from "./subagent-sessions.js";
+import { subscriptionModels } from "./subscription-models.js";
 import { subscriptionSave } from "./subscription-save.js";
 
 /** The operations this host answers, and the function that answers each. */
@@ -23,6 +25,8 @@ const OPERATIONS: Record<string, (ctx: ModeContext) => Promise<JsonObject>> = {
   provider_save: providerSave,
   session_messages: sessionMessages,
   sessions,
+  subagent_sessions: subagentSessions,
+  subscription_models: subscriptionModels,
   subscription_save: subscriptionSave,
 };
 
