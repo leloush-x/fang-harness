@@ -5,4 +5,6 @@
     <color name="ic_launcher_background_cobalt">#161C33</color>
     <color name="ic_launcher_background_stone">#2A2B30</color>
     <color name="ic_launcher_background_obsidian">#121214</color>
+    <color name="window_background">#F6F7FB</color>
+    <color name="accent">#2F4BD8</color>
 </resources>
