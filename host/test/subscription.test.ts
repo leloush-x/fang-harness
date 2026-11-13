@@ -133,7 +133,7 @@ describe("subscription model settings and scope", () => {
       theme: "dark",
       defaultProvider: "my-lb",
       defaultModel: "lb-1",
-      enabledModels: ["my-lb/lb-1", "google/*", "kimi-coding/*", "openai-codex/*", "zai/*", "my-lb/*", "anthropic/claude-opus-4-8"],
+      enabledModels: ["my-lb/lb-1", "google/*", "openai-codex/*", "my-lb/*", "anthropic/claude-opus-4-8"],
     });
   });
 
