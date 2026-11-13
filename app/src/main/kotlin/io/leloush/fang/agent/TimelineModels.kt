@@ -3,7 +3,7 @@ package io.leloush.fang.agent
 import org.json.JSONObject
 
 /** Everything the chat screen renders for one Pi process. [model] is Pi's model JSON (`provider`, `id`, `input`). */
-data class TimelineState(
+class TimelineState(
   val items: List<TimelineItem> = emptyList(),
   val busy: Boolean = false,
   val queue: List<String> = emptyList(),
