@@ -64,8 +64,23 @@ Proc config: FakeProcfs generates /proc/* content so the environment behaves lik
 ### Pre-upgrade (baseline)
 - fang-harness was an older fork of Pipkin, self-contained on Wolfi OS, with the old Wolfi terminal.
 
-### Upgrade 1 — Latest versions only
-(pending)
+### Upgrade 1 — Latest versions only (implemented, CI verification pending)
+- Bumped `@earendil-works/pi-coding-agent` and `@earendil-works/pi-ai` to 1.5.2 (host + app pi assets).
+- Updated host dev deps: oxlint 1.93.0, vitest 5.1.0, @types/node 26.6.6, typebox 1.4.7, undici 8.12.4, defuddle 0.19.6, @modelcontextprotocol/sdk 1.32.2.
+- Node.js: engines `>=24.0.0`, Wolfi runtime installs latest `nodejs` (not pinned to 24) and requires Node >=24.
+- Regenerated `host/pnpm-lock.yaml` and `app/src/main/assets/pi/package-lock.json`.
+- Home screen/setup continues to use bundled expected Pi version (latest); no old-version option.
+- Host lint and bundle build pass locally.
 
-### Upgrade 2+ (pending)
-(to be filled as upgrades land)
+### Upgrade 7 — Termx terminal core (partial)
+- Added `wolfi-core/.../wolfi/FakeProcfs.kt` (Termx-style /proc sysdata generator).
+- `WolfiRuntime`: generates fake proc files and binds them only when real `/proc/*` entries are blocked/unreadable (bind_if_blocked), fixing SN1 (/proc/stat permission denied) for htop/top.
+- `WolfiRuntime`: shared storage mounts (`/sdcard`, `/storage`) now gated on T1 permission (All-files on API 30+, legacy RW on 26-28), addressing SCOM/storage permission errors. Ghostty terminal widget unchanged.
+- Further Termx integration (full StorageAccess UI flow, tests, AndroidDnsResolver etc.) pending.
+
+### Parity port progress (partial)
+- Copied/rebranded selected pipkin-only host utilities/modes/tests and app/site assets (subagent-sessions, subscription-models, install/pid locks, string-enum, subagent-folders, icons/fonts, docs/privacy, site components), skipping remote chat and local models per user instruction.
+- Many differing files (host core/modes, app Kotlin, UI, build config, docs, site) still need merge/adaptation to Wolfi runtime and fang branding.
+
+### Known constraints
+- This environment cannot run `./gradlew check` (no Android SDK) and host `tsc`/vitest have known arm64 limitations; CI must verify CLI green, APK build, and all tests.
