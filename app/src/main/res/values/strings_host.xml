@@ -124,4 +124,6 @@
     <string name="host_git_exited"><xliff:g id="command" example="git diff">%1$s</xliff:g> exited with <xliff:g id="exit" example="128">%2$s</xliff:g>.</string>
     <!-- %1$s: the git command, such as "git diff"; %2$s: how many seconds it was given. -->
     <string name="host_git_timed_out"><xliff:g id="command" example="git diff">%1$s</xliff:g> took longer than <xliff:g id="seconds" example="30">%2$s</xliff:g> seconds.</string>
+  <string name="host_agent_install_incomplete">The agent\'s install is incomplete. Reinstall the Fang agent in Settings.</string>
+  <string name="host_subscription_no_key">No API key is saved for this provider</string>
 </resources>

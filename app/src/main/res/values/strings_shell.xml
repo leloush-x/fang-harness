@@ -43,4 +43,18 @@
 
     <string name="shell_split_open">Open in split screen</string>
     <string name="shell_split_close">Close split screen</string>
+  <string name="shell_tabs_more">%1$s+</string>
+  <string name="shell_workspace_waiting">Waiting for you</string>
+  <string name="shell_workspace_working">Working</string>
+  <plurals name="shell_workspace_tabs">
+        <item quantity="one">%1$d tab</item>
+        <item quantity="other">%1$d tabs</item>
+    </plurals>
+  <string name="shell_host_status">Fang · Pi %1$s</string>
+  <string name="shell_host_status_unknown">Fang</string>
+  <string name="shell_termux_attention">Termux needs attention</string>
+  <string name="shell_termux_open">Termux isn\'t running · Open</string>
+  <string name="shell_tabs_label">Tabs</string>
+  <string name="shell_tabs_swipe_hint">Swipe to close</string>
+  <string name="shell_actions_label">Actions</string>
 </resources>

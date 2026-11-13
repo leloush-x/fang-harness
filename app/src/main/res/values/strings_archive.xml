@@ -72,4 +72,20 @@
     <string name="archive_transcript_failed">Couldn\'t load this chat.</string>
     <string name="archive_transcript_empty">This chat has no messages.</string>
     <string name="archive_retry">Retry</string>
+  <plurals name="archive_auto_archived">
+        <item quantity="one">Archived %1$d inactive chat</item>
+        <item quantity="other">Archived %1$d inactive chats</item>
+    </plurals>
+  <plurals name="archive_subagents">
+        <item quantity="one">%1$d subagent</item>
+        <item quantity="other">%1$d subagents</item>
+    </plurals>
+  <plurals name="archive_delete_text_subagents">
+        <item quantity="one">Its session file and the transcript of its subagent are deleted. This can\'t be undone.</item>
+        <item quantity="other">Its session file and the transcripts of its %1$d subagents are deleted. This can\'t be undone.</item>
+    </plurals>
+  <plurals name="archive_delete_text_many_subagents">
+        <item quantity="one">Their session files and the transcript of their subagent are deleted. This can\'t be undone.</item>
+        <item quantity="other">Their session files and the transcripts of their %1$d subagents are deleted. This can\'t be undone.</item>
+    </plurals>
 </resources>

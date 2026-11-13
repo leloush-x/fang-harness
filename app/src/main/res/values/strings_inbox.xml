@@ -28,4 +28,5 @@
     <string name="inbox_open_chat">Open chat</string>
     <string name="inbox_show_chats">Show chats</string>
     <string name="inbox_hide_chats">Hide chats</string>
+  <string name="inbox_waiting_subagent">%1$s needs you</string>
 </resources>

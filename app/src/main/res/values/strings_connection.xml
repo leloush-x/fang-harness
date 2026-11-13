@@ -10,4 +10,16 @@
     <string name="host_failure_crashed" tools:ignore="PluralsCandidate">Fang Harness\'s agent exited with status <xliff:g id="status" example="1">%1$d</xliff:g> before connecting.</string>
     <string name="host_failure_timeout">Fang Harness\'s agent did not respond in time. Retry.</string>
     <string name="host_failure_disconnected">The connection to Fang Harness\'s agent closed unexpectedly. Retry.</string>
+  <string name="host_failure_missing_termux">Termux is not installed. Install it from F-Droid or Google Play.</string>
+  <string name="host_failure_untrusted_termux">For your security, Fang only runs in the official F-Droid or Google Play build of Termux, and the Termux on this phone is neither. Reinstall Termux from F-Droid or Google Play.</string>
+  <string name="host_failure_external_apps">Termux blocked Fang\'s commands. Run the setup command in Termux, then retry.</string>
+  <string name="host_failure_background">Android blocked starting Termux in the background. Open Fang and retry.</string>
+  <string name="host_failure_termux_not_initialized">Open Termux once and let it finish installing.</string>
+  <string name="host_failure_interrupted">Termux stopped while starting Fang\'s helper. Retry.</string>
+  <string name="host_failure_termux_error">Termux couldn\'t run Fang\'s helper. Retry.</string>
+  <string name="host_failure_termux_changed">Termux was reinstalled, which removed Pi, its sign-in and Fang\'s setup in Termux. Run the setup command in Termux again.</string>
+  <string name="host_failure_helper_not_paired">Fang isn\'t set up in Termux yet. Run the setup command in Termux.</string>
+  <string name="host_failure_helper_rejected">Termux\'s Fang helper doesn\'t recognize this Fang. Run the setup command in Termux again.</string>
+  <string name="host_failure_helper_unreachable">Fang\'s helper isn\'t running in Termux. Open Termux, then switch back to Fang.</string>
+  <string name="host_failure_helper_port_taken">Another app is using the ports Fang\'s helper needs. Restart your phone, then retry.</string>
 </resources>

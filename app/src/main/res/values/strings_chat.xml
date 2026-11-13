@@ -172,4 +172,29 @@
     <string name="context_window_no_data">No context data</string>
     <string name="context_window_a11y">Context window %1$d%% used</string>
     <string name="context_window_a11y_no_data">Context window: No context data</string>
+  <string name="chat_set_up_termux">Set up Termux</string>
+  <string name="chat_open_termux">Open Termux</string>
+  <string name="chat_open_termux_hint">Termux shows why Fang\'s helper didn\'t start. Once it\'s running, Fang switches back on its own. If Termux asks for the setup command, tap Set up Termux.</string>
+  <string name="chat_you">You</string>
+  <string name="chat_figure_added">+%1$s</string>
+  <string name="chat_figure_removed">−%1$s</string>
+  <string name="chat_figure_exit">exit %1$s</string>
+  <string name="chat_figure_timed_out">timed out</string>
+  <string name="chat_figure_stopped">stopped</string>
+  <string name="chat_steps_working">Working</string>
+  <string name="chat_steps_done">Done</string>
+  <string name="chat_steps_stopped">Stopped</string>
+  <plurals name="chat_steps_count">
+        
+        <item quantity="one">%1$s step</item>
+        <item quantity="other">%1$s steps</item>
+    </plurals>
+  <string name="chat_steps_expand">Show steps</string>
+  <string name="chat_steps_collapse">Hide steps</string>
+  <string name="chat_command_source_builtin">Built-in</string>
+  <string name="chat_command_source_extension">Extension</string>
+  <string name="chat_command_source_prompt">Prompt</string>
+  <string name="chat_command_source_skill">Skill</string>
+  <string name="chat_dialog_from_subagents">From a subagent</string>
+  <string name="chat_dialog_from_subagent">Asked by subagent %1$s</string>
 </resources>
