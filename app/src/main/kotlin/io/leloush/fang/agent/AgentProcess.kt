@@ -387,7 +387,11 @@ internal class AgentProcess(
     if (runs.isNotEmpty()) {
       val now = System.currentTimeMillis()
       val ids = runs.mapTo(HashSet(), SubagentRun::toolCallId)
-      subagentsCutOffState.update { previous -> previous - ids + runs.filter { it.status.active }.associate { run -> run.toolCallId to now } }
+      subagentsCutOffState.update { previous ->
+        previous - ids + runs.filter { it.status.active }.associate { run ->
+          run.toolCallId to now
+        }
+      }
     }
     subagentRunsState.value = emptyList()
     subagentsStandingAsideState.value = false
