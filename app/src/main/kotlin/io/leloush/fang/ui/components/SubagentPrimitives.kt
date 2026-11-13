@@ -72,3 +72,128 @@ internal fun CapsLabel(
     maxLines = 1,
   )
 }
+
+
+/** A [HeaderBar] button; a [filled] one sits on a raised disc, as the explorer's toggle does. */
+@Composable
+fun HeaderButton(
+  @DrawableRes icon: Int,
+  contentDescription: String,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier,
+  enabled: Boolean = true,
+  filled: Boolean = false,
+  tint: Color = fangColors.foreground,
+) {
+  Box(
+    modifier = modifier.roundButton(
+      size = HeaderButtonSize,
+      background = if (filled) fangColors.surface2 else Color.Transparent,
+      enabled = enabled,
+      onClick = onClick,
+    ),
+    contentAlignment = Alignment.Center,
+  ) {
+    LucideIcon(icon = icon, contentDescription = contentDescription, size = HEADER_ICON_SIZE, tint = tint)
+  }
+}
+
+private val HEADER_ICON_SIZE = 18.dp
+
+/** The colours of a [PillButton]. */
+enum class PillTone { Primary, Destructive, Tonal }
+
+/** A fully rounded button, 40dp tall, whose [label] wraps onto a second line rather than cutting off. */
+@Composable
+fun PillButton(
+  label: String,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier,
+  tone: PillTone = PillTone.Primary,
+  enabled: Boolean = true,
+  @DrawableRes icon: Int? = null,
+) {
+  val colors = fangColors
+  val (container, content) = when (tone) {
+    PillTone.Primary -> colors.accent to colors.accentForeground
+    PillTone.Destructive -> colors.destructive to colors.destructiveForeground
+    PillTone.Tonal -> colors.surface2 to colors.foregroundMuted
+  }
+  Button(
+    onClick = onClick,
+    modifier = modifier.heightIn(min = 40.dp),
+    enabled = enabled,
+    shape = RoundedCornerShape(20.dp),
+    colors = ButtonDefaults.buttonColors(
+      containerColor = container,
+      contentColor = content,
+      disabledContainerColor = container.copy(alpha = DISABLED_ALPHA * container.alpha),
+      disabledContentColor = content.copy(alpha = DISABLED_ALPHA),
+    ),
+    contentPadding = PaddingValues(horizontal = FangTokens.Spacing.s16, vertical = FangTokens.Spacing.s8),
+  ) {
+    if (icon != null) {
+      LucideIcon(icon = icon, contentDescription = null, size = 15.dp, tint = LocalContentColor.current)
+      Box(Modifier.size(FangTokens.Spacing.s8))
+    }
+    Text(
+      text = label,
+      fontSize = FangTokens.FontSize.base,
+      fontWeight = FontWeight.SemiBold,
+      textAlign = TextAlign.Center,
+      maxLines = 2,
+      overflow = TextOverflow.Ellipsis,
+    )
+  }
+}
+
+private const val DISABLED_ALPHA = 0.4f
+
+/** A steering action: cobalt text, on a cobalt-tinted pill when [filled]. */
+@Composable
+internal fun SteerButton(label: String, enabled: Boolean, filled: Boolean, onClick: () -> Unit) {
+  val colors = fangColors
+  Text(
+    text = label,
+    modifier = Modifier
+      .padding(start = FangTokens.Spacing.s4)
+      .alpha(if (enabled) 1f else DISABLED_ALPHA)
+      .heightIn(min = BUTTON_HEIGHT)
+      .clip(CircleShape)
+      .background(if (filled) colors.accentSoft else Color.Transparent)
+      .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+      .padding(horizontal = if (filled) FangTokens.Spacing.s12 else 10.dp, vertical = 7.dp),
+    color = colors.accent,
+    fontSize = 12.5.sp,
+    fontWeight = FontWeight.Bold,
+    maxLines = 1,
+  )
+}
+
+internal fun TabsButton(tabs: Int, onClick: () -> Unit) {
+  val colors = fangColors
+  val description = pluralStringResource(R.plurals.shell_tabs_button, tabs, tabs)
+  val number = remember(tabs) { NumberFormat.getIntegerInstance().format(tabs.coerceAtMost(MAX_SHOWN_TABS)) }
+  val count = if (tabs > MAX_SHOWN_TABS) stringResource(R.string.shell_tabs_more, number) else number
+  Box(
+    modifier = Modifier
+      .roundButton(size = HeaderButtonSize, background = colors.surface2, enabled = true, onClick = onClick)
+      .semantics {
+        contentDescription = description
+        role = Role.Button
+      },
+    contentAlignment = Alignment.Center,
+  ) {
+    LucideIcon(
+      icon = R.drawable.ic_lucide_square,
+      contentDescription = null,
+      size = TABS_ICON_SIZE,
+      tint = colors.foreground,
+    )
+    Text(
+      text = count,
+      modifier = Modifier.clearAndSetSemantics {},
+      color = colors.foreground,
+      fontSize = if (count.length > 2) 7.sp else 9.sp,
+      fontWeight = FontWeight.ExtraBold,
+      style = LocalTextStyle.current.copy(fontFeatureSettings = Pipki

@@ -217,7 +217,7 @@ private fun StreamArea(
 
 /** The first extension dialog Pi waits on, between the stream and the composer. */
 @Composable
-private fun PendingDialogCard(controller: ChatController, timeline: TimelineState) {
+internal fun PendingDialogCard(controller: ChatController, timeline: TimelineState) {
   val request = timeline.pendingUi ?: return
   ExtensionUiCard(
     request = request,
