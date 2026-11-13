@@ -151,6 +151,8 @@ private fun Screen(
 
     Destination.Archive, is Destination.ArchivedChat -> ArchivePage(top, navigator, actions, requestedChat)
 
+    is Destination.ArchivedSubagent -> ArchivePage(Destination.Archive, navigator, actions, requestedChat)
+
     Destination.Settings, Destination.Permissions, Destination.Backups, Destination.Advanced, Destination.Licenses,
     is Destination.License,
     -> SettingsPages(top, navigator)

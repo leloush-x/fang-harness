@@ -351,15 +351,25 @@ private fun StreamItem(
 ) {
   when (item) {
     is TimelineItem.User -> UserMessage(item, modifier)
+
     is TimelineItem.AssistantText -> AssistantMessage(item, markdownCache, modifier)
+
     is TimelineItem.ExtensionMessage -> ExtensionMessage(item, markdownCache, modifier)
+
     is TimelineItem.ExtensionNotice -> ExtensionNoticeCard(item, modifier)
+
     is TimelineItem.Thinking -> ToolRow(toolPresentation(item), onClick = { onOpenTool(item.key) }, modifier)
+
     is TimelineItem.ToolCall -> ToolRow(toolPresentation(item), onClick = { onOpenTool(item.key) }, modifier)
+
     is TimelineItem.Error -> ErrorRow(item.cause.text(LocalResources.current), modifier)
+
     is TimelineItem.Notice -> NoticeRow(stringResource(item.kind.text), modifier)
+
     is TimelineItem.TurnFooter -> TurnFooterRow(item, backgroundTasks, modifier)
+
     is TimelineItem.ExitBanner -> ExitBannerCard(item, onRestart, modifier)
+
     is TimelineItem.Steps -> {
       Column(modifier = modifier) {
         item.steps.forEach { step ->

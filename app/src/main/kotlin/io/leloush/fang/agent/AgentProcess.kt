@@ -387,7 +387,7 @@ internal class AgentProcess(
     if (runs.isNotEmpty()) {
       val now = System.currentTimeMillis()
       val ids = runs.mapTo(HashSet(), SubagentRun::toolCallId)
-      subagentsCutOffState.update { previous -> previous - ids + runs.active().associate { it.toolCallId to now } }
+      subagentsCutOffState.update { previous -> previous - ids + runs.filter { it.status.active }.associate { run -> run.toolCallId to now } }
     }
     subagentRunsState.value = emptyList()
     subagentsStandingAsideState.value = false
@@ -670,8 +670,9 @@ internal class AgentProcess(
     val data = line.optJSONObject("data") ?: return
     when (topic) {
       BACKGROUND_TOPIC -> backgroundTasksState.value = data.optInt("active")
+
       SUBAGENTS_TOPIC -> {
-        val runs = data.optJSONArray("runs")?.let { SubagentRun.listFrom(it) }
+        val runs = if (data.has("runs")) SubagentRun.listFrom(data) else null
         if (runs != null) {
           subagentRunsState.value = runs
           subagentsStandingAsideState.value = data.optBoolean("standingAside")

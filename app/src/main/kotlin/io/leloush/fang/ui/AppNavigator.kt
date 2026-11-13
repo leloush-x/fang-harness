@@ -116,8 +116,10 @@ class AppNavigator(initial: List<Destination>) {
 
     private fun archiveKey(d: Destination): String = when (d) {
       is Destination.ArchivedChat -> ARCHIVED_CHAT + d.path
+
       // A tool call id has no line break; a path comes last, since it may hold any other character.
       is Destination.ArchivedSubagent -> ARCHIVED_SUBAGENT + d.toolCallId + "\n" + d.path
+
       else -> ARCHIVE
     }
 
