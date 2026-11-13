@@ -76,12 +76,13 @@ Proc config: FakeProcfs generates /proc/* content so the environment behaves lik
 - Added `wolfi-core/.../wolfi/FakeProcfs.kt` (Termx-style /proc sysdata generator).
 - `WolfiRuntime`: generates fake proc files and binds them only when real `/proc/*` entries are blocked/unreadable (bind_if_blocked), fixing SN1 (/proc/stat permission denied) for htop/top.
 - `WolfiRuntime`: shared storage mounts (`/sdcard`, `/storage`) now gated on T1 permission (All-files on API 30+, legacy RW on 26-28), addressing SCOM/storage permission errors. Ghostty terminal widget unchanged.
-- Further Termx integration (full StorageAccess UI flow, tests, AndroidDnsResolver etc.) pending.
+- Added adapted `wolfi-core/src/test/kotlin/io/leloush/fang/wolfi/FakeProcfsTest.kt` covering procfs content/count/format helpers. BindTable/StorageAccess tests from Termx are not directly portable because wolfi-core inlines that logic in `WolfiRuntime`.
+- Further Termx integration (full StorageAccess UI flow, AndroidDnsResolver etc.) pending.
 
 ### Parity port progress (partial)
 - Copied/rebranded selected pipkin-only host utilities/modes/tests and app/site assets (subagent-sessions, subscription-models, install/pid locks, string-enum, subagent-folders, icons/fonts, docs/privacy, site components), skipping remote chat and local models per user instruction.
 - Host core parity (in progress): merged pipkin versions (rebranded) into many in-scope host files and fang-web-access modules, added new web-access provider modules (cloudflare-search, deepseek, duckduckgo-rate-limit, field-extract, linkup, ninerouter, offtopic-judge, searchapi, tabstack, upgrade-notice). Remote-dependent host files intentionally kept on Wolfi/fang-safe implementations pending careful non-remote merge (main, prompt, fang-extensions, browse/ensure/files/git/rpc/save-attachments/sessions/terminal/utility, fang-background, fang-subagents/runs). `termux-session.ts` not adopted (Wolfi runtime).
-- Host build and lint green locally after partial port; full CI (APK/tests) still required.
+- CI: debug pipeline green at `30f643a` (host typecheck/lint/tests, Android checks/unit tests, debug APK assembled). Further parity merges and tests still required.
 - Many differing files (app Kotlin, UI, build config, docs, site) still need merge/adaptation to Wolfi runtime and fang branding.
 ### Known constraints
 - This environment cannot run `./gradlew check` (no Android SDK) and host `tsc`/vitest have known arm64 limitations; CI must verify CLI green, APK build, and all tests.

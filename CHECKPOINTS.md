@@ -26,6 +26,7 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [x] Upgrade 1 (implementation): Pi 1.5.2, host deps latest, lockfiles regenerated, Node >=24/latest in runtime.
 - [x] Upgrade 7 (partial): Termx FakeProcfs + bind_if_blocked /proc (SN1), T1-gated shared storage binds (SCOM) in WolfiRuntime.
 - [x] Copied/rebranded selected pipkin-only files (remote/local-models skipped).
+- [x] Latest debug CI green at `30f643a` (host check/typecheck/lint/tests, Android check, debug APK).
 
 ## Upgrades (in order)
 
@@ -36,8 +37,8 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [x] Remove old pinned versions in host/pi deps and configs touched; lockfiles regenerated.
 - [x] Home screen/setup uses bundled expected Pi version (latest); no old-version option.
 - [x] Latest-working rule: no breaks found so far (host lint/build OK locally).
-- [ ] Verify: CLI green, APK builds, all tests pass (pending CI).
-- [~] Commit done; tick fully after verification, log in AGENT.md.
+- [x] Verify: CLI green, APK builds, all tests pass on CI for `30f643a`.
+- [~] Keep Upgrade 1 ticked as implemented/verified at latest green point; continue overall upgrade work.
 
 ### Upgrade 2 — Host core additions (pipkin → fang, rebranded)
 - [~] Port `host/src/install-lock.ts`, `host/src/pid-lock.ts`, `host/src/model-list.ts`, `host/src/pi-extensions/string-enum.ts`; `host/src/string-enum.ts` N/A in pipkin root.
@@ -46,7 +47,7 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [~] Port `host/src/subagent-folders.ts`; `host/src/termux-session.ts` skipped (Wolfi runtime, not Termux).
 - [~] Merged pipkin host changes into many differing in-scope files (catalogue/channel/config-lock/connection/detect/env/folder-search/mode/model-def/model-list/models-json/runtime/scope/session-file/tar, several modes, fang-channel, most fang-web-access modules + new providers). `ensure` merged with install-lock/completion-marker improvements (no remote). `sessions`/`utility` merged with in-scope parity (subagent counts, unified utility protocol/ops) excluding remote/local-models ops. Restored Wolfi-specific `env` behavior (`FANG_HOME`, comments) after parity port. Remote-dependent files still pending careful non-remote merge: main/prompt/fang-extensions, browse/files/git/rpc/save-attachments/terminal, fang-background, fang-subagents/runs.
 - [~] Port host tests: aligned `scope`, `channel`, `provider-save`, `subscription`, `login` tests with pipkin parity; removed obsolete `folder-search.test.ts`; added `subscription-models.test.ts` and `harness.runOp`; existing fang-named background/subagents/todo tests already match pipkin rebranded. Remote/local-models/helper/ssh tests intentionally skipped.
-- [~] Host build+lint/typecheck green locally; multiple fixes pushed to debug. CI runs repeatedly cancelled by newer pushes; latest run pending/needs verification for green check/tests/APK.
+- [x] Host build+lint/typecheck green locally; latest debug CI (`30f643a`) green including host tests/check and APK assembly. Continue careful non-remote merges.
 
 ### Upgrade 3 — Subagents
 - [ ] Port `app/.../agent/LiveSubagent.kt`, `StepFigure.kt`, `StepStream.kt`, `SubagentRuns.kt`.
@@ -73,9 +74,9 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [x] Fix SN1 permission error (/proc/stat permission denied) via FakeProcfs + bind_if_blocked proc binds.
 - [x] Fix SCOM permission error: shared storage binds (/sdcard,/storage) gated on T1 permission (All-files/legacy).
 - [x] Copy proc config (FakeProcfs) so environment behaves like a real device.
-- [ ] Port Termx tests: BindTableTest, FakeProcfsTest, StorageAccessTest (adapted for wolfi-core).
+- [~] Port Termx tests: `FakeProcfsTest` added for wolfi-core (adapted); BindTable/StorageAccess tests not directly portable because wolfi-core inlines bind/storage logic in `WolfiRuntime` (no separate classes like Termx).
 - [x] Keep Ghostty terminal widget (libghostty-android); runtime core updated.
-- [ ] Verify: CLI green, APK builds, all tests pass (pending CI).
+- [~] Verify: CI was green at `30f643a`; re-verify after further changes (FakeProcfsTest added, pending push/CI).
 - Commit, tick, log.
 
 ### Upgrade 8 — UI, strings, icons, fonts, site
@@ -100,8 +101,9 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 (none yet)
 
 ## Next
-- Continue Upgrade 2: carefully merge non-remote pipkin changes into remaining host files (prompt stays Wolfi-specific; merge non-remote parts of utility/sessions/terminal/save-attachments/browse/files/git/rpc, fang-extensions, fang-background, fang-subagents/runs) and port applicable host tests.
+- Push current safe Upgrade 7 progress (FakeProcfsTest) and verify CI green.
+- Continue Upgrade 2: carefully merge non-remote pipkin changes into remaining host files (`main.ts`, `fang-extensions.ts`, `modes/browse,files,git,rpc,save-attachments,terminal`, `pi-extensions/fang-background/{index,tasks}.ts`, `pi-extensions/fang-subagents/runs.ts`) excluding remote/local-models; port applicable host tests.
 - Upgrade 3/6: port subagents (app agent/UI/data/tests + host wiring) and subscription/model-defaults integration, excluding remote/local-models.
-- Upgrade 7: add/adapt Termx tests (BindTable/FakeProcfs/StorageAccess) for wolfi-core where feasible.
-- Upgrade 8/9: merge UI strings/resources/fonts/icons, site, build config, scripts, docs (non-remote/local-models), workflows; rebrand and keep Wolfi runtime.
+- Upgrade 7: BindTable/StorageAccess Termx tests not directly portable as-is (wolfi-core inlines logic); add coverage only where feasible.
+- Upgrade 8/9: merge UI strings/resources/fonts/icons, app screens, build config, scripts, docs (non-remote/local-models), workflows; rebrand and keep Wolfi runtime.
 - After each coherent step: host build+lint green, commit, push debug, verify CI green + APK/tests, then proceed. Final: push debug to main.
