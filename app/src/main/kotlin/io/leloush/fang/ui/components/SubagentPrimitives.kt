@@ -53,23 +53,6 @@ internal fun Modifier.roundButton(size: Dp, background: Color, enabled: Boolean,
     .clip(CircleShape)
     .background(background)
     .clickable(enabled = enabled, onClick = onClick)
-
-@Composable
-fun PanningText(text: AnnotatedString, modifier: Modifier = Modifier) {
-  Text(
-    text = text,
-    modifier = modifier.basicMarquee(
-      iterations = Int.MAX_VALUE,
-      initialDelayMillis = 2500,
-      repeatDelayMillis = 2500,
-    ),
-    color = fangColors.foregroundMuted,
-    fontSize = FangTokens.FontSize.sm,
-    maxLines = 1,
-    softWrap = false,
-  )
-}
-
 @Composable
 internal fun CapsLabel(
   text: String,
