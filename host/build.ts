@@ -24,11 +24,12 @@ const common = { bundle: true, platform: "node", format: "esm", target: "node22"
 
 // The MIT and BSD licences ask every copy to carry its notice, and esbuild drops the notices of the code it bundles,
 // so each bundle with third-party code starts with them.
-const [diffLicense, typeboxLicense, webAccessLicense, todoLicense] = await Promise.all([
+const [diffLicense, typeboxLicense, webAccessLicense, todoLicense, askUserLicense] = await Promise.all([
   readFile("node_modules/diff/LICENSE", "utf8"),
   readFile("node_modules/typebox/license", "utf8"),
   readFile("src/pi-extensions/fang-web-access/LICENSE", "utf8"),
   readFile("src/pi-extensions/fang-todo/LICENSE", "utf8"),
+  readFile("src/pi-extensions/fang-ask-user/LICENSE", "utf8"),
 ]);
 const [diffVersion, typeboxVersion] = await Promise.all(["diff", "typebox"].map(packageVersion));
 const paseoNotice =
@@ -37,6 +38,7 @@ const paseoNotice =
   "(http://www.apache.org/licenses/LICENSE-2.0), with changes for Fang Harness.\n";
 const hostNotices = `/*\nBundles jsdiff ${diffVersion}:\n\n${diffLicense}\n${paseoNotice}*/`;
 const todoNotices = `/*\nThe todo tool's texts come from @juicesharp/rpiv-todo 2.13.8:\n\n${todoLicense}*/`;
+const askUserNotices = `/*\nVendored from pi-ask-user 0.17.2:\n\n${askUserLicense}*/`;
 const webAccessNotices =
   `/*\nVendored from pi-web-access:\n\n${webAccessLicense}\nBundles typebox:\n\n${typeboxLicense}*/`;
 
@@ -63,6 +65,9 @@ const licenses: Record<string, string> = {
   "rpiv-todo":
     "@juicesharp/rpiv-todo 2.13.8 (https://github.com/juicesharp/rpiv-mono), MIT License. " +
     `The Fang Harness todo extension's tool texts come from it.\n\n${todoLicense}`,
+  "pi-ask-user":
+    "pi-ask-user 0.17.2 (https://github.com/edlsh/pi-ask-user), MIT License. " +
+    `Fang Harness's ask-user extension is a modified copy.\n\n${askUserLicense}`,
 };
 
 await mkdir(`${out}/licenses`, { recursive: true });
@@ -82,6 +87,14 @@ await Promise.all([
     outfile: `${out}/fang-extensions/fang-background.js`,
     // Pi resolves these to its own copies when it loads an extension.
     external: ["@earendil-works/*", "typebox"],
+  }),
+  build({
+    ...common,
+    entryPoints: ["src/pi-extensions/fang-ask-user/index.ts"],
+    outfile: `${out}/fang-extensions/fang-ask-user.js`,
+    banner: { js: askUserNotices },
+    // Pi resolves these to its own copies when it loads an extension.
+    external: ["@earendil-works/*", "@sinclair/typebox"],
   }),
   build({
     ...common,

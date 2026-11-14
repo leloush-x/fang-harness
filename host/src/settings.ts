@@ -60,18 +60,62 @@ export async function readGlobalSettings(configDir: string): Promise<unknown> {
 }
 
 /**
- * npm package names the user's global Pi settings install. Pi parses `npm:<name>[@version]` sources with this same
- * pattern and identifies npm packages by name. Project settings are left out: Pi loads them only after a trust
- * decision that extensions, `trust.json` and prompts can make, which the host cannot predict.
+ * The packages the user's global Pi settings install, keyed by how Pi identifies them: npm ones by package name, git
+ * ones by `host/path` of the repository. Project settings are left out: Pi loads them only after a trust decision that
+ * extensions, `trust.json` and prompts can make, which the host cannot predict.
  */
-export function userNpmPackages(settings: unknown): Set<string> {
-  const names = new Set<string>();
-  if (!isObject(settings) || !Array.isArray(settings.packages)) return names;
+export interface UserPackages {
+  npm: Set<string>;
+  git: Set<string>;
+}
+
+/** [UserPackages] of the user's global Pi settings. */
+export function userPackages(settings: unknown): UserPackages {
+  const packages: UserPackages = { npm: new Set(), git: new Set() };
+  if (!isObject(settings) || !Array.isArray(settings.packages)) return packages;
   for (const entry of settings.packages as unknown[]) {
     const source = isObject(entry) ? entry.source : entry;
-    if (typeof source !== "string" || !source.startsWith("npm:")) continue;
-    const spec = source.slice("npm:".length).trim();
-    names.add(/^(@?[^@]+(?:\/[^@]+)?)(?:@.+)?$/.exec(spec)?.[1] ?? spec);
+    if (typeof source !== "string") continue;
+    if (source.startsWith("npm:")) {
+      const spec = source.slice("npm:".length).trim();
+      packages.npm.add(/^(@?[^@]+(?:\/[^@]+)?)(?:@.+)?$/.exec(spec)?.[1] ?? spec);
+      continue;
+    }
+    const repository = gitRepository(source);
+    if (repository !== null) packages.git.add(repository);
   }
-  return names;
+  return packages;
+}
+
+/**
+ * npm package names the user's global Pi settings install. Pi parses `npm:<name>[@version]` sources with this same
+ * pattern and identifies npm packages by name.
+ */
+export function userNpmPackages(settings: unknown): Set<string> {
+  return userPackages(settings).npm;
+}
+
+/**
+ * The `host/path` of the git repository [source] installs, as Pi identifies it, or null when the source installs
+ * something else. Pi reads `git:github.com/owner/repo`, `git:https://github.com/owner/repo`, `git@github.com:owner/repo`
+ * and the same with a `#ref` or `@ref`; every form ends up at the host and path, without `.git`.
+ */
+export function gitRepository(source: string): string | null {
+  let value = source.trim();
+  if (!value.startsWith("git:") && !/^(https?|ssh|git):\/\//i.test(value) && !value.startsWith("git@")) return null;
+  value = value.replace(/^git:/, "").trim();
+  const scp = /^git@([^:]+):(.+)$/.exec(value);
+  if (scp !== null) value = `${scp[1]}/${scp[2]}`;
+  value = value
+    .replace(/^(https?|ssh|git):\/\//i, "")
+    .replace(/^git@/, "")
+    .replace(/\.git$/, "")
+    .replace(/[#@][^/]*$/, "")
+    .replace(/\/+$/, "")
+    .toLowerCase();
+  // Pi takes a generic source's first segment as the host only when it looks like one.
+  const slash = value.indexOf("/");
+  if (slash <= 0) return null;
+  const host = value.slice(0, slash);
+  return host.includes(".") || host === "localhost" ? value : null;
 }

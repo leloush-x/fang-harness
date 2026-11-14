@@ -30,6 +30,7 @@ The license texts for everything Fang Harness ships are in the app under **Setti
 
 - **[pi-web-access](https://github.com/nicobailon/pi-web-access)**: Fang Harness's web search and page fetching extension is a modified copy. It uses [Mozilla Readability](https://github.com/mozilla/readability), [Defuddle](https://github.com/kepano/defuddle), [linkedom](https://github.com/WebReflection/linkedom), [Turndown](https://github.com/mixmark-io/turndown), [undici](https://github.com/nodejs/undici), [unpdf](https://github.com/unjs/unpdf), the [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk), and [p-limit](https://github.com/sindresorhus/p-limit).
 - **[rpiv-todo](https://github.com/juicesharp/rpiv-mono)**: the to-do list extension's tool texts come from it.
+- **[pi-ask-user](https://github.com/edlsh/pi-ask-user)**: the questions extension is a modified copy, so the agent can ask a question with choices.
 - **[jsdiff](https://github.com/kpdecker/jsdiff)** parses diffs, and **[TypeBox](https://github.com/sinclairzx81/typebox)** builds the extensions' tool schemas.
 
 ## The website

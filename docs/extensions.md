@@ -10,12 +10,13 @@ Fang Harness supports Pi's extensions, skills, and prompt templates. They go in 
 Fang Harness bundles extensions for ease of use, or where the experience it wants isn't possible through Pi's RPC protocol. The current bundled extensions are:
 
 - **Fang Harness todo** keeps a to-do list for the agent's current task, shown as a tab on the message box. The list is saved with the chat, and `/todos` shows it. It showcases Fang Harness's [widgets](#how-extensions-look-in-fang). Its tool matches [rpiv-todo](https://github.com/juicesharp/rpiv-mono)'s.
+- **Fang Harness questions** gives the agent [pi-ask-user](https://github.com/edlsh/pi-ask-user)'s `ask_user` tool, so it can ask you a question with choices when it needs a decision. The chat shows the question as a [card](#how-extensions-look-in-fang) with its answer choices, an optional comment, or a text field for your own answer.
 - **Fang Harness background** (experimental) lets the agent run commands in the background, such as servers and long builds, and picks the chat back up when each one exits. Fang Harness keeps the chat's agent and the phone awake while they run. See [Background tasks](/docs/background/#background-tasks).
 - **Fang Harness web access** lets the agent search the web and read pages, docs, and PDFs. `/websearch` opens its search curator. It's a copy of [pi-web-access](https://github.com/nicobailon/pi-web-access), changed to start faster on Android. Its settings, such as search API keys, go in `files/wolfi/pi/web-search.json`; the [pi-web-access README](https://github.com/nicobailon/pi-web-access#readme) lists them.
 
 Turn them off in **Settings → Fang Harness extensions**. Idle chats reload to apply the change; working chats apply it when their agent next starts.
 
-If you install `npm:pi-web-access` yourself, Fang Harness drops its bundled copy.
+If you install `npm:pi-web-access` or `pi-ask-user` yourself, or the pi-ask-user repository from git, Fang Harness drops its bundled copy so the two don't register the same tools.
 
 ## Install a Pi package
 

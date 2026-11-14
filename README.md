@@ -32,6 +32,7 @@
 - **Real workbench.** Review changes in the built-in git diff viewer, browse files with tree-sitter syntax highlighting, look through commits, and open terminals inside the app.
 - **Your model, your plan.** Connect Claude, OpenAI Codex, Gemini, Z.ai Coding Plan, Kimi Code, or any OpenAI-compatible API. Switch models per chat.
 - **Runs in the background.** Lock your phone or switch apps; a notification tells you when a chat is done or needs your answer.
+- **Asks when it needs you.** The agent can stop and ask a question with tappable choices, so you answer a decision instead of explaining it twice.
 - **Guided setup.** Setup downloads and unpacks Wolfi OS, installs Pi, and walks you through permissions.
 
 ## Requirements

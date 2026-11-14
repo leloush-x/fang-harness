@@ -10,5 +10,5 @@
     "es2024": true
   },
   // Vendored upstream code keeps its own style so upstream releases merge cleanly; see its UPSTREAM.md.
-  "ignorePatterns": ["node_modules", "src/pi-extensions/fang-web-access"]
+  "ignorePatterns": ["node_modules", "src/pi-extensions/fang-web-access", "src/pi-extensions/fang-ask-user"]
 }

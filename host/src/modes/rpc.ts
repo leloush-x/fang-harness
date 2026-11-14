@@ -17,7 +17,7 @@ import type { ModeContext } from "../mode.js";
 import { nullableStringParam, stringParam } from "../params.js";
 import { installedFangExtensionFiles, fangExtensionFingerprintsParam } from "../fang-extensions.js";
 import { SYSTEM_APPEND } from "../prompt.js";
-import { openSettingsIfValid, readGlobalSettings, userNpmPackages } from "../settings.js";
+import { openSettingsIfValid, readGlobalSettings, userPackages, type UserPackages } from "../settings.js";
 import { sessionEnv } from "../session.js";
 import { configBusy, isConfigLocked } from "../config-lock.js";
 
@@ -30,9 +30,15 @@ const KILL_AFTER_MS = 5000;
  * bounded.
  */
 const OUTPUT_BACKLOG_LIMIT = 32 * 1024 * 1024;
-/** Fang Harness's copy of pi-web-access, and the npm package a user can install in its place. */
 const WEB_ACCESS_EXTENSION = "fang-web-access";
-const WEB_ACCESS_NPM_PACKAGE = "pi-web-access";
+/**
+ * The packages whose tools a Fang Harness extension also registers, by extension name. Pi exits when two extensions
+ * register one tool, so a user who installed the package gets Pi's extension and Fang Harness leaves its copy out.
+ */
+const REPLACED_BY_PACKAGES: Record<string, { npm?: string; git?: string }> = {
+  [WEB_ACCESS_EXTENSION]: { npm: "pi-web-access" },
+  "fang-ask-user": { npm: "pi-ask-user", git: "github.com/edlsh/pi-ask-user" },
+};
 
 /** Keeps only the newest bytes of Pi's stderr for the exit report. */
 class TailBuffer {
@@ -59,6 +65,14 @@ function note(message: string): void {
 /** Notes a channel line from [from] that the host dropped, which only a bug in Fang Harness sends. */
 function droppedChannelLine(from: string): (reason: string) => void {
   return (reason) => note(`dropped a channel line from ${from}: ${reason}`);
+}
+
+/** Whether the user's global settings install the package that [extension] duplicates, in npm or from git. */
+function replacedByUserPackage(extension: string, installed: UserPackages): boolean {
+  const packages = REPLACED_BY_PACKAGES[extension];
+  if (packages === undefined) return false;
+  const fromNpm = packages.npm !== undefined && installed.npm.has(packages.npm);
+  return fromNpm || (packages.git !== undefined && installed.git.has(packages.git));
 }
 
 /**
@@ -171,10 +185,9 @@ export async function rpc(ctx: ModeContext): Promise<void> {
   if (fangExtensions.some(({ name }) => name === WEB_ACCESS_EXTENSION)) await defaultWebToolsToEager(ctx.env.configDir);
   const settings = await readGlobalSettings(ctx.env.configDir);
   await defaultSteeringToAll(ctx, settings);
-  // Pi exits when two copies of one extension register the same tools, so pi-web-access from npm replaces Fang Harness's copy.
-  const replacedByNpm = userNpmPackages(settings).has(WEB_ACCESS_NPM_PACKAGE);
+  const userInstalled = userPackages(settings);
   for (const { name, path } of extensionFiles) {
-    if (!(replacedByNpm && name === WEB_ACCESS_EXTENSION)) args.push("--extension", path);
+    if (!replacedByUserPackage(name, userInstalled)) args.push("--extension", path);
   }
   args.push("--append-system-prompt", SYSTEM_APPEND);
   const env = await sessionEnv(ctx.env);

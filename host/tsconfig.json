@@ -18,5 +18,5 @@
   },
   "include": ["src", "test", "vitest.config.ts", "build.ts"],
   // Vendored upstream code follows its own, looser compiler settings; see its UPSTREAM.md.
-  "exclude": ["src/pi-extensions/fang-web-access"]
+  "exclude": ["src/pi-extensions/fang-web-access", "src/pi-extensions/fang-ask-user"]
 }

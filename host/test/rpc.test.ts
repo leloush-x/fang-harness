@@ -363,6 +363,39 @@ describe("rpc mode", () => {
     await run.exited;
   });
 
+  it.each([
+    ["the user's global settings install it from npm", ["npm:pi-ask-user@0.17.2"], [], false],
+    ["the user's global settings install the repository from git", ["git:github.com/edlsh/pi-ask-user"], [], false],
+    ["the user's global settings install the repository from git at a ref", ["git:github.com/edlsh/pi-ask-user#v0.17.2"], [], false],
+    // Pi may leave an untrusted project's packages unloaded, so Fang Harness's copy must stay.
+    ["only a project's settings install it", [], ["npm:pi-ask-user"], true],
+    ["the user installs a different package", ["npm:pi-ask-user-extra"], [], true],
+  ])("loads fang-ask-user unless pi-ask-user replaces it, given %s", async (_, globalPackages, projectPackages, loaded) => {
+    await writeFile(path.join(dirs.configDir, "settings.json"), JSON.stringify({ packages: globalPackages }));
+    await mkdir(path.join(dirs.home, ".pi"));
+    await writeFile(path.join(dirs.home, ".pi/settings.json"), JSON.stringify({ packages: projectPackages }));
+    const fangExtensions = [await installedExtension(dirs, "fang-todo"), await installedExtension(dirs, "fang-ask-user")];
+    const { run } = await startHost("rpc", dirs);
+    await run.next();
+    run.send({
+      type: "fang_request",
+      params: {
+        cwd: dirs.home,
+        sessionPath: null,
+        expectedVersion: PI_VERSION,
+        packageJson: PACKAGE_JSON,
+        fangExtensions,
+      },
+    });
+    const askUser = loaded ? ["--extension", extensionFile(dirs, "fang-ask-user")] : [];
+    expect(await run.next()).toMatchObject({
+      type: "ready",
+      argv: ["--mode", "rpc", "--extension", extensionFile(dirs, "fang-todo"), ...askUser, "--append-system-prompt", SYSTEM_APPEND],
+    });
+    run.socket.end();
+    await run.exited;
+  });
+
   describe("fang-web-access tool activation", () => {
     it.each([
       ["no config", null, { toolActivation: "eager" }],

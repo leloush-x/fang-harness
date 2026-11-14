@@ -69,6 +69,8 @@
     <string name="backups_delete_file_text">%1$s will be deleted for good.</string>
     <string name="settings_extension_todo">Fang Harness todo</string>
     <string name="settings_extension_todo_summary">A todo list the agent keeps, shown on the composer</string>
+    <string name="settings_extension_ask_user">Fang Harness questions</string>
+    <string name="settings_extension_ask_user_summary">The agent asks you a question with choices, and the chat shows it as a card to answer</string>
     <string name="settings_extension_background">Fang Harness background (experimental)</string>
     <string name="settings_extension_background_summary">Commands that keep running while the agent waits, such as servers and long builds</string>
     <string name="settings_extension_web_access">Fang Harness web access</string>

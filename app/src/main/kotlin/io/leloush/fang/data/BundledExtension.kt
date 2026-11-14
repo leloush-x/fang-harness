@@ -22,6 +22,14 @@ internal enum class BundledExtension(
     asset = "fang-extensions/fang-todo.js",
   ),
 
+  /** pi-ask-user's `ask_user` tool: the agent asks a question with choices and the chat shows it as a card. */
+  AskUser(
+    "fang-ask-user",
+    R.string.settings_extension_ask_user,
+    R.string.settings_extension_ask_user_summary,
+    asset = "fang-extensions/fang-ask-user.js",
+  ),
+
   /** Runs shell commands past the agent's turn; it tells the app over Fang Harness's channel while they run. */
   Background(
     "fang-background",
