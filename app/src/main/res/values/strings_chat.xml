@@ -44,7 +44,7 @@
     <string name="chat_message_edited">Message edited</string>
     <string name="chat_message_deleted">Message deleted</string>
     <string name="chat_message_resent">Resent</string>
-    <string name="chat_message_action_failed">Couldn't do that</string>
+    <string name="chat_message_action_failed">Couldn\'t do that</string>
     <string name="chat_copy_details">Copy</string>
     <string name="chat_extension_message">Extension message</string>
     <string name="chat_notice_info">Info</string>

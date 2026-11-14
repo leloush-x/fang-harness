@@ -98,32 +98,43 @@ internal fun UserMessage(
           iconSize = FangTokens.IconSize.sm,
         )
       }
-      Box {
-        IconButton28(
-          icon = R.drawable.ic_lucide_ellipsis,
-          contentDescription = stringResource(R.string.chat_message_actions),
-          onClick = { menuOpen = true },
-          tint = colors.foregroundMuted,
-          iconSize = FangTokens.IconSize.sm,
-        )
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.chat_edit_message)) },
-            leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_pencil, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
-            onClick = { menuOpen = false; onAction(UserMessageAction.Edit) },
-          )
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.chat_resend_message)) },
-            leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_refresh_cw, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
-            onClick = { menuOpen = false; onAction(UserMessageAction.Resend) },
-          )
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.chat_delete_message)) },
-            leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_trash_2, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.destructive) },
-            onClick = { menuOpen = false; onAction(UserMessageAction.Delete) },
-          )
-        }
-      }
+      UserMessageMenu(menuOpen = menuOpen, onOpen = { menuOpen = true }, onDismiss = { menuOpen = false }, onAction = onAction)
+    }
+  }
+}
+
+@Composable
+private fun UserMessageMenu(
+  menuOpen: Boolean,
+  onOpen: () -> Unit,
+  onDismiss: () -> Unit,
+  onAction: (UserMessageAction) -> Unit,
+) {
+  val colors = fangColors
+  Box {
+    IconButton28(
+      icon = R.drawable.ic_lucide_ellipsis,
+      contentDescription = stringResource(R.string.chat_message_actions),
+      onClick = onOpen,
+      tint = colors.foregroundMuted,
+      iconSize = FangTokens.IconSize.sm,
+    )
+    DropdownMenu(expanded = menuOpen, onDismissRequest = onDismiss) {
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.chat_edit_message)) },
+        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_pencil, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
+        onClick = { onDismiss(); onAction(UserMessageAction.Edit) },
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.chat_resend_message)) },
+        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_refresh_cw, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
+        onClick = { onDismiss(); onAction(UserMessageAction.Resend) },
+      )
+      DropdownMenuItem(
+        text = { Text(stringResource(R.string.chat_delete_message)) },
+        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_trash_2, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.destructive) },
+        onClick = { onDismiss(); onAction(UserMessageAction.Delete) },
+      )
     }
   }
 }

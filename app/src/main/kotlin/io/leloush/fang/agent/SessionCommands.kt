@@ -48,5 +48,5 @@ internal suspend fun AgentProcess.fork(entryId: String): String? {
   return typedText(data.optString("text"))
 }
 
-/** Moves this process to a copy of the session; false when an extension cancelled it. Waits as [fork] does. */
-internal suspend fun AgentProcess.cloneSession(): Boolean = moveSession("clone") != null
+/** `get_session_stats` data: message counts, `tokens`, `cost` and `contextUsage`. */
+internal suspend fun AgentProcess.sessionStats(): JSONObject = call("get_session_stats")

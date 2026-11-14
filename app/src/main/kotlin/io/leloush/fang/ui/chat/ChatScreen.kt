@@ -23,7 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -212,28 +212,28 @@ private fun StreamArea(
       onRestart = process::restart,
       onUserMessageAction = { item, action ->
         when (action) {
-          UserMessageAction.Edit -> controller.editMessage(item)
-          UserMessageAction.Delete -> controller.requestDeleteMessage(item)
-          UserMessageAction.Resend -> controller.resendMessage(item)
+          UserMessageAction.Edit -> controller.messageActions.edit(item)
+          UserMessageAction.Delete -> controller.messageActions.requestDelete(item)
+          UserMessageAction.Resend -> controller.messageActions.resend(item)
         }
       },
       backgroundTasks = backgroundTasks,
     )
     SnackbarStack(snackbar, Modifier.align(Alignment.BottomCenter).padding(FangTokens.Spacing.s16))
     SlashMenuHost(controller, ready = processState == AgentProcessState.Ready, Modifier.align(Alignment.BottomCenter))
-    val pendingDelete = controller.pendingDelete
+    val pendingDelete = controller.messageActions.pendingDelete
     if (pendingDelete != null) {
       AlertDialog(
-        onDismissRequest = { controller.cancelDeleteMessage() },
+        onDismissRequest = { controller.messageActions.cancelDelete() },
         title = { Text(stringResource(R.string.chat_delete_message)) },
         text = { Text(stringResource(R.string.chat_delete_message_confirm)) },
         confirmButton = {
-          TextButton(onClick = { controller.confirmDeleteMessage() }) {
+          TextButton(onClick = { controller.messageActions.confirmDelete() }) {
             Text(stringResource(R.string.chat_delete_message_confirm_yes))
           }
         },
         dismissButton = {
-          TextButton(onClick = { controller.cancelDeleteMessage() }) {
+          TextButton(onClick = { controller.messageActions.cancelDelete() }) {
             Text(stringResource(R.string.chat_delete_message_confirm_no))
           }
         },
