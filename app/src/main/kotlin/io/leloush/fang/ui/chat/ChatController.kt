@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import io.leloush.fang.AppGraph
 import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcess
+import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.agent.RpcError
 import io.leloush.fang.agent.TimelineEffect
 import io.leloush.fang.agent.UiAnswer
@@ -73,9 +74,68 @@ internal class ChatController(
   var sending by mutableStateOf(false)
     private set
 
-  /** Whether [sending] a slash command, which Pi answers only once the command finished. */
-  var sendingCommand by mutableStateOf(false)
+  /** Pending deletion of a sent message, awaiting confirmation. */
+  var pendingDelete by mutableStateOf<TimelineItem.User?>(null)
     private set
+
+  fun requestDeleteMessage(item: TimelineItem.User) { pendingDelete = item }
+
+  fun cancelDeleteMessage() { pendingDelete = null }
+
+  fun confirmDeleteMessage() {
+    val item = pendingDelete ?: return
+    pendingDelete = null
+    deleteMessage(item)
+  }
+
+  private fun userMessageIndex(item: TimelineItem.User): Int =
+    process.timeline.state.value.items.filterIsInstance<TimelineItem.User>().indexOf(item)
+
+  /** Forks the session to before [item], filling the composer with its text for editing. */
+  fun editMessage(item: TimelineItem.User) {
+    val index = userMessageIndex(item)
+    launchRpc {
+      val entryId = process.userEntryId(index, item.text)
+      if (entryId == null) { show(R.string.chat_message_action_failed); return@launchRpc }
+      val text = process.fork(entryId)
+      if (text != null) {
+        setDraftText(text)
+        show(R.string.chat_message_edited)
+      } else {
+        show(R.string.chat_message_action_failed)
+      }
+    }
+  }
+
+  /** Forks the session to before [item], dropping it and everything after it. */
+  private fun deleteMessage(item: TimelineItem.User) {
+    val index = userMessageIndex(item)
+    launchRpc {
+      val entryId = process.userEntryId(index, item.text)
+      if (entryId == null) { show(R.string.chat_message_action_failed); return@launchRpc }
+      val result = process.fork(entryId)
+      if (result == null) show(R.string.chat_message_action_failed) else show(R.string.chat_message_deleted)
+    }
+  }
+
+  /** Sends [item]'s text again, steering if a run is in progress. */
+  fun resendMessage(item: TimelineItem.User) {
+    if (process.state.value.starting) { show(R.string.chat_message_action_failed); return }
+    scope.launch {
+      try {
+        if (process.busy.value) {
+          process.steer(item.text, item.images)
+        } else {
+          process.prompt(item.text, item.images)
+        }
+        show(R.string.chat_message_resent)
+      } catch (error: RpcError) {
+        show(error.message)
+      } catch (error: IOException) {
+        show(error.message.orEmpty())
+      }
+    }
+  }
 
   /** Stop was pressed before Pi answered the prompt being sent, so the run that prompt starts is aborted. */
   private var stopRequested = false

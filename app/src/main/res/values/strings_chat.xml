@@ -34,6 +34,17 @@
     <string name="chat_image">Attached image</string>
     <string name="chat_copy_reply">Copy reply</string>
     <string name="chat_copy_message">Copy message</string>
+    <string name="chat_edit_message">Edit and resend</string>
+    <string name="chat_delete_message">Delete this and later</string>
+    <string name="chat_resend_message">Resend</string>
+    <string name="chat_message_actions">Message actions</string>
+    <string name="chat_delete_message_confirm">Delete this message and everything after it?</string>
+    <string name="chat_delete_message_confirm_yes">Delete</string>
+    <string name="chat_delete_message_confirm_no">Cancel</string>
+    <string name="chat_message_edited">Message edited</string>
+    <string name="chat_message_deleted">Message deleted</string>
+    <string name="chat_message_resent">Resent</string>
+    <string name="chat_message_action_failed">Couldn't do that</string>
     <string name="chat_copy_details">Copy</string>
     <string name="chat_extension_message">Extension message</string>
     <string name="chat_notice_info">Info</string>

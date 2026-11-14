@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,8 +59,13 @@ private val UserBubbleShape =
 private val ImageMaxEdge = 160.dp
 
 @Composable
-internal fun UserMessage(item: TimelineItem.User, modifier: Modifier = Modifier) {
+internal fun UserMessage(
+  item: TimelineItem.User,
+  onAction: (UserMessageAction) -> Unit = {},
+  modifier: Modifier = Modifier,
+) {
   val colors = fangColors
+  var menuOpen by remember { mutableStateOf(false) }
   Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
     Column(
       modifier = Modifier.background(colors.surface3, UserBubbleShape).padding(FangTokens.Spacing.s16),
@@ -91,9 +98,37 @@ internal fun UserMessage(item: TimelineItem.User, modifier: Modifier = Modifier)
           iconSize = FangTokens.IconSize.sm,
         )
       }
+      Box {
+        IconButton28(
+          icon = R.drawable.ic_lucide_ellipsis,
+          contentDescription = stringResource(R.string.chat_message_actions),
+          onClick = { menuOpen = true },
+          tint = colors.foregroundMuted,
+          iconSize = FangTokens.IconSize.sm,
+        )
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.chat_edit_message)) },
+            leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_pencil, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
+            onClick = { menuOpen = false; onAction(UserMessageAction.Edit) },
+          )
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.chat_resend_message)) },
+            leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_refresh_cw, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
+            onClick = { menuOpen = false; onAction(UserMessageAction.Resend) },
+          )
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.chat_delete_message)) },
+            leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_trash_2, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.destructive) },
+            onClick = { menuOpen = false; onAction(UserMessageAction.Delete) },
+          )
+        }
+      }
     }
   }
 }
+
+internal enum class UserMessageAction { Edit, Delete, Resend }
 
 @Composable
 private fun UserImages(images: List<ImagePart>) {

@@ -96,6 +96,7 @@ internal fun ChatStream(
   onOpenProviders: () -> Unit,
   onOpenOnboarding: () -> Unit,
   onRestart: () -> Unit,
+  onUserMessageAction: (TimelineItem.User, UserMessageAction) -> Unit = { _, _ -> },
   backgroundTasks: Int,
   modifier: Modifier = Modifier,
 ) {
@@ -248,6 +249,7 @@ private fun StreamList(
         backgroundTasks = if (item.key == lastFooterKey) backgroundTasks else 0,
         onOpenTool = onOpenTool,
         onRestart = onRestart,
+        onUserMessageAction = onUserMessageAction,
         modifier = Modifier.contentWidth().padding(top = gapBefore(items.getOrNull(index - 1), item)),
       )
     }
@@ -342,10 +344,11 @@ private fun StreamItem(
   backgroundTasks: Int,
   onOpenTool: (key: String) -> Unit,
   onRestart: () -> Unit,
+  onUserMessageAction: (TimelineItem.User, UserMessageAction) -> Unit = { _, _ -> },
   modifier: Modifier,
 ) {
   when (item) {
-    is TimelineItem.User -> UserMessage(item, modifier)
+    is TimelineItem.User -> UserMessage(item, onAction = { action -> onUserMessageAction(item, action) }, modifier)
 
     is TimelineItem.AssistantText -> AssistantMessage(item, markdownCache, modifier)
 
@@ -368,7 +371,7 @@ private fun StreamItem(
     is TimelineItem.Steps -> {
       Column(modifier = modifier) {
         item.steps.forEach { step ->
-          StreamItem(step, markdownCache, 0, onOpenTool, onRestart, Modifier)
+          StreamItem(step, markdownCache, 0, onOpenTool, onRestart, onUserMessageAction, Modifier)
         }
       }
     }

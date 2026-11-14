@@ -23,8 +23,14 @@ internal suspend fun AgentProcess.exportHtml(outputPath: String): String {
   return call("export_html", params).optString("path")
 }
 
-/** `get_session_stats` data: message counts, `tokens`, `cost` and `contextUsage`. */
-internal suspend fun AgentProcess.sessionStats(): JSONObject = call("get_session_stats")
+/** Entry id of the user message at [index] among the chat's user messages, or the first whose text matches. */
+internal suspend fun AgentProcess.userEntryId(index: Int, text: String): String? {
+  val messages = forkMessages()
+  if (index in messages.indices && messages[index].optString("text") == text) {
+    return messages[index].optString("entryId").takeIf { it.isNotEmpty() }
+  }
+  return messages.firstOrNull { it.optString("text") == text }?.optString("entryId")?.takeIf { it.isNotEmpty() }
+}
 
 /** The user messages a fork can start from (`entryId`, `text`), oldest first; skills show as typed. */
 internal suspend fun AgentProcess.forkMessages(): List<JSONObject> =

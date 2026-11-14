@@ -24,7 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcess
@@ -208,10 +210,35 @@ private fun StreamArea(
       onOpenProviders = onOpenProviders,
       onOpenOnboarding = onOpenOnboarding,
       onRestart = process::restart,
+      onUserMessageAction = { item, action ->
+        when (action) {
+          UserMessageAction.Edit -> controller.editMessage(item)
+          UserMessageAction.Delete -> controller.requestDeleteMessage(item)
+          UserMessageAction.Resend -> controller.resendMessage(item)
+        }
+      },
       backgroundTasks = backgroundTasks,
     )
     SnackbarStack(snackbar, Modifier.align(Alignment.BottomCenter).padding(FangTokens.Spacing.s16))
     SlashMenuHost(controller, ready = processState == AgentProcessState.Ready, Modifier.align(Alignment.BottomCenter))
+    val pendingDelete = controller.pendingDelete
+    if (pendingDelete != null) {
+      AlertDialog(
+        onDismissRequest = { controller.cancelDeleteMessage() },
+        title = { Text(stringResource(R.string.chat_delete_message)) },
+        text = { Text(stringResource(R.string.chat_delete_message_confirm)) },
+        confirmButton = {
+          TextButton(onClick = { controller.confirmDeleteMessage() }) {
+            Text(stringResource(R.string.chat_delete_message_confirm_yes))
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { controller.cancelDeleteMessage() }) {
+            Text(stringResource(R.string.chat_delete_message_confirm_no))
+          }
+        },
+      )
+    }
   }
 }
 
