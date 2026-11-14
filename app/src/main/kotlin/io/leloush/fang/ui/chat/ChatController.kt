@@ -74,6 +74,10 @@ internal class ChatController(
   var sending by mutableStateOf(false)
     private set
 
+  /** Whether [sending] a slash command, which Pi answers only once the command finished. */
+  var sendingCommand by mutableStateOf(false)
+    private set
+
   val messageActions = MessageActions(this)
 
   /** Stop was pressed before Pi answered the prompt being sent, so the run that prompt starts is aborted. */

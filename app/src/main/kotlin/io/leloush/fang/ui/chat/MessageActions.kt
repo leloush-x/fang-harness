@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import io.leloush.fang.R
 import io.leloush.fang.agent.RpcError
 import io.leloush.fang.agent.TimelineItem
-import java.io.IOException
+import kotlinx.coroutines.launch
 
 /**
  * Edit / delete / resend actions for a sent user message. Kept out of [ChatController] so that class stays under the
