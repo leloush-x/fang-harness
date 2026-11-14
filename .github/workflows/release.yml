@@ -7,6 +7,8 @@ name: Release
 #            nothing the build runs, such as Gradle plugins or npm packages, can reach the signing key
 #   sign     signs the APK with the release key from the `release` environment, which only main can deploy to
 #   publish  creates the GitHub release, the only job allowed to write to the repository
+#   verify   downloads the published APK again and checks that it is the signed file, so a bad upload or a second
+#            asset beside it fails the run instead of reaching a phone as "the package appears to be invalid"
 #
 # The `release` environment holds:
 #   secrets    RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD
@@ -170,6 +172,11 @@ jobs:
           # A device that cannot verify the signature refuses the package and says only that the package appears to
           # be invalid, so the signature is checked for the app's own minimum, Android 10: it has to verify there.
           "$build_tools/apksigner" verify --min-sdk-version 29 "$apk"
+          # And every scheme has to be in the file. apksigner reports them all against the oldest minimum it knows.
+          compat=$("$build_tools/apksigner" verify --min-sdk-version 21 --verbose "$apk")
+          for scheme in "v1 scheme (JAR signing)" "v2 scheme (APK Signature Scheme v2)" "v3 scheme (APK Signature Scheme v3)"; do
+            grep -qx "Verified using $scheme: true" <<<"$compat" || { echo "The APK is missing the $scheme signature" >&2; exit 1; }
+          done
           # apksigner keeps the alignment it was given, and a device with 16 KB memory pages needs it.
           "$build_tools/zipalign" -c -P 16 -v 4 "$apk"
           # The runtime the app needs travels in the APK; without it the app installs and then cannot start the agent.
@@ -204,28 +211,27 @@ jobs:
           name: signed-apk
           path: dist
 
-      - name: Write the checksums and the release notes
+      - name: Write the release notes
         working-directory: dist
         run: |
-          sha256sum ./*.apk > SHA256SUMS
-          # The notes say which file to install, how big it is and what it should hash to. A phone that downloads
-          # the file over a slow link can end up holding a part of it, and the installer then says only that the
-          # package appears to be invalid; the size and the digest here tell the user that the file they hold is
-          # not the release, without needing a terminal to find out.
+          # Only the APK is attached. A checksum file used to sit beside it, and on a phone it sorts above the APK:
+          # tapping it downloads 85 bytes of text that no installer can open, and Android says only that the package
+          # appears to be invalid. The notes carry the same digest for anyone who wants to check it by hand.
           size=$(stat -c %s ./*.apk)
-          digest=$(cut -d' ' -f1 SHA256SUMS)
+          digest=$(sha256sum ./*.apk | cut -d' ' -f1)
+          name=$(basename ./*.apk)
           previous=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           {
-            echo "Install **fang-v$VERSION_NAME.apk** on your phone. It is the only file here that installs: the"
-            echo "other assets are the checksum list and the source archives."
+            echo "Install **$name** on your phone. It is the only file attached to this release; the other"
+            echo "downloads are the source archives GitHub adds itself, which are not apps."
             echo
             echo "The file is $size bytes and hashes to \`$digest\`. A copy of another size is a download that was"
             echo "cut short, and the installer will refuse it: download it again rather than install it."
             echo
             echo '```'
-            cat SHA256SUMS
+            echo "$digest  $name"
             echo '```'
-            if [ -n "$previous" ]; then
+            if [ -n "$previous" ] && [ "$previous" != "v$VERSION_NAME" ]; then
               echo
               echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$previous...v$VERSION_NAME"
             fi
@@ -246,7 +252,7 @@ jobs:
           # GitHub answers 403 now and then when it is busy, and a release that is built and signed but never
           # published is lost. The step tries again before it gives up.
           for attempt in 1 2 3 4; do
-            if gh release create "v$VERSION_NAME" dist/*.apk dist/SHA256SUMS \
+            if gh release create "v$VERSION_NAME" dist/*.apk \
               --title "Fang Harness $VERSION_NAME" \
               --target "$GITHUB_SHA" \
               --notes-file dist/notes.md \
@@ -258,3 +264,70 @@ jobs:
           done
           echo "Could not publish v$VERSION_NAME"
           exit 1
+
+  # The file a phone downloads is not the file the sign job produced: it went through the artifact upload, the
+  # release asset store and the CDN. A truncated object, a second APK beside it, or an asset whose digest GitHub
+  # records differently is a package whose only symptom on the phone is "the package appears to be invalid", so the
+  # published copy is downloaded again and checked here, after it is the one everyone can see.
+  verify:
+    name: Verify the published APK
+    needs: [build, sign, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION_NAME: ${{ needs.build.outputs.version-name }}
+      VERSION_CODE: ${{ needs.build.outputs.version-code }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: signed-apk
+          path: built
+
+      - name: Install Android build tools
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;$BUILD_TOOLS_VERSION" > /dev/null'
+
+      - name: Check the published copy
+        run: |
+          mkdir published
+          gh release download "v$VERSION_NAME" --pattern '*.apk' --dir published
+          built=$(ls built/*.apk)
+          published=$(ls published/*.apk)
+          if [ "$(basename "$built")" != "$(basename "$published")" ]; then
+            echo "The release attaches $published, not $built" >&2
+            exit 1
+          fi
+          if ! cmp -s "$built" "$published"; then
+            echo "The release attached a different file from the one that was signed and checked" >&2
+            exit 1
+          fi
+          # Exactly one APK, so a phone cannot pick a file that is not the app.
+          apks=$(gh release view "v$VERSION_NAME" --json assets --jq '[.assets[] | select(.name | endswith(".apk"))] | length')
+          if [ "$apks" -ne 1 ]; then
+            echo "The release attaches $apks APKs; a phone needs exactly one" >&2
+            exit 1
+          fi
+          # GitHub's own record of the asset has to name the digest of the file it hands out.
+          digest=$(sha256sum "$published" | cut -d' ' -f1)
+          recorded=$(gh release view "v$VERSION_NAME" --json assets --jq '.assets[] | select(.name | endswith(".apk")) | .digest')
+          if [ "sha256:$digest" != "$recorded" ]; then
+            echo "The release records $recorded for the APK, but the file hashes to sha256:$digest" >&2
+            exit 1
+          fi
+          echo "Published $(basename "$published"): $(stat -c %s "$published") bytes, sha256:$digest"
+
+          build_tools="$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION"
+          badging=$("$build_tools/aapt2" dump badging "$published")
+          if ! grep -q "versionCode='$VERSION_CODE' versionName='$VERSION_NAME'" <<< "$badging"; then
+            echo "The published APK doesn't carry version $VERSION_NAME ($VERSION_CODE)" >&2
+            exit 1
+          fi
+          "$build_tools/apksigner" verify --min-sdk-version 29 "$published"
+          compat=$("$build_tools/apksigner" verify --min-sdk-version 21 --verbose "$published")
+          for scheme in "v1 scheme (JAR signing)" "v2 scheme (APK Signature Scheme v2)" "v3 scheme (APK Signature Scheme v3)"; do
+            grep -qx "Verified using $scheme: true" <<<"$compat" || { echo "The published APK is missing the $scheme signature" >&2; exit 1; }
+          done
+          "$build_tools/zipalign" -c -P 16 -v 4 "$published"
