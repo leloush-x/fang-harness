@@ -101,9 +101,7 @@ internal fun ChatStream(
   modifier: Modifier = Modifier,
 ) {
   val scope = rememberCoroutineScope()
-  // Keep the action handler reachable for the stream's rows; detekt does not count a parameter that is only
-  // forwarded into a trailing lambda below.
-  val userMessageAction = onUserMessageAction
+  val starting = processState is AgentProcessState.Starting || processState is AgentProcessState.Installing
   val loadingOverHistory = starting && timeline.items.isNotEmpty()
   val banner = processState.takeIf { !loadingOverHistory && (starting || it is AgentProcessState.Failed) }
   val count = timeline.items.size + if (banner != null) 1 else 0
@@ -251,7 +249,7 @@ private fun StreamList(
         backgroundTasks = if (item.key == lastFooterKey) backgroundTasks else 0,
         onOpenTool = onOpenTool,
         onRestart = onRestart,
-        onUserMessageAction = userMessageAction,
+        onUserMessageAction = onUserMessageAction,
         modifier = Modifier.contentWidth().padding(top = gapBefore(items.getOrNull(index - 1), item)),
       )
     }
