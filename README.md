@@ -28,6 +28,7 @@
 - **Runs on your phone.** The agent, your code, git, and terminals all live in Wolfi OS on your device. Install compilers, runtimes, and databases with `apk add` — no root required.
 - **Built on Pi.** Compatible with Pi's skills, tools, prompt templates, and extensions. Install extensions the usual Pi way.
 - **Native Jetpack Compose UI.** No web view — smooth scrolling, typing, and streaming replies. Split panes on foldables and tablets.
+- **Fix a message you sent.** Edit what you wrote and send it again, resend it as it was, or delete it and everything after it.
 - **Real workbench.** Review changes in the built-in git diff viewer, browse files with tree-sitter syntax highlighting, look through commits, and open terminals inside the app.
 - **Your model, your plan.** Connect Claude, OpenAI Codex, Gemini, Z.ai Coding Plan, Kimi Code, or any OpenAI-compatible API. Switch models per chat.
 - **Runs in the background.** Lock your phone or switch apps; a notification tells you when a chat is done or needs your answer.

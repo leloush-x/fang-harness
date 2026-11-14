@@ -76,6 +76,7 @@ A few things to know while it works:
 - **Stop it** at any time with **Stop**.
 - **Attach images** with the **+** button when the model can see them.
 - **Type `/`** to see commands, such as `/model`, `/compact` to shrink a long chat, or `/fork` to branch from an earlier message.
+- **Fix a message you sent.** Tap the **⋯** under one of your own messages to edit it and send it again, resend it as it was, or delete it together with everything after it. Editing and deleting start a new branch of the chat, so the earlier part of the conversation stays as it was.
 
 ## Check the agent's work
 

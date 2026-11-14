@@ -1,6 +1,7 @@
 package io.leloush.fang.agent
 
 import io.leloush.fang.host.objects
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** Pi's `get_commands`: extension commands, prompt templates and skills (named `skill:<name>`). */
@@ -21,15 +22,6 @@ internal suspend fun AgentProcess.exportHtml(outputPath: String): String {
   val params = JSONObject()
   if (outputPath.isNotBlank()) params.put("outputPath", outputPath)
   return call("export_html", params).optString("path")
-}
-
-/** Entry id of the user message at [index] among the chat's user messages, or the first whose text matches. */
-internal suspend fun AgentProcess.userEntryId(index: Int, text: String): String? {
-  val messages = forkMessages()
-  if (index in messages.indices && messages[index].optString("text") == text) {
-    return messages[index].optString("entryId").takeIf { it.isNotEmpty() }
-  }
-  return messages.firstOrNull { it.optString("text") == text }?.optString("entryId")?.takeIf { it.isNotEmpty() }
 }
 
 /** The user messages a fork can start from (`entryId`, `text`), oldest first; skills show as typed. */

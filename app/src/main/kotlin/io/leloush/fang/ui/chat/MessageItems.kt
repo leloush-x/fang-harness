@@ -97,11 +97,12 @@ internal fun UserMessage(
           iconSize = FangTokens.IconSize.sm,
         )
       }
-      UserMessageMenu(menuOpen = menuOpen, onOpen = { menuOpen = true }, onDismiss = { menuOpen = false }, onAction = onAction)
+      UserMessageMenu(menuOpen = menuOpen, onOpen = {
+        menuOpen = true
+      }, onDismiss = { menuOpen = false }, onAction = onAction)
     }
   }
 }
-
 
 internal enum class UserMessageAction { Edit, Delete, Resend }
 

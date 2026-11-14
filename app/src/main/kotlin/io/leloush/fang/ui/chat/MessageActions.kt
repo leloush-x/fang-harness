@@ -15,14 +15,22 @@ import kotlinx.coroutines.launch
  * Edit / delete / resend actions for a sent user message. Kept out of [ChatController] so that class stays under the
  * function-count limit; it reaches the controller's public helpers ([ChatController.launchRpc], [ChatController.show],
  * [ChatController.setDraftText], [ChatController.process]).
+ *
+ * Pi has no command to change a message that was sent, so editing and deleting fork the chat: the session is cut
+ * before that message and continues in a new one, which is what `/fork` does as well.
  */
 internal class MessageActions(private val controller: ChatController) {
+  /** The message whose deletion the user is asked to confirm. */
   var pendingDelete by mutableStateOf<TimelineItem.User?>(null)
     private set
 
-  fun requestDelete(item: TimelineItem.User) { pendingDelete = item }
+  fun requestDelete(item: TimelineItem.User) {
+    pendingDelete = item
+  }
 
-  fun cancelDelete() { pendingDelete = null }
+  fun cancelDelete() {
+    pendingDelete = null
+  }
 
   fun confirmDelete() {
     val item = pendingDelete ?: return
@@ -30,33 +38,45 @@ internal class MessageActions(private val controller: ChatController) {
     delete(item)
   }
 
-  fun edit(item: TimelineItem.User) {
-    val index = userMessageIndex(item)
-    controller.launchRpc {
-      val entryId = controller.process.userEntryId(index, item.text)
-      if (entryId == null) { controller.show(R.string.chat_message_action_failed); return@launchRpc }
-      val text = controller.process.fork(entryId)
-      if (text != null) {
-        controller.setDraftText(text)
-        controller.show(R.string.chat_message_edited)
-      } else {
-        controller.show(R.string.chat_message_action_failed)
-      }
+  /** Forks the chat to before [item] and puts its text in the composer, to edit it and send it again. */
+  fun edit(item: TimelineItem.User) = controller.launchRpc {
+    val entryId = entryIdOf(item)
+    if (entryId == null) {
+      controller.show(R.string.chat_message_action_failed)
+      return@launchRpc
+    }
+    val text = controller.process.fork(entryId)
+    if (text == null) {
+      controller.show(R.string.chat_message_action_failed)
+    } else {
+      controller.setDraftText(text)
+      controller.show(R.string.chat_message_edited)
     }
   }
 
-  private fun delete(item: TimelineItem.User) {
-    val index = userMessageIndex(item)
-    controller.launchRpc {
-      val entryId = controller.process.userEntryId(index, item.text)
-      if (entryId == null) { controller.show(R.string.chat_message_action_failed); return@launchRpc }
-      val result = controller.process.fork(entryId)
-      if (result == null) controller.show(R.string.chat_message_action_failed) else controller.show(R.string.chat_message_deleted)
+  /** Forks the chat to before [item], which drops it and everything after it. */
+  private fun delete(item: TimelineItem.User) = controller.launchRpc {
+    val entryId = entryIdOf(item)
+    if (entryId == null) {
+      controller.show(R.string.chat_message_action_failed)
+      return@launchRpc
+    }
+    val text = controller.process.fork(entryId)
+    if (text ==
+      null
+    ) {
+      controller.show(R.string.chat_message_action_failed)
+    } else {
+      controller.show(R.string.chat_message_deleted)
     }
   }
 
+  /** Sends [item]'s text and images again, steering if a run is in progress. */
   fun resend(item: TimelineItem.User) {
-    if (controller.process.state.value.starting) { controller.show(R.string.chat_message_action_failed); return }
+    if (controller.process.state.value.starting) {
+      controller.show(R.string.chat_message_action_failed)
+      return
+    }
     controller.scope.launch {
       try {
         if (controller.process.busy.value) {
@@ -73,6 +93,9 @@ internal class MessageActions(private val controller: ChatController) {
     }
   }
 
-  private fun userMessageIndex(item: TimelineItem.User): Int =
-    controller.process.timeline.state.value.items.filterIsInstance<TimelineItem.User>().indexOf(item)
+  /**
+   * Pi's entry id of [item], or null when the chat's own messages don't name it. The chat shows the messages of the
+   * branch the session is on, and Pi keeps that branch's messages as the entries from its leaf back to its root.
+   */
+  private suspend fun entryIdOf(item: TimelineItem.User): String? = controller.process.userEntryId(item)
 }

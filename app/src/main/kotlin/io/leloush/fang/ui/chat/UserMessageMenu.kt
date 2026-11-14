@@ -31,18 +31,48 @@ internal fun UserMessageMenu(
     DropdownMenu(expanded = menuOpen, onDismissRequest = onDismiss) {
       DropdownMenuItem(
         text = { Text(stringResource(R.string.chat_edit_message)) },
-        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_pencil, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
-        onClick = { onDismiss(); onAction(UserMessageAction.Edit) },
+        leadingIcon = {
+          LucideIcon(
+            icon = R.drawable.ic_lucide_pencil,
+            contentDescription = null,
+            size = FangTokens.IconSize.sm,
+            tint = colors.foregroundMuted,
+          )
+        },
+        onClick = {
+          onDismiss()
+          onAction(UserMessageAction.Edit)
+        },
       )
       DropdownMenuItem(
         text = { Text(stringResource(R.string.chat_resend_message)) },
-        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_refresh_cw, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
-        onClick = { onDismiss(); onAction(UserMessageAction.Resend) },
+        leadingIcon = {
+          LucideIcon(
+            icon = R.drawable.ic_lucide_refresh_cw,
+            contentDescription = null,
+            size = FangTokens.IconSize.sm,
+            tint = colors.foregroundMuted,
+          )
+        },
+        onClick = {
+          onDismiss()
+          onAction(UserMessageAction.Resend)
+        },
       )
       DropdownMenuItem(
         text = { Text(stringResource(R.string.chat_delete_message)) },
-        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_trash_2, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.destructive) },
-        onClick = { onDismiss(); onAction(UserMessageAction.Delete) },
+        leadingIcon = {
+          LucideIcon(
+            icon = R.drawable.ic_lucide_trash_2,
+            contentDescription = null,
+            size = FangTokens.IconSize.sm,
+            tint = colors.destructive,
+          )
+        },
+        onClick = {
+          onDismiss()
+          onAction(UserMessageAction.Delete)
+        },
       )
     }
   }
