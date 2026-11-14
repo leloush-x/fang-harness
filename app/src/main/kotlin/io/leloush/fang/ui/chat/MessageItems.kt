@@ -20,9 +20,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,7 +40,6 @@ import io.leloush.fang.R
 import io.leloush.fang.agent.ImagePart
 import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.ui.components.FangMarkdown
-import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.MarkdownCache
 import io.leloush.fang.ui.components.SimmeringPot

@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import io.leloush.fang.R
 import io.leloush.fang.agent.RpcError
 import io.leloush.fang.agent.TimelineItem
+import io.leloush.fang.agent.fork
+import io.leloush.fang.agent.userEntryId
 import java.io.IOException
 import kotlinx.coroutines.launch
 

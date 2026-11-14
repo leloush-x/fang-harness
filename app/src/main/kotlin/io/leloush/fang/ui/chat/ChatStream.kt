@@ -132,6 +132,7 @@ internal fun ChatStream(
       onRestart,
       onOpenOnboarding,
       onOpenTool,
+      onUserMessageAction,
     )
     if (timeline.items.isEmpty() && processState == AgentProcessState.Ready) {
       EmptyState(noModel = timeline.model == null, onOpenProviders, Modifier.align(Alignment.Center))
@@ -203,6 +204,7 @@ private fun StreamList(
   onRestart: () -> Unit,
   onOpenOnboarding: () -> Unit,
   onOpenTool: (key: String) -> Unit,
+  onUserMessageAction: (TimelineItem.User, UserMessageAction) -> Unit = { _, _ -> },
 ) {
   val recomposer = LocalView.current.findViewTreeCompositionContext() as Recomposer
   val anchor = remember(listState, follow, recomposer) { BottomAnchor(listState, follow, recomposer) }
