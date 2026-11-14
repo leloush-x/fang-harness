@@ -112,6 +112,8 @@
     <string name="settings_reinstall_done">The Fang Harness agent %1$s is installed</string>
 
     <string name="settings_version">Version</string>
+    <string name="settings_signing_certificate">Signing certificate</string>
+    <string name="settings_signing_certificate_summary">The first half of the SHA-256 of the certificate this build is signed with, as the release notes carry it</string>
     <string name="settings_licenses">Open-source licenses</string>
     <string name="settings_licenses_caption">Fang Harness is open source under the MIT License. It\'s built with the code, fonts and icons below, each under its own license.</string>
     <string name="settings_licenses_components">Code, fonts and icons</string>

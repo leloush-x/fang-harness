@@ -1,5 +1,7 @@
 package io.leloush.fang.ui.settings
 
+import android.content.Context
+import android.content.pm.PackageManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +46,7 @@ import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.ThemeMode
 import io.leloush.fang.ui.theme.fangColors
+import java.security.MessageDigest
 import kotlinx.coroutines.launch
 
 /** Paseo-style settings: providers, agent, appearance, notifications, Wolfi OS, advanced and about cards under a header. */
@@ -338,15 +341,21 @@ private fun AdvancedSection(onOpenAdvanced: () -> Unit) {
   }
 }
 
-/** The app's version, and a row into the open-source licences it ships. */
+/** The app's version, the certificate it is signed with, and a row into the open-source licences it ships. */
 @Composable
 private fun AboutSection(onOpenLicenses: () -> Unit) {
   val context = LocalContext.current
   val version = remember(context) {
     context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
   }
+  val certificate = remember(context) { signingCertificate(context) }
   SettingsSection(title = stringResource(R.string.settings_section_about)) {
     SettingsRow(title = stringResource(R.string.settings_version)) { SettingsValue(version) }
+    SettingsDivider()
+    SettingsRow(
+      title = stringResource(R.string.settings_signing_certificate),
+      subtitle = stringResource(R.string.settings_signing_certificate_summary),
+    ) { SettingsValue(certificate) }
     SettingsDivider()
     SettingsRow(title = stringResource(R.string.settings_licenses), onClick = onOpenLicenses) {
       LucideIcon(
@@ -356,4 +365,20 @@ private fun AboutSection(onOpenLicenses: () -> Unit) {
       )
     }
   }
+}
+
+/**
+ * The first half of the SHA-256 of the certificate this build is signed with, or an empty string when the platform
+ * gives none. Android refuses an install with "signature verification failed" when the app on the phone was signed
+ * with another key, and this is the value the release notes carry, so the two can be compared.
+ */
+private fun signingCertificate(context: Context): String {
+  val signature = context.packageManager
+    .getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+    .signingInfo
+    ?.apkContentsSigners
+    ?.firstOrNull()
+    ?: return ""
+  val digest = MessageDigest.getInstance("SHA-256").digest(signature.toByteArray()).toHexString()
+  return digest.take(16)
 }

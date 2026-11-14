@@ -123,9 +123,27 @@ jobs:
     environment: release
     permissions:
       contents: read
+    outputs:
+      # The certificate's digest, which the release notes carry: an install refused with "signature verification
+      # failed" means the app on the phone was signed with another key, and only this digest says which key this
+      # file has.
+      cert-sha256: ${{ steps.cert.outputs.digest }}
     env:
       VERSION_NAME: ${{ needs.build.outputs.version-name }}
     steps:
+      - name: Read the release certificate's digest
+        id: cert
+        env:
+          RELEASE_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 }}
+        run: |
+          digest=$(printf '%s' "$RELEASE_CERT_SHA256" | tr -d ':' | tr 'A-F' 'a-f')
+          if [ -z "$digest" ]; then
+            echo "The release environment has no RELEASE_CERT_SHA256" >&2
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "The release certificate is $digest"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -205,6 +223,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       VERSION_NAME: ${{ needs.build.outputs.version-name }}
+      CERT_SHA256: ${{ needs.sign.outputs.cert-sha256 }}
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -231,6 +250,20 @@ jobs:
             echo '```'
             echo "$digest  $name"
             echo '```'
+            echo
+            echo "This APK is signed with the certificate whose SHA-256 is \`$CERT_SHA256\`."
+            echo
+            echo "**If the phone refuses the file** with \"the package appears to be invalid\" or \"signature"
+            echo "verification failed\", the file or the installed app is the problem, not this release:"
+            echo
+            echo "- The app on the phone has to be signed with the same certificate. If an older Fang Harness was"
+            echo "  installed from another build or another key, Android refuses the update: uninstall it first,"
+            echo "  then install this file. Uninstalling removes that app's local data."
+            echo "- The file has to be the one above, byte for byte. A copy whose size or hash differs was cut short"
+            echo "  on the way to the phone; download it again, or install it from a computer with"
+            echo "  \`adb install -r $name\`."
+            echo "- The phone has to allow installs from this source: turn on \"install unknown apps\" for the app you"
+            echo "  open the file with, and let Play Protect finish its scan."
             if [ -n "$previous" ] && [ "$previous" != "v$VERSION_NAME" ]; then
               echo
               echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$previous...v$VERSION_NAME"
