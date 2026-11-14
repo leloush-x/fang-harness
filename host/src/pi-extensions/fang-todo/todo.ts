@@ -1,7 +1,7 @@
 /**
  * The `todo` tool's state, results and display, without Pi's runtime.
  *
- * Everything the model sees is copied from @juicesharp/rpiv-todo 2.13.8 (https://github.com/juicesharp/rpiv-mono,
+ * Everything the model sees is copied from @juicesharp/rpiv-todo 2.15.0 (https://github.com/juicesharp/rpiv-mono,
  * MIT licence, Copyright (c) 2026 juicesharp), so a model that knows that tool uses this one the same way: the tool's
  * name, description, prompt snippet and guidelines, its parameter schema, the status rules, and the result and error
  * texts. The `/todos` command's texts come from it too. The code is Fang's own; the widget follows rpiv-todo's
@@ -46,7 +46,7 @@ export const TOOL_NAME = "todo";
 export const TOOL_LABEL = "Todo";
 
 export const TOOL_DESCRIPTION =
-  "Manage a task list for tracking multi-step progress. Actions: create (new task), update (change status/fields/dependencies), list (all tasks, optionally filtered by status), get (single task details), delete (tombstone), clear (reset all). Status: pending → in_progress → completed, plus deleted tombstone. Use this to plan and track multi-step work like research, design, and implementation.";
+  "Manage a task list for tracking multi-step progress. Actions: create (new task, or several independent tasks at once via tasks[]), update (change status/fields/dependencies), list (all tasks, optionally filtered by status), get (single task details), delete (tombstone), clear (reset all). Status: pending → in_progress → completed, plus deleted tombstone. Use this to plan and track multi-step work like research, design, and implementation.";
 
 export const PROMPT_SNIPPET = "Manage a task list to track multi-step progress";
 
@@ -57,13 +57,48 @@ export const PROMPT_GUIDELINES: string[] = [
   "Task status is a 4-state machine: pending → in_progress → completed, plus deleted as a tombstone. Pass activeForm (present-continuous label, e.g. 'researching existing tool') when marking in_progress.",
   'To change a task\'s status, call update with the task id and the target status, e.g. {"action":"update","id":3,"status":"completed"} or {"action":"update","id":3,"status":"in_progress","activeForm":"writing tests"}. status is the field that changes the task; an update without a mutable field (status or another) is rejected.',
   "Use blockedBy to express dependencies (A is blocked by B). On create, pass blockedBy as the initial set. On update, use addBlockedBy / removeBlockedBy (additive merge — do not resend the full array). Cycles are rejected.",
+  "To create several independent tasks at once, pass create with tasks: [{subject}, ...]. Do not also pass subject. tasks[] cannot blockedBy each other (ids do not exist until the call commits); create the prerequisite first, then the dependent with blockedBy. Dependency chains stay single-create.",
   "list hides tombstoned (deleted) tasks by default; pass includeDeleted:true to see them. Pass status to filter by a single status.",
   "Subject must be short and imperative (e.g. 'Research existing tool'); description is for long-form detail. activeForm is a present-continuous label shown while in_progress.",
 ];
 
+/** One item of a batch `create`'s `tasks[]`, with the create fields that belong to each task. */
+export interface CreateTaskInput {
+  subject: string;
+  description?: string;
+  activeForm?: string;
+  blockedBy?: number[];
+  owner?: string;
+  metadata?: Record<string, unknown>;
+}
+
+const CreateTaskInputSchema = Type.Object({
+  subject: Type.String({ description: "Task subject line" }),
+  description: Type.Optional(Type.String({ description: "Long-form task description" })),
+  activeForm: Type.Optional(
+    Type.String({
+      description: "Present-continuous spinner label shown while status is in_progress (e.g. 'writing tests')",
+    }),
+  ),
+  blockedBy: Type.Optional(
+    Type.Array(Type.Number(), {
+      description:
+        "Existing task ids this item waits on. Cannot name another item in this same batch; create the prerequisite first, then the dependent with blockedBy.",
+    }),
+  ),
+  owner: Type.Optional(Type.String({ description: "Agent/owner assigned to this task" })),
+  metadata: Type.Optional(
+    Type.Record(Type.String(), Type.Unknown(), {
+      description: "Arbitrary metadata",
+    }),
+  ),
+});
+
 export const TodoParams = Type.Object({
   action: StringEnum(["create", "update", "list", "get", "delete", "clear"] as const),
-  subject: Type.Optional(Type.String({ description: "Task subject line (required for create)" })),
+  subject: Type.Optional(
+    Type.String({ description: "Task subject line (required for create unless tasks[] is set)" }),
+  ),
   description: Type.Optional(Type.String({ description: "Long-form task description" })),
   activeForm: Type.Optional(
     Type.String({
@@ -95,13 +130,19 @@ export const TodoParams = Type.Object({
       description: "If true, list action returns deleted (tombstoned) tasks as well. Default: false.",
     }),
   ),
+  tasks: Type.Optional(
+    Type.Array(CreateTaskInputSchema, {
+      description:
+        "Batch create: independent tasks in one call, one-of with subject. The whole list is validated then committed together. Items cannot blockedBy each other; create the prerequisite first, then the dependent with blockedBy.",
+    }),
+  ),
 });
 
 export type TodoParams = Static<typeof TodoParams>;
 
 /** What a call did; [formatContent] turns it into the text the model reads. */
 export type Op =
-  | { kind: "create"; task: Task }
+  | { kind: "create"; tasks: Task[] }
   | { kind: "update"; id: number; from: TaskStatus; to: TaskStatus; changed: boolean }
   | { kind: "delete"; task: Task }
   | { kind: "list"; status: TaskStatus | undefined; includeDeleted: boolean }
@@ -146,18 +187,17 @@ export function applyTodo(state: TodoState, params: TodoParams): Applied {
   const fail = (message: string): Applied => ({ state, op: { kind: "error", message } });
   switch (params.action) {
     case "create": {
+      if (params.tasks !== undefined && params.subject !== undefined) {
+        return fail("create requires subject or tasks[], not both");
+      }
+      if (params.tasks !== undefined) return createBatch(state, params, fail);
       if (!params.subject?.trim()) return fail("subject required for create");
       for (const dep of params.blockedBy ?? []) {
         const problem = dependencyProblem(state, dep);
         if (problem) return fail(`blockedBy: ${problem}`);
       }
-      const task: Task = { id: state.nextId, subject: params.subject, status: "pending" };
-      if (params.description) task.description = params.description;
-      if (params.activeForm) task.activeForm = params.activeForm;
-      if (params.blockedBy?.length) task.blockedBy = [...params.blockedBy];
-      if (params.owner) task.owner = params.owner;
-      if (params.metadata) task.metadata = { ...params.metadata };
-      return { state: { tasks: [...state.tasks, task], nextId: state.nextId + 1 }, op: { kind: "create", task } };
+      const task = buildCreatedTask(state.nextId, params, params.subject);
+      return { state: { tasks: [...state.tasks, task], nextId: state.nextId + 1 }, op: { kind: "create", tasks: [task] } };
     }
     case "update":
       return update(state, params, fail);
@@ -179,6 +219,50 @@ export function applyTodo(state: TodoState, params: TodoParams): Applied {
     case "clear":
       return { state: EMPTY_STATE, op: { kind: "clear", count: state.tasks.length } };
   }
+}
+
+/** Per-task create fields: on a batch they belong to each `tasks[]` item, not to the call. */
+const BATCH_ITEM_FIELDS = ["description", "activeForm", "blockedBy", "owner", "metadata"] as const;
+
+function buildCreatedTask(id: number, spec: Omit<CreateTaskInput, "subject">, subject: string): Task {
+  const task: Task = { id, subject, status: "pending" };
+  if (spec.description) task.description = spec.description;
+  if (spec.activeForm) task.activeForm = spec.activeForm;
+  if (spec.blockedBy?.length) task.blockedBy = [...spec.blockedBy];
+  if (spec.owner) task.owner = spec.owner;
+  if (spec.metadata) task.metadata = { ...spec.metadata };
+  return task;
+}
+
+/** Creates several independent tasks in one call; the whole batch is validated before anything is added. */
+function createBatch(state: TodoState, params: TodoParams, fail: (message: string) => Applied): Applied {
+  const batch = params.tasks ?? [];
+  // A call through another tool can bypass the schema, so the rules are enforced here too.
+  const topLevel = BATCH_ITEM_FIELDS.filter((field) => params[field] !== undefined);
+  if (topLevel.length > 0) {
+    return fail(`create with tasks[] takes ${topLevel.join(", ")} on each item, not at the top level`);
+  }
+  if (batch.length === 0) return fail("tasks[] must be non-empty");
+  for (const [index, item] of batch.entries()) {
+    if (!item.subject?.trim()) return fail(`tasks[${index}]: subject required for create`);
+  }
+  const siblingIds = new Set(batch.map((_, index) => state.nextId + index));
+  for (const item of batch) {
+    for (const dep of item.blockedBy ?? []) {
+      if (siblingIds.has(dep)) {
+        return fail(
+          `blockedBy: #${dep} is another item in this batch; create the prerequisite first, then the dependent with blockedBy`,
+        );
+      }
+      const problem = dependencyProblem(state, dep);
+      if (problem) return fail(`blockedBy: ${problem}`);
+    }
+  }
+  const created = batch.map((item, index) => buildCreatedTask(state.nextId + index, item, item.subject));
+  return {
+    state: { tasks: [...state.tasks, ...created], nextId: state.nextId + created.length },
+    op: { kind: "create", tasks: created },
+  };
 }
 
 function update(state: TodoState, params: TodoParams, fail: (message: string) => Applied): Applied {
@@ -300,7 +384,7 @@ const ids = (list: readonly number[], separator: string): string => list.map((id
 export function formatContent(op: Op, state: TodoState): string {
   switch (op.kind) {
     case "create":
-      return `Created #${op.task.id}: ${sanitize(op.task.subject)} (pending)`;
+      return op.tasks.map((task) => `Created #${task.id}: ${sanitize(task.subject)} (pending)`).join("\n");
     case "update":
       if (!op.changed) return `No change: #${op.id} already matches the requested values (status: ${op.to})`;
       return op.from === op.to ? `Updated #${op.id}` : `Updated #${op.id} (${op.from} → ${op.to})`;
@@ -318,6 +402,38 @@ export function formatContent(op: Op, state: TodoState): string {
       return getLines(op.task, state);
     case "error":
       return `Error: ${op.message}`;
+  }
+}
+
+/**
+ * Pi's `prepareArguments` hook: undo a double-encoded `tasks[]` before the schema validates it. Some tool-call parsers
+ * emit a nested structure as a JSON string, either the array or its items. Only a string at one of those positions is
+ * decoded, and only when it parses to the expected shape, so a real mistake still reaches the caller unchanged.
+ */
+export function prepareTodoArguments(args: unknown): TodoParams {
+  if (typeof args !== "object" || args === null || !("tasks" in args)) return args as TodoParams;
+  const tasks = decodeArray(args.tasks);
+  if (!Array.isArray(tasks)) return args as TodoParams;
+  const decoded = tasks.map(decodeObject);
+  if (tasks === args.tasks && decoded.every((item, index) => item === tasks[index])) return args as TodoParams;
+  return { ...args, tasks: decoded } as TodoParams;
+}
+
+function decodeArray(value: unknown): unknown {
+  const parsed = typeof value === "string" ? decodeJson(value) : value;
+  return Array.isArray(parsed) ? parsed : value;
+}
+
+function decodeObject(value: unknown): unknown {
+  const parsed = typeof value === "string" ? decodeJson(value) : value;
+  return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : value;
+}
+
+function decodeJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
   }
 }
 

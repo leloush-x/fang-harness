@@ -4,6 +4,7 @@ import {
   changesState,
   commandText,
   EMPTY_STATE,
+  prepareTodoArguments,
   replayBranch,
   type TodoParams,
   type TodoState,
@@ -63,6 +64,43 @@ describe("todo tool", () => {
   ] as [TodoParams, string][])("rejects %j", (params, message) => {
     expect(reply(three, params)).toContain(message);
     expect(applyTodo(three, params).state).toBe(three);
+  });
+
+  it("creates several independent tasks in one call", () => {
+    const params: TodoParams = {
+      action: "create",
+      tasks: [{ subject: "Read the code" }, { subject: "Write the fix", activeForm: "Writing the fix" }],
+    };
+    expect(reply(EMPTY_STATE, params)).toBe("Created #1: Read the code (pending)\nCreated #2: Write the fix (pending)");
+    expect(applyTodo(EMPTY_STATE, params).state.tasks).toEqual([
+      { id: 1, subject: "Read the code", status: "pending" },
+      { id: 2, subject: "Write the fix", status: "pending", activeForm: "Writing the fix" },
+    ]);
+  });
+
+  it.each([
+    [{ action: "create", subject: "One", tasks: [{ subject: "Two" }] }, "create requires subject or tasks[], not both"],
+    [{ action: "create", tasks: [] }, "tasks[] must be non-empty"],
+    [{ action: "create", tasks: [{ subject: "One" }], owner: "me" }, "on each item, not at the top level"],
+    [{ action: "create", tasks: [{ subject: " " }] }, "tasks[0]: subject required for create"],
+    [
+      { action: "create", tasks: [{ subject: "One" }, { subject: "Two", blockedBy: [5] }] },
+      "blockedBy: #5 is another item in this batch",
+    ],
+    [{ action: "create", tasks: [{ subject: "One", blockedBy: [7] }] }, "blockedBy: #7 not found"],
+  ] as [TodoParams, string][])("rejects a batch given %j", (params, message) => {
+    expect(reply(three, params)).toContain(message);
+    expect(applyTodo(three, params).state).toBe(three);
+  });
+
+  it("undoes a double-encoded tasks[] before it is validated", () => {
+    const decoded = prepareTodoArguments({
+      action: "create",
+      tasks: JSON.stringify([{ subject: "One" }, JSON.stringify({ subject: "Two" })]),
+    });
+    expect(decoded.tasks).toEqual([{ subject: "One" }, { subject: "Two" }]);
+    const untouched = { action: "create", tasks: "not json" } as unknown as TodoParams;
+    expect(prepareTodoArguments(untouched)).toBe(untouched);
   });
 
   it("allows only forward moves out of completed, and nothing out of deleted", () => {

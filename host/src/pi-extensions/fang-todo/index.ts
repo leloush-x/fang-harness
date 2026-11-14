@@ -17,6 +17,7 @@ import {
   applyTodo,
   changesState,
   commandText,
+  prepareTodoArguments,
   replayBranch,
   toolResult,
   widgetLines,
@@ -52,6 +53,8 @@ export default function fangTodo(pi: ExtensionAPI): void {
       promptSnippet: PROMPT_SNIPPET,
       promptGuidelines: PROMPT_GUIDELINES,
       parameters: TodoParams,
+      // Undo a double-encoded tasks[] before Pi validates it.
+      prepareArguments: prepareTodoArguments,
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         const applied = applyTodo(listOf(ctx), params);
         const result = toolResult(params, applied);
