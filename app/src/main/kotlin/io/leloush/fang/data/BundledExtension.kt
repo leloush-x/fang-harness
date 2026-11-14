@@ -30,6 +30,14 @@ internal enum class BundledExtension(
     asset = "fang-extensions/fang-ask-user.js",
   ),
 
+  /** Hands tasks to subagents that run in parallel; the app follows, steers and stops them. */
+  Subagents(
+    "fang-subagents",
+    R.string.settings_extension_subagents,
+    R.string.settings_extension_subagents_summary,
+    asset = "fang-extensions/fang-subagents.js",
+  ),
+
   /** Runs shell commands past the agent's turn; it tells the app over Fang Harness's channel while they run. */
   Background(
     "fang-background",

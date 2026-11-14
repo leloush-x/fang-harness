@@ -37,7 +37,7 @@ const paseoNotice =
   "Copyright (c) 2025-present Mohamed Boudra, licensed under the Apache License, Version 2.0\n" +
   "(http://www.apache.org/licenses/LICENSE-2.0), with changes for Fang Harness.\n";
 const hostNotices = `/*\nBundles jsdiff ${diffVersion}:\n\n${diffLicense}\n${paseoNotice}*/`;
-const todoNotices = `/*\nThe todo tool's texts come from @juicesharp/rpiv-todo 2.13.8:\n\n${todoLicense}*/`;
+const todoNotices = `/*\nThe todo tool's texts come from @juicesharp/rpiv-todo 2.15.0:\n\n${todoLicense}*/`;
 const askUserNotices = `/*\nVendored from pi-ask-user 0.17.2:\n\n${askUserLicense}*/`;
 const webAccessNotices =
   `/*\nVendored from pi-web-access:\n\n${webAccessLicense}\nBundles typebox:\n\n${typeboxLicense}*/`;
@@ -60,10 +60,10 @@ const licenses: Record<string, string> = {
     `TypeBox ${typeboxVersion} (https://github.com/sinclairzx81/typebox), MIT License. ` +
     `Bundled into the Fang Harness web access extension.\n\n${typeboxLicense}`,
   "pi-web-access":
-    "pi-web-access 0.39.0 (https://github.com/nicobailon/pi-web-access), MIT License. " +
+    "pi-web-access 0.47.0 (https://github.com/nicobailon/pi-web-access), MIT License. " +
     `Fang Harness's web access extension is a modified copy.\n\n${webAccessLicense}`,
   "rpiv-todo":
-    "@juicesharp/rpiv-todo 2.13.8 (https://github.com/juicesharp/rpiv-mono), MIT License. " +
+    "@juicesharp/rpiv-todo 2.15.0 (https://github.com/juicesharp/rpiv-mono), MIT License. " +
     `The Fang Harness todo extension's tool texts come from it.\n\n${todoLicense}`,
   "pi-ask-user":
     "pi-ask-user 0.17.2 (https://github.com/edlsh/pi-ask-user), MIT License. " +
@@ -85,6 +85,13 @@ await Promise.all([
     ...common,
     entryPoints: ["src/pi-extensions/fang-background/index.ts"],
     outfile: `${out}/fang-extensions/fang-background.js`,
+    // Pi resolves these to its own copies when it loads an extension.
+    external: ["@earendil-works/*", "typebox"],
+  }),
+  build({
+    ...common,
+    entryPoints: ["src/pi-extensions/fang-subagents/index.ts"],
+    outfile: `${out}/fang-extensions/fang-subagents.js`,
     // Pi resolves these to its own copies when it loads an extension.
     external: ["@earendil-works/*", "typebox"],
   }),
