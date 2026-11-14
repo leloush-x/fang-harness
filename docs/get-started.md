@@ -14,7 +14,25 @@ Setup takes a few minutes, and Fang Harness does most of it for you. It checks o
 
 ## Install Fang Harness
 
-[Download the latest APK](https://github.com/leloush-x/fang-harness/releases/latest) from the releases page on your phone and open it to install. On the release page, download the file named `fang-v<VERSION>.apk`: it is the only one that installs, and the release notes say how big it is and what it should hash to. A copy of another size is a download that was cut short, and Android will refuse it with "the package appears to be invalid": download it again rather than install it. Android asks you to allow installs from your browser or file manager the first time. Later releases install over it as updates and keep your chats and settings.
+[Download the latest APK](https://github.com/leloush-x/fang-harness/releases/latest) from the releases page on your phone and open it to install. Each release attaches exactly one file, `fang-v<VERSION>.apk`, and its notes give that file's size and SHA-256. Android asks you to allow installs from your browser or file manager the first time. Later releases install over it as updates and keep your chats and settings.
+
+### If Android says "the package appears to be invalid"
+
+That is Android's one line for every install it refuses, so it does not say what is wrong. In order:
+
+1. **Compare the file's size with the release notes.** A download that lost its connection is short by a few bytes or a few megabytes, and the installer rejects it: download it again, on Wi-Fi if you can.
+2. **Make sure it is the APK.** A browser or file manager that cannot open a `.apk` sometimes saves it as `fang-v<VERSION>.apk.txt`, `fang-v<VERSION>.apk.zip`, or `.bin`. Rename it back to end in `.apk`, or copy the file from a computer.
+3. **Uninstall an older copy signed with another key.** An app cannot be updated over one signed with a different key, and the installer reports that refusal with the same sentence. Export a backup from **Settings → Backups** if the old app still opens, then uninstall **Fang Harness** and install again. Your chats live in the app's storage and go with it, so back them up first as well.
+4. **Check the phone.** Fang Harness needs Android 10 or newer and a 64-bit processor, and does not install on a 32-bit-only device.
+5. **Ask `adb` for the real error.** With the phone connected over USB:
+
+   ```sh
+   adb install -r fang-v<VERSION>.apk
+   ```
+
+   The `INSTALL_FAILED_*` code it prints names the cause; the message on the phone does not.
+
+Every release is signed with the same key, carries the v1, v2 and v3 signature schemes, and is aligned for 16 KB memory pages. If a phone still refuses one, include the `adb` output when you report it.
 
 ### Build from source
 

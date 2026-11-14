@@ -43,9 +43,11 @@
 
 ### Download a release
 
-[Download the latest APK](https://github.com/leloush-x/fang-harness/releases/latest) and open it on your phone to install. Download the file named `fang-v<VERSION>.apk`. Android asks you to allow installs from your browser or file manager the first time.
+[Download the latest APK](https://github.com/leloush-x/fang-harness/releases/latest) and open it on your phone to install. Each release attaches one file, `fang-v<VERSION>.apk`, and its notes give the file's size and SHA-256. Android asks you to allow installs from your browser or file manager the first time.
 
 Open the app and tap **Get started**: setup downloads and unpacks Wolfi OS, installs its tools, and installs the agent for you.
+
+If Android says **"the package appears to be invalid"**, it refused the install without saying why. Compare the file's size with the release notes and download it again if it differs; a browser may have saved it as `.apk.txt` or `.zip`; and a copy signed with another key cannot be installed over an existing app, so uninstall **Fang Harness** (after **Settings → Backups**) first. [Get started](docs/get-started.md#if-android-says-the-package-appears-to-be-invalid) has the full list and the `adb install` command that prints the real error.
 
 ### Build from source
 
