@@ -17,12 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,41 +102,6 @@ internal fun UserMessage(
   }
 }
 
-@Composable
-private fun UserMessageMenu(
-  menuOpen: Boolean,
-  onOpen: () -> Unit,
-  onDismiss: () -> Unit,
-  onAction: (UserMessageAction) -> Unit,
-) {
-  val colors = fangColors
-  Box {
-    IconButton28(
-      icon = R.drawable.ic_lucide_ellipsis,
-      contentDescription = stringResource(R.string.chat_message_actions),
-      onClick = onOpen,
-      tint = colors.foregroundMuted,
-      iconSize = FangTokens.IconSize.sm,
-    )
-    DropdownMenu(expanded = menuOpen, onDismissRequest = onDismiss) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_edit_message)) },
-        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_pencil, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
-        onClick = { onDismiss(); onAction(UserMessageAction.Edit) },
-      )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_resend_message)) },
-        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_refresh_cw, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.foregroundMuted) },
-        onClick = { onDismiss(); onAction(UserMessageAction.Resend) },
-      )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_delete_message)) },
-        leadingIcon = { LucideIcon(icon = R.drawable.ic_lucide_trash_2, contentDescription = null, size = FangTokens.IconSize.sm, tint = colors.destructive) },
-        onClick = { onDismiss(); onAction(UserMessageAction.Delete) },
-      )
-    }
-  }
-}
 
 internal enum class UserMessageAction { Edit, Delete, Resend }
 

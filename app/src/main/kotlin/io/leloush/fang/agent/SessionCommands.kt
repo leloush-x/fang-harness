@@ -50,3 +50,6 @@ internal suspend fun AgentProcess.fork(entryId: String): String? {
 
 /** `get_session_stats` data: message counts, `tokens`, `cost` and `contextUsage`. */
 internal suspend fun AgentProcess.sessionStats(): JSONObject = call("get_session_stats")
+
+/** Moves this process to a copy of the session; false when an extension cancelled it. Waits as [fork] does. */
+internal suspend fun AgentProcess.cloneSession(): Boolean = moveSession("clone") != null
