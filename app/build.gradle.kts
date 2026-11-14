@@ -403,6 +403,14 @@ android {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
   }
+
+  // AGP 9.5 refuses to lint a project compiled for Java 21 from the Java 17 Gradle daemon, unless Lint's own JVM is
+  // at least the project's level.
+  lint {
+    toolchain {
+      languageVersion = JavaLanguageVersion.of(21)
+    }
+  }
 }
 
 androidComponents {
