@@ -2,7 +2,7 @@
 
 This folder is [pi-web-access](https://github.com/nicobailon/pi-web-access) by Nico Bailon, MIT License (see `LICENSE`), copied into Fang so that Fang can fix it without waiting for upstream. Fang ships it as the extension `fang-web-access`.
 
-- Upstream version: 0.46.0, tag `v0.46.0`, commit `4af1a7f7757d450ba0afefe2d98737384dc9a9b4`.
+- Upstream version: 0.47.0, tag `v0.47.0`, commit `322e44fafc1aaa691779cdf2116584e67edd7645`.
 
 ## What differs from upstream
 
@@ -36,7 +36,7 @@ Everything below is a deliberate Fang change. Keep each one when folding in a re
 ### Outside this folder
 
 - `host/build.ts` bundles `index.ts` into the APK asset `fang-extensions/fang-web-access.js`. It bundles `typebox` in, because loading a separate typebox from `node_modules` costs more at startup than the rest of the extension, and leaves out `@earendil-works/*` and every package in `app/src/main/assets/pi/package.json`. The bundle starts with the MIT notices of pi-web-access and typebox, which the license requires in every copy; if upstream starts bundling more packages, add their notices there too. It also writes `licenses/pi-web-access.txt` for the app's license list, whose first line names the upstream version.
-- `app/src/main/assets/pi/package.json` lists upstream's runtime `dependencies`, pinned to exact versions, so that `npm ci` installs them in Fang's Pi runtime.
+- `app/src/main/assets/pi/package.json` lists upstream's runtime `dependencies`, pinned to exact versions, so that `npm ci` installs them in Fang's Pi runtime. Fang takes the latest release of each one, not upstream's declared range, after checking that the copied code still works with it: a newer major such as `unpdf` 2 needs a test that extracts text.
 - `BundledExtension.WebAccess` in `app/src/main/kotlin/io/leloush/fang/data/BundledExtension.kt` sets `usesRuntimePackages`, so `ensure` installs it as `<root>/pi/extensions/fang-web-access/index.js`. There Node finds those packages, and because the runtime's `package.json` says `"type": "module"`, Pi's loader imports the file natively. Outside that folder Pi's loader would transpile it instead and cache the result in Termux's `$TMPDIR`, which Termux wipes when its service stops, so the first chat after that would transpile 1.3 MB again.
 - `host/src/modes/rpc.ts` sets `toolActivation` to `eager` in `web-search.json` unless the user chose a mode or set `toolExposure` to `deferred` (the extension refuses to load with both), and leaves `fang-web-access` out when the user installs `npm:pi-web-access` in Pi's global settings, because Pi exits when two extensions register the same tools.
 - `host/tsconfig.json` and `host/.oxlintrc.json` leave this folder out, because upstream's `tsconfig.json` is looser than the host's. Only esbuild checks it, when it bundles the extension.
