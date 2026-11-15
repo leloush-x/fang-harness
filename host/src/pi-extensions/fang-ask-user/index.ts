@@ -16,6 +16,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
 import { Type, type TUnsafe } from "@sinclair/typebox";
+import { ASK_USER_DESCRIPTION, ASK_USER_GUIDELINES, ASK_USER_SNIPPET } from "./fang-prompt.js";
 import {
    Container,
    type Component,
@@ -3052,18 +3053,9 @@ export default function(pi: ExtensionAPI) {
       ...modelOnly,
       name: "ask_user",
       label: "Ask User",
-      description:
-         "Ask the user a question with optional multiple-choice answers. Use this to gather information interactively. Ask one focused question per call, or 2-4 independent questions together through questions. Before calling, gather context with tools (read/web/ref) and pass a short summary via the context field.",
-      promptSnippet:
-         "Ask the user one focused question (or 2-4 independent ones together) with optional multiple-choice answers to gather information interactively",
-      promptGuidelines: [
-         "Before calling ask_user, gather context with tools (read/web/ref) and pass a short summary via the context field.",
-         "Use ask_user when the user's intent is ambiguous, when a decision requires explicit user input, or when multiple valid options exist.",
-         "Ask one focused question per ask_user call by default.",
-         "Use questions (2-4 entries) only for independent decisions whose prerequisites are already settled; ask anything that depends on another answer in a later ask_user call.",
-         "With questions, put every question inside questions. A top-level question is only shown as the batch heading and is never asked or answered.",
-         "Do not combine multiple numbered, multipart, or unrelated questions into one question's text.",
-      ],
+      description: ASK_USER_DESCRIPTION,
+      promptSnippet: ASK_USER_SNIPPET,
+      promptGuidelines: ASK_USER_GUIDELINES,
       // Block other tool calls in the same assistant turn until the user answers,
       // so the model can't batch ask_user with bash/edit/write and let those run
       // (potentially with side effects) before the user sees the prompt.

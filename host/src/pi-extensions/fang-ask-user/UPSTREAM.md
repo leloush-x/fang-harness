@@ -16,6 +16,7 @@ Everything below is a deliberate Fang change. Keep each one when folding in a re
    - Why: `host/build.ts` bundles the whole extension into one asset, which no `package.json` sits beside, so upstream's lookup throws while Pi loads it.
 2. `index.ts` names a choice's description in the dialogs it falls back to in RPC mode (Fang's mode): `askViaDialogs` appends `" — <description>"` to each choice's title and maps the answer back to the plain title. Upstream shows the bare titles there, so a host without Pi's terminal UI loses the descriptions. Fang's question card shows one line per choice, which is why the description shares the line.
 3. Only upstream's top-level `*.ts` files and `LICENSE` are copied. Its `package.json`, tests, scripts, docs, media and `skills/ask-user` are left out: Fang installs extensions as source files, not as packages, so it has nothing to install a package's skills into.
+4. The tool's `description`, `promptSnippet` and `promptGuidelines` come from a Fang-owned file, `./fang-prompt.js`, instead of being held inline in `index.ts`. `fang-prompt.js` is Fang's own (not vendored) and is not copied from upstream; keep it on every fold. The reason: the prompt text is the main lever Fang has over the tool's behaviour, and keeping it in a plain data module makes it diffable and testable.
 
 ### Outside this folder
 
