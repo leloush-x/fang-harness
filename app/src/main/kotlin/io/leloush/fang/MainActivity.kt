@@ -1,6 +1,7 @@
 package io.leloush.fang
 
 import android.content.Intent
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -28,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.agent.ChatLocation
 import io.leloush.fang.agent.ChatNotification
@@ -54,6 +56,7 @@ import io.leloush.fang.ui.settings.SettingsScreen
 import io.leloush.fang.ui.settings.SubscriptionScreen
 import io.leloush.fang.ui.settings.ownsDraft
 import io.leloush.fang.ui.theme.FangTheme
+import io.leloush.fang.ui.theme.ThemeMode
 import io.leloush.fang.ui.theme.fangColors
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -67,6 +70,9 @@ class MainActivity : ComponentActivity() {
     if (savedInstanceState == null) requestedChat.value = ChatNotification.location(intent)
     enableEdgeToEdge()
     val graph = appGraph
+    // The window shows before Compose draws, so on the AMOLED theme it opens on black, not on the system's colour.
+    val amoled = graph.preferences.theme.value == ThemeMode.AMOLED
+    if (amoled) window.setBackgroundDrawable(amoledBackground())
     setContent {
       val theme by graph.preferences.theme.collectAsStateWithLifecycle()
       FangTheme(theme) {
@@ -75,7 +81,12 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
+    if (amoled) window.decorView.setBackgroundDrawable(amoledBackground())
   }
+
+  /** The black the window shows on the AMOLED theme, before Compose draws. */
+  private fun amoledBackground(): ColorDrawable =
+    ColorDrawable(ContextCompat.getColor(this, R.color.window_background_amoled))
 
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)

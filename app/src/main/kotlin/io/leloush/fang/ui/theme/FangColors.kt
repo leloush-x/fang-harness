@@ -51,6 +51,32 @@ val DarkFangColors =
     dotWarning = Color(0xFFDB932E),
   )
 
+/**
+ * The AMOLED palette: the dark one on pure black, for OLED screens. Its surfaces sit barely above the black, so
+ * the borders are lifted, because the dark theme's edges vanish against it.
+ */
+val AmoledFangColors =
+  FangColors(
+    isDark = true,
+    surface0 = Color(0xFF000000),
+    surface1 = Color(0xFF0A0A0A),
+    surface2 = Color(0xFF171717),
+    surface3 = Color(0xFF232323),
+    surface4 = Color(0xFF2F2F2F),
+    sidebar = Color(0xFF000000),
+    foreground = Color(0xFFFAFAFA),
+    foregroundMuted = Color(0xFFA1A5A4),
+    foregroundExtraMuted = Color(0xFF717574),
+    border = Color(0xFF242424),
+    borderAccent = Color(0xFF333333),
+    accent = Color(0xFFDD774E),
+    accentForeground = Color(0xFFFFFFFF),
+    destructive = Color(0xFFC64F43),
+    dotSuccess = Color(0xFF35C264),
+    dotDanger = Color(0xFFF7796D),
+    dotWarning = Color(0xFFDB932E),
+  )
+
 val LightFangColors =
   FangColors(
     isDark = false,

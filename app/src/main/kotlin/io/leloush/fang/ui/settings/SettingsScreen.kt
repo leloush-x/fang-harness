@@ -275,7 +275,7 @@ private fun AppearanceSection(preferences: Preferences) {
   SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
     SettingsRow(title = stringResource(R.string.settings_theme)) {
       SegmentedControl(
-        options = listOf(ThemeMode.Light, ThemeMode.Dark, ThemeMode.System),
+        options = listOf(ThemeMode.Light, ThemeMode.Dark, ThemeMode.AMOLED, ThemeMode.System),
         selected = theme,
         onSelect = preferences::setTheme,
       ) { mode, isSelected ->
@@ -285,6 +285,7 @@ private fun AppearanceSection(preferences: Preferences) {
             when (mode) {
               ThemeMode.Light -> R.drawable.ic_lucide_sun
               ThemeMode.Dark -> R.drawable.ic_lucide_moon
+              ThemeMode.AMOLED -> R.drawable.ic_lucide_circle
               ThemeMode.System -> R.drawable.ic_lucide_monitor
             },
           contentDescription =
@@ -292,6 +293,7 @@ private fun AppearanceSection(preferences: Preferences) {
               when (mode) {
                 ThemeMode.Light -> R.string.settings_theme_light
                 ThemeMode.Dark -> R.string.settings_theme_dark
+                ThemeMode.AMOLED -> R.string.settings_theme_amoled
                 ThemeMode.System -> R.string.settings_theme_system
               },
             ),
@@ -299,6 +301,9 @@ private fun AppearanceSection(preferences: Preferences) {
         )
       }
     }
+  }
+  if (theme == ThemeMode.AMOLED) {
+    SettingsCaption(text = stringResource(R.string.settings_theme_amoled_summary))
   }
 }
 

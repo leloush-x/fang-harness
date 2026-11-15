@@ -21,13 +21,14 @@ val fangColors: FangColors
 
 @Composable
 fun FangTheme(mode: ThemeMode, content: @Composable () -> Unit) {
-  val dark =
+  val colors =
     when (mode) {
-      ThemeMode.System -> isSystemInDarkTheme()
-      ThemeMode.Light -> false
-      ThemeMode.Dark -> true
+      ThemeMode.System -> if (isSystemInDarkTheme()) DarkFangColors else LightFangColors
+      ThemeMode.Light -> LightFangColors
+      ThemeMode.Dark -> DarkFangColors
+      ThemeMode.AMOLED -> AmoledFangColors
     }
-  val colors = if (dark) DarkFangColors else LightFangColors
+  val dark = colors.isDark
   val base = if (dark) darkColorScheme() else lightColorScheme()
   val scheme =
     base.copy(
