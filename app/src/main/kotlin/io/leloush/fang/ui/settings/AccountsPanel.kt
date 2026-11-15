@@ -14,7 +14,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,6 +37,22 @@ import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 
+/** The three things the accounts rows need to run a call and report its failure, bundled so helpers stay small. */
+private class AccountActions(
+  val scope: kotlinx.coroutines.CoroutineScope,
+  val accounts: AccountRepository,
+  val snackbar: SnackbarStackState,
+  val failed: String,
+)
+
+/** The dialog state of one panel; snapshot-backed so composables read and write it during composition. */
+@Stable
+private class AccountsPanelState {
+  var addingLabel by mutableStateOf(false)
+  var addingKey by mutableStateOf<String?>(null)
+  var deleting by mutableStateOf<AccountInfo?>(null)
+}
+
 /**
  * The accounts box on a provider: one box per provider (in the spirit of the todos and background tabs) that expands
  * in place to show the provider's pooled accounts and the ways to add one — an API key, or another OAuth sign-in.
@@ -52,12 +70,13 @@ internal fun ProviderAccountsPanel(
   val providerId = subscription.id
   val failed = stringResource(R.string.provider_failed)
   val scope = rememberCoroutineScope()
+  val actions = remember(accounts, snackbar, failed, scope) {
+    AccountActions(scope = scope, accounts = accounts, snackbar = snackbar, failed = failed)
+  }
   var expanded by rememberSaveable(providerId) { mutableStateOf(false) }
   var list by remember(providerId) { mutableStateOf<List<ProviderAccounts>?>(null) }
-  var reloads by remember { mutableStateOf(0) }
-  var addingLabel by remember { mutableStateOf(false) }
-  var addingKey by remember { mutableStateOf<String?>(null) }
-  var deleting by remember { mutableStateOf<AccountInfo?>(null) }
+  val state = remember { AccountsPanelState() }
+  var reloads by remember { mutableIntStateOf(0) }
   // One capture per page open catches sign-ins made before the capture existed.
   LaunchedEffect(Unit) {
     accounts.captureAccount(providerId)
@@ -78,63 +97,88 @@ internal fun ProviderAccountsPanel(
   ) {
     AccountsBoxButton(count = count, expanded = expanded, onToggle = { expanded = !expanded })
     AnimatedVisibility(expanded) {
-      Column(modifier = Modifier.fillMaxWidth()) {
-        HorizontalDivider(color = fangColors.border, thickness = 1.dp)
-        Column(
-          modifier = Modifier.fillMaxWidth().padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
-          verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
-        ) {
-          when {
-            list == null -> SettingsCaption(text = stringResource(R.string.accounts_loading))
-            provider == null || provider.accounts.isEmpty() ->
-              SettingsCaption(text = stringResource(R.string.accounts_empty))
-
-            else -> SettingsSection(title = null) {
-              provider.accounts.forEachIndexed { index, account ->
-                AccountRow(
-                  account = account,
-                  scope = scope,
-                  accounts = accounts,
-                  snackbar = snackbar,
-                  failed = failed,
-                  onDelete = { deleting = it },
-                  onReload = { reloads++ },
-                )
-                if (index < provider.accounts.lastIndex) SettingsDivider()
-              }
-            }
-          }
-          AccountsAddActions(
-            usesApiKey = subscription.usesApiKey,
-            onAddApiKey = { addingLabel = true },
-            onAddOauth = { onAddOauth(providerId) },
-          )
-          SettingsRow(
-            title = stringResource(R.string.accounts_manage_all),
-            onClick = { onManageAccounts(providerId) },
-          ) { Chevron() }
-        }
-      }
+      AccountsExpanded(
+        list = list,
+        subscription = subscription,
+        actions = actions,
+        state = state,
+        onAddOauth = { onAddOauth(providerId) },
+        onManage = { onManageAccounts(providerId) },
+        onReload = { reloads++ },
+      )
     }
   }
-  AccountsAddDialogs(
-    addingLabel = addingLabel,
-    addingKey = addingKey,
-    onAddingLabelChange = { addingLabel = it },
-    onAddingKeyChange = { addingKey = it },
-    onSave = { label, key -> saveApiKey(accounts, providerId, label, key, snackbar, failed) },
-    onReload = { reloads++ },
-  )
-  deleting?.let { account ->
-    AccountsDeleteDialog(
-      account = account,
-      accounts = accounts,
-      scope = scope,
-      snackbar = snackbar,
-      failed = failed,
-      onDeletingChange = { deleting = it },
-      onReload = { reloads++ },
-    )
+  AccountsPanelDialogs(state, providerId, actions, onReload = { reloads++ })
+}
+
+/** The expanded body: the account rows, the ways to add one, and a jump to the full management screen. */
+@Composable
+private fun AccountsExpanded(
+  list: List<ProviderAccounts>?,
+  subscription: Subscription,
+  actions: AccountActions,
+  state: AccountsPanelState,
+  onAddOauth: () -> Unit,
+  onManage: () -> Unit,
+  onReload: () -> Unit,
+) {
+  val provider = list?.firstOrNull()
+  Column(modifier = Modifier.fillMaxWidth()) {
+    HorizontalDivider(color = fangColors.border, thickness = 1.dp)
+    Column(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
+      verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
+    ) {
+      when {
+        list == null -> SettingsCaption(text = stringResource(R.string.accounts_loading))
+        provider == null || provider.accounts.isEmpty() ->
+          SettingsCaption(text = stringResource(R.string.accounts_empty))
+        else -> AccountsPanelList(provider, actions, state, onReload)
+      }
+      AccountsPanelFooter(
+        usesApiKey = subscription.usesApiKey,
+        state = state,
+        onAddOauth = onAddOauth,
+        onManage = onManage,
+      )
+    }
+  }
+}
+
+@Composable
+private fun AccountsPanelList(
+  provider: ProviderAccounts,
+  actions: AccountActions,
+  state: AccountsPanelState,
+  onReload: () -> Unit,
+) {
+  SettingsSection(title = null) {
+    provider.accounts.forEachIndexed { index, account ->
+      AccountRow(
+        account = account,
+        scope = actions.scope,
+        accounts = actions.accounts,
+        snackbar = actions.snackbar,
+        failed = actions.failed,
+        onDelete = { state.deleting = it },
+        onReload = onReload,
+      )
+      if (index < provider.accounts.lastIndex) SettingsDivider()
+    }
+  }
+}
+
+/** The two ways to add an account beside the manage row. */
+@Composable
+private fun AccountsPanelFooter(
+  usesApiKey: Boolean,
+  state: AccountsPanelState,
+  onAddOauth: () -> Unit,
+  onManage: () -> Unit,
+) {
+  Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8)) {
+    AccountsAddActions(usesApiKey = usesApiKey, onAddApiKey = { state.addingLabel = true }, onAddOauth = onAddOauth)
+    SettingsRow(title = stringResource(R.string.accounts_manage_all), onClick = onManage) { Chevron() }
   }
 }
 
@@ -194,5 +238,33 @@ private fun AccountsAddActions(usesApiKey: Boolean, onAddApiKey: () -> Unit, onA
         modifier = Modifier.weight(1f),
       )
     }
+  }
+}
+
+@Composable
+private fun AccountsPanelDialogs(
+  state: AccountsPanelState,
+  providerId: String,
+  actions: AccountActions,
+  onReload: () -> Unit,
+) {
+  AccountsAddDialogs(
+    addingLabel = state.addingLabel,
+    addingKey = state.addingKey,
+    onAddingLabelChange = { state.addingLabel = it },
+    onAddingKeyChange = { state.addingKey = it },
+    onSave = { label, key -> saveApiKey(actions.accounts, providerId, label, key, actions.snackbar, actions.failed) },
+    onReload = onReload,
+  )
+  state.deleting?.let { account ->
+    AccountsDeleteDialog(
+      account = account,
+      accounts = actions.accounts,
+      scope = actions.scope,
+      snackbar = actions.snackbar,
+      failed = actions.failed,
+      onDeletingChange = { state.deleting = it },
+      onReload = onReload,
+    )
   }
 }

@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.R
 import io.leloush.fang.appGraph
+import io.leloush.fang.data.AccountRepository
 import io.leloush.fang.host.AuthStatus
 import io.leloush.fang.host.HostRejected
 import io.leloush.fang.ui.auth.LoginSheet
@@ -60,6 +61,7 @@ internal fun ProvidersScreen(
   val status by accounts.status.collectAsStateWithLifecycle()
   val refreshError by accounts.refreshError.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarStackState() }
+  val scope = rememberCoroutineScope()
   var signingIn by remember { mutableStateOf<String?>(null) }
   var signIns by remember { mutableIntStateOf(0) }
   LaunchedEffect(Unit) { accounts.refresh() }
@@ -76,20 +78,14 @@ internal fun ProvidersScreen(
       else -> SettingsSection(title = null) {
         signedIn.forEachIndexed { index, subscription ->
           if (index > 0) SettingsDivider()
-          SettingsRow(
-            title = stringResource(subscription.title),
-            subtitle = stringResource(subscription.subtitle),
-            onClick = { onOpenSubscription(subscription.id) },
-            leading = { ProviderLogo(subscription.id) },
-          ) { Chevron() }
-          SettingsDivider()
-          ProviderAccountsPanel(
+          SignedInProviderRow(
             subscription = subscription,
             accounts = accounts,
             snackbar = snackbar,
             refreshKey = signIns,
-            onAddOauth = { signingIn = it },
+            onOpenSubscription = onOpenSubscription,
             onManageAccounts = onOpenAccounts,
+            onSignIn = { signingIn = it },
           )
         }
         custom.forEachIndexed { index, provider ->
@@ -113,10 +109,38 @@ internal fun ProvidersScreen(
       onDismiss = {
         signingIn = null
         signIns++
-        accounts.refresh()
+        scope.launch { accounts.refresh() }
       },
     )
   }
+}
+
+/** One signed-in provider: its row, then the inline accounts box under it. */
+@Composable
+private fun SignedInProviderRow(
+  subscription: Subscription,
+  accounts: AccountRepository,
+  snackbar: SnackbarStackState,
+  refreshKey: Int,
+  onOpenSubscription: (id: String) -> Unit,
+  onManageAccounts: (id: String) -> Unit,
+  onSignIn: (id: String) -> Unit,
+) {
+  SettingsRow(
+    title = stringResource(subscription.title),
+    subtitle = stringResource(subscription.subtitle),
+    onClick = { onOpenSubscription(subscription.id) },
+    leading = { ProviderLogo(subscription.id) },
+  ) { Chevron() }
+  SettingsDivider()
+  ProviderAccountsPanel(
+    subscription = subscription,
+    accounts = accounts,
+    snackbar = snackbar,
+    refreshKey = refreshKey,
+    onAddOauth = onSignIn,
+    onManageAccounts = onManageAccounts,
+  )
 }
 
 /**
