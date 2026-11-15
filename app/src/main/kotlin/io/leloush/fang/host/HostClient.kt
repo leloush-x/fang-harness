@@ -195,7 +195,7 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
 
   suspend fun accounts(): List<ProviderAccounts> {
     val data = utilityData("accounts_list", JSONObject(), UTILITY_TIMEOUT_MILLIS)
-    return data.optJSONArray("providers")?.objects()?.map(ProviderAccounts::from) ?: emptyList()
+    return data.optJSONArray("providers")?.objects()?.map(ProviderAccounts::from).orEmpty()
   }
 
   suspend fun accountSave(params: JSONObject): AccountInfo {

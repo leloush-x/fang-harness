@@ -188,7 +188,7 @@ internal data class ProviderAccounts(
       providerId = json.getString("providerId"),
       name = json.optString("name"),
       strategy = json.optString("strategy", "round_robin"),
-      accounts = json.optJSONArray("accounts")?.objects()?.map(AccountInfo::from) ?: emptyList(),
+      accounts = json.optJSONArray("accounts")?.objects()?.map(AccountInfo::from).orEmpty(),
     )
   }
 }
