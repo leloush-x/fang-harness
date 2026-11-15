@@ -193,6 +193,29 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     utilityData("provider_remove", JSONObject().put("id", id), UTILITY_TIMEOUT_MILLIS)
   }
 
+  suspend fun accounts(): List<ProviderAccounts> {
+    val data = utilityData("accounts_list", JSONObject(), UTILITY_TIMEOUT_MILLIS)
+    return data.optJSONArray("providers")?.objects()?.map(ProviderAccounts::from) ?: emptyList()
+  }
+
+  suspend fun accountSave(params: JSONObject): AccountInfo {
+    val data = utilityData("accounts_save", params, UTILITY_TIMEOUT_MILLIS)
+    return AccountInfo.from(data.getJSONObject("account"))
+  }
+
+  suspend fun accountRemove(id: String) {
+    utilityData("accounts_remove", JSONObject().put("id", id), UTILITY_TIMEOUT_MILLIS)
+  }
+
+  suspend fun accountActivate(id: String): AccountInfo {
+    val data = utilityData("accounts_activate", JSONObject().put("id", id), UTILITY_TIMEOUT_MILLIS)
+    return AccountInfo.from(data.getJSONObject("account"))
+  }
+
+  suspend fun accountStrategy(providerId: String, strategy: String) {
+    utilityData("accounts_strategy", JSONObject().put("providerId", providerId).put("strategy", strategy), UTILITY_TIMEOUT_MILLIS)
+  }
+
   /** Runs `pi install [source]`, adding a Pi package that chats load when their Pi next starts. */
   suspend fun installPackage(source: String, onProgress: (String) -> Unit) {
     call("package_install", JSONObject().put("source", source), PACKAGE_INSTALL_TIMEOUT_MILLIS, progress(onProgress))

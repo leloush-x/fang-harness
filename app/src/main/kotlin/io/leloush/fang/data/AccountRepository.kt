@@ -91,6 +91,36 @@ internal class AccountRepository(
     changed()
   }
 
+  suspend fun accounts(): List<ProviderAccounts> = hostClient.accounts()
+
+  suspend fun saveAccount(providerId: String, label: String, kind: String, apiKey: String, credential: JSONObject?, enabled: Boolean) {
+    hostClient.accountSave(
+      JSONObject()
+        .put("providerId", providerId)
+        .put("label", label)
+        .put("kind", kind)
+        .put("apiKey", apiKey)
+        .put("credential", credential ?: JSONObject.NULL)
+        .put("enabled", enabled),
+    )
+    changed()
+  }
+
+  suspend fun removeAccount(id: String) {
+    hostClient.accountRemove(id)
+    changed()
+  }
+
+  suspend fun activateAccount(id: String) {
+    hostClient.accountActivate(id)
+    changed()
+  }
+
+  suspend fun accountStrategy(providerId: String, strategy: String) {
+    hostClient.accountStrategy(providerId, strategy)
+    changed()
+  }
+
   /** Installs a Pi package with `pi install`; idle chats restart to load it. Cancelling the caller aborts it. */
   suspend fun installPackage(source: String, onProgress: (String) -> Unit) {
     keepAlive.acquire("Pi install").use { hostClient.installPackage(source, onProgress) }

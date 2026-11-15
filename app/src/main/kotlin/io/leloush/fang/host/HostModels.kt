@@ -149,6 +149,50 @@ internal data class AuthStatus(
   }
 }
 
+internal data class AccountInfo(
+  val id: String,
+  val label: String,
+  val kind: String,
+  val masked: String,
+  val enabled: Boolean,
+  val state: String,
+  val failures: Int,
+  val cooldownUntil: Long,
+  val lastUsedAt: Long,
+  val needsSignIn: Boolean,
+) {
+  companion object {
+    fun from(json: JSONObject) = AccountInfo(
+      id = json.getString("id"),
+      label = json.optString("label"),
+      kind = json.optString("kind"),
+      masked = json.optString("masked"),
+      enabled = json.optBoolean("enabled", true),
+      state = json.optString("state", "active"),
+      failures = json.optInt("failures"),
+      cooldownUntil = json.optLong("cooldownUntil"),
+      lastUsedAt = json.optLong("lastUsedAt"),
+      needsSignIn = json.optBoolean("needsSignIn"),
+    )
+  }
+}
+
+internal data class ProviderAccounts(
+  val providerId: String,
+  val name: String,
+  val strategy: String,
+  val accounts: List<AccountInfo>,
+) {
+  companion object {
+    fun from(json: JSONObject) = ProviderAccounts(
+      providerId = json.getString("providerId"),
+      name = json.optString("name"),
+      strategy = json.optString("strategy", "round_robin"),
+      accounts = json.optJSONArray("accounts")?.objects()?.map(AccountInfo::from) ?: emptyList(),
+    )
+  }
+}
+
 /** `provider_save` params. */
 internal data class ProviderConfig(
   val id: String,
