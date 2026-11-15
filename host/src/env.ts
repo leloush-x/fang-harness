@@ -151,7 +151,7 @@ export function withoutHostVariables(environment: NodeJS.ProcessEnv): NodeJS.Pro
   return rest;
 }
 
-/** `~/.fang/backups` (`~/.fang-dev/backups` for the debug build): configuration backups, next to the config folder and on the same filesystem. */
+/** `~/.fang/backups` (`~/.fang-dev/backups` for the debug build): the private backups folder, used when shared storage is not granted. */
 export function backupsDir(env: HostEnv): string {
   return join(dirname(env.configDir), "backups");
 }

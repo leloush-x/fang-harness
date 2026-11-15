@@ -19,7 +19,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGunzip, createGzip } from "node:zlib";
 import { withConfigLock } from "../config-lock.js";
-import { backupsDir, HostError, type HostEnv, installedPiVersion } from "../env.js";
+import { backupsDir, grantedSharedStorage, HostError, type HostEnv, installedPiVersion } from "../env.js";
 import type { JsonObject } from "../framing.js";
 import type { ModeContext } from "../mode.js";
 import { stringParam } from "../params.js";
@@ -54,12 +54,55 @@ interface Manifest {
   sessions?: number | undefined;
 }
 
-/** A backup's file name as the app names it: a plain `.tar.gz` name in the backups folder. */
-function backupPath(env: HostEnv, name: string): string {
+/** Backups live in shared storage, next to the other downloads, when the app has storage access; private otherwise. */
+const SHARED_SUBDIR = join("Download", "fang-harness", "backup");
+
+/** The folder the backups live in: `<shared>/Download/fang-harness/backup` when access is granted, else the private one. */
+async function resolveBackupsDir(env: HostEnv): Promise<string> {
+  const shared = await grantedSharedStorage(env);
+  if (shared === null) return backupsDir(env);
+  const target = join(shared, SHARED_SUBDIR);
+  await migrateLegacyBackups(env, target);
+  return target;
+}
+
+/** Moves backups made before they lived on shared storage into [target]; a file that fails to move stays private, so it is not lost. */
+async function migrateLegacyBackups(env: HostEnv, target: string): Promise<void> {
+  const legacy = backupsDir(env);
+  const names = await readdir(legacy).catch(() => null);
+  if (names === null || names.length === 0) return;
+  await mkdir(target, { recursive: true });
+  for (const name of names) {
+    if (name.startsWith(".") || !name.endsWith(".tar.gz")) continue;
+    const from = join(legacy, name);
+    const to = join(target, name);
+    const partial = join(target, `.${name}.partial-${process.pid}`);
+    try {
+      const isFile = await stat(from).then((stats) => stats.isFile(), () => false);
+      if (!isFile || (await stat(to).then(() => true, () => false))) continue;
+      await pipeline(createReadStream(from), createWriteStream(partial));
+      await rename(partial, to);
+      await rm(from, { force: true });
+    } catch {
+      await rm(partial, { force: true }).catch(() => undefined);
+    }
+  }
+}
+
+/**
+ * A backup's file name as the app names it: a plain `.tar.gz` name. Prefers the shared folder and falls back to one
+ * left in private storage by a failed migration, so a backup never disappears from the list.
+ */
+async function backupPath(env: HostEnv, name: string): Promise<string> {
   if (basename(name) !== name || name.startsWith(".") || !name.endsWith(".tar.gz") || name.includes("\0")) {
     throw new HostError("bad_name", `Not a backup name: ${name}`);
   }
-  return join(backupsDir(env), name);
+  const dir = await resolveBackupsDir(env);
+  const shared = join(dir, name);
+  if (await stat(shared).then((stats) => stats.isFile(), () => false)) return shared;
+  const legacy = join(backupsDir(env), name);
+  if (legacy !== shared && (await stat(legacy).then((stats) => stats.isFile(), () => false))) return legacy;
+  return shared;
 }
 
 /**
@@ -224,7 +267,7 @@ async function parseManifest(entry: TarEntry): Promise<Manifest> {
 }
 
 async function backupInfo(env: HostEnv, name: string): Promise<JsonObject> {
-  const path = backupPath(env, name);
+  const path = await backupPath(env, name);
   const stats = await stat(path);
   const info: JsonObject = { name, size: stats.size, createdAt: stats.mtime.toISOString(), piVersion: null, sessions: null, error: null };
   try {
@@ -246,12 +289,15 @@ async function backupInfo(env: HostEnv, name: string): Promise<JsonObject> {
 
 /** Lists the backups folder, newest first. A file that isn't a readable backup is listed with an `error`. */
 export async function listBackups(ctx: ModeContext): Promise<JsonObject> {
-  const dir = backupsDir(ctx.env);
-  const names = await readdir(dir).catch(() => [] as string[]);
+  const dir = await resolveBackupsDir(ctx.env);
+  const names = new Set(await readdir(dir).catch(() => [] as string[]));
+  const legacy = backupsDir(ctx.env);
+  if (legacy !== dir) for (const name of await readdir(legacy).catch(() => [] as string[])) names.add(name);
   const backups: JsonObject[] = [];
   for (const name of names) {
     if (name.startsWith(".") || !name.endsWith(".tar.gz")) continue;
-    if (!(await stat(join(dir, name)).then((stats) => stats.isFile(), () => false))) continue;
+    const path = await backupPath(ctx.env, name);
+    if (!(await stat(path).then((stats) => stats.isFile(), () => false))) continue;
     backups.push(await backupInfo(ctx.env, name));
   }
   backups.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || String(b.name).localeCompare(String(a.name)));
@@ -262,7 +308,7 @@ export async function listBackups(ctx: ModeContext): Promise<JsonObject> {
 export async function createBackup(ctx: ModeContext): Promise<JsonObject> {
   return withConfigLock(ctx.env, async () => {
     await settleRestores(ctx.env);
-    const dir = backupsDir(ctx.env);
+    const dir = await resolveBackupsDir(ctx.env);
     await mkdir(dir, { recursive: true });
     await removePartialBackups(dir);
     const name = await newBackupName(dir);
@@ -294,7 +340,7 @@ export async function createBackup(ctx: ModeContext): Promise<JsonObject> {
 
 /** Deletes a backup; one that is already gone counts as deleted. */
 export async function deleteBackup(ctx: ModeContext): Promise<JsonObject> {
-  const path = backupPath(ctx.env, stringParam(ctx.params, "name"));
+  const path = await backupPath(ctx.env, stringParam(ctx.params, "name"));
   return withConfigLock(ctx.env, async () => {
     await rm(path, { force: true });
     return {};
@@ -537,7 +583,7 @@ async function settleRestores(env: HostEnv, signal?: AbortSignal): Promise<void>
  * uses the config folder, the swap is a handful of renames.
  */
 export async function restoreBackup(ctx: ModeContext): Promise<JsonObject> {
-  const archive = backupPath(ctx.env, stringParam(ctx.params, "name"));
+  const archive = await backupPath(ctx.env, stringParam(ctx.params, "name"));
   return withConfigLock(ctx.env, async () => {
     await settleRestores(ctx.env, ctx.signal);
     if (!(await exists(archive))) throw new HostError("not_found", "This backup no longer exists", { key: "backup_missing" });
