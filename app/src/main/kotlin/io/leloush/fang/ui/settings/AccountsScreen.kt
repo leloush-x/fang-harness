@@ -53,37 +53,37 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
     AccountsStrategy(provider, accounts, scope, snackbar, failed) { reloads++ }
     AccountsList(provider, scope, accounts, snackbar, failed, onAdd = { addingLabel = true }) { reloads++ }
   }
-  AccountsDialogs(
+  AccountsAddDialogs(
     addingLabel = addingLabel,
     addingKey = addingKey,
-    deleting = deleting,
-    providerId = providerId,
-    accounts = accounts,
-    scope = scope,
-    snackbar = snackbar,
-    failed = failed,
     onAddingLabelChange = { addingLabel = it },
     onAddingKeyChange = { addingKey = it },
-    onDeletingChange = { deleting = it },
+    onSave = { label, key -> saveApiKey(accounts, providerId, label, key, snackbar, failed) },
     onReload = { reloads++ },
   )
+  deleting?.let { account ->
+    AccountsDeleteDialog(
+      account = account,
+      accounts = accounts,
+      scope = scope,
+      snackbar = snackbar,
+      failed = failed,
+      onDeletingChange = { deleting = it },
+      onReload = { reloads++ },
+    )
+  }
 }
 
 @Composable
-private fun AccountsDialogs(
+private fun AccountsAddDialogs(
   addingLabel: Boolean,
   addingKey: String?,
-  deleting: AccountInfo?,
-  providerId: String,
-  accounts: AccountRepository,
-  scope: kotlinx.coroutines.CoroutineScope,
-  snackbar: SnackbarStackState,
-  failed: String,
   onAddingLabelChange: (Boolean) -> Unit,
   onAddingKeyChange: (String?) -> Unit,
-  onDeletingChange: (AccountInfo?) -> Unit,
+  onSave: suspend (String, String) -> Boolean,
   onReload: () -> Unit,
 ) {
+  val scope = rememberCoroutineScope()
   if (addingLabel) {
     TextInputDialog(
       title = stringResource(R.string.accounts_label),
@@ -108,21 +108,13 @@ private fun AccountsDialogs(
       onConfirm = { key ->
         onAddingKeyChange(null)
         scope.launch {
-          try {
-            accounts.saveAccount(providerId, label, "api_key", key, null, true)
+          if (onSave(label, key)) {
             onReload()
-          } catch (failure: IOException) {
-            snackbar.show(failure.message ?: failed)
-          } catch (rejected: HostRejected) {
-            snackbar.show(rejected.error.ifEmpty { failed })
           }
         }
       },
       onDismiss = { onAddingKeyChange(null) },
     )
-  }
-  deleting?.let { account ->
-    AccountsDeleteDialog(account, accounts, scope, snackbar, failed, onDeletingChange, onReload)
   }
 }
 
@@ -254,4 +246,22 @@ private suspend fun loadAccounts(
 } catch (rejected: HostRejected) {
   snackbar.show(rejected.error.ifEmpty { failed })
   emptyList()
+}
+
+private suspend fun saveApiKey(
+  accounts: AccountRepository,
+  providerId: String,
+  label: String,
+  apiKey: String,
+  snackbar: SnackbarStackState,
+  failed: String,
+): Boolean = try {
+  accounts.saveAccount(providerId, label, "api_key", apiKey, null, true)
+  true
+} catch (failure: IOException) {
+  snackbar.show(failure.message ?: failed)
+  false
+} catch (rejected: HostRejected) {
+  snackbar.show(rejected.error.ifEmpty { failed })
+  false
 }
