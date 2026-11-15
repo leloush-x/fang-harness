@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_nvidia">NVIDIA NIM</string>
+    <string name="settings_nvidia_subtitle">NVIDIA NIM API key</string>
+    <string name="login_title_nvidia">Add an NVIDIA NIM API key</string>
+</resources>

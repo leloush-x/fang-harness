@@ -64,6 +64,14 @@ internal val subscriptions = listOf(
     "openai-completions",
     usesApiKey = true,
   ),
+  Subscription(
+    "nvidia",
+    R.string.settings_nvidia,
+    R.string.settings_nvidia_subtitle,
+    R.string.login_title_nvidia,
+    "openai-completions",
+    usesApiKey = true,
+  ),
 )
 
 /** True once Pi holds a credential for the provider [id]. */

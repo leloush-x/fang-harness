@@ -1,6 +1,6 @@
 ---
 title: Connect a model
-description: Sign in with a Claude or OpenAI subscription, add a Gemini, Z.ai or Kimi API key or an OpenAI-compatible API, and choose models per chat.
+description: Sign in with a Claude or OpenAI subscription, add a Gemini, Z.ai, Kimi or NVIDIA NIM API key or an OpenAI-compatible API, and choose models per chat.
 ---
 
 The agent runs on your phone, but the AI model it talks to runs at a provider. Fang Harness supports these:
@@ -12,6 +12,7 @@ The agent runs on your phone, but the AI model it talks to runs at a provider. F
 | **Gemini** | A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) |
 | **Z.ai** | An API key for the [GLM Coding Plan](https://z.ai/subscribe) |
 | **Kimi** | An API key from the [Kimi Code console](https://www.kimi.com/code) |
+| **NVIDIA NIM** | An API key from the [NVIDIA API catalogue](https://build.nvidia.com) |
 | **OpenAI-compatible API** | A base URL and API key from any service that speaks the OpenAI API, including gateways and servers you run yourself |
 
 You can connect several and switch between them per chat. Add them during setup, or later in **Settings → Providers → Add a provider**.
@@ -41,6 +42,13 @@ Fang Harness uses Pi's built-in support for these providers, so their models, co
 Google doesn't let third-party apps use a Google AI Pro or Ultra subscription, so Gemini needs an API key rather than a Google sign-in.
 
 To remove a key, open the provider in **Settings → Providers** and tap **Remove key**.
+
+## Add an NVIDIA NIM key
+
+1. Choose **NVIDIA NIM**.
+2. Paste your API key and tap **Continue**. Fang Harness shows **Key saved**.
+
+NVIDIA NIM serves the models NVIDIA hosts, such as Nemotron and GLM. Get the key from the [NVIDIA API catalogue](https://build.nvidia.com), where each model's page lists what it costs and how to call it. Pi ships those models and their settings, so they are there to pick as soon as the key is saved. Usage counts against the credits on your NVIDIA account, and Fang Harness doesn't check the key when you save it; a wrong key shows up as an error in the first chat.
 
 ## Add an OpenAI-compatible API
 
@@ -75,7 +83,7 @@ Whatever you pick applies to the current chat and becomes the default for new ch
 
 Fang Harness saves providers in Pi's own configuration files, in its private Wolfi storage at `files/wolfi/pi`:
 
-- `auth.json` holds subscription sign-ins and the Gemini, Z.ai and Kimi keys.
+- `auth.json` holds subscription sign-ins and the Gemini, Z.ai, Kimi and NVIDIA keys.
 - `models.json` holds OpenAI-compatible providers, their models, and their API keys.
 - `settings.json` holds the default model and which models appear in the list.
 

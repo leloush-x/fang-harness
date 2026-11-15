@@ -4,7 +4,7 @@ import type { ModeContext } from "./mode.js";
 
 /**
  * Pi's own providers Fang connects, and how: OAuth for the Claude and ChatGPT subscriptions, an
- * API key for Gemini, the Z.ai Coding Plan, Kimi Code and OpenRouter.
+ * API key for Gemini, the Z.ai Coding Plan, Kimi Code, OpenRouter and NVIDIA NIM.
  */
 const LOGIN_TYPES: Record<string, "oauth" | "api_key"> = {
   anthropic: "oauth",
@@ -13,6 +13,7 @@ const LOGIN_TYPES: Record<string, "oauth" | "api_key"> = {
   zai: "api_key",
   "kimi-coding": "api_key",
   openrouter: "api_key",
+  nvidia: "api_key",
 };
 
 export const BUILTIN_PROVIDERS: readonly string[] = Object.keys(LOGIN_TYPES);
@@ -20,7 +21,8 @@ export const BUILTIN_PROVIDERS: readonly string[] = Object.keys(LOGIN_TYPES);
 /**
  * Where the providers Fang connects with an API key list the models their key may use, under their base
  * URL. Gemini's list has its own shape, so it has none here. These providers' models stay out of scope
- * after sign-in until the user picks some from the list.
+ * after sign-in until the user picks some from the list. NVIDIA NIM has none on purpose: its models come
+ * from Pi's own catalogue, so they are selectable straight away.
  */
 const MODEL_LIST_PATHS: Record<string, string> = { zai: "/models", "kimi-coding": "/models", openrouter: "/models/user" };
 
