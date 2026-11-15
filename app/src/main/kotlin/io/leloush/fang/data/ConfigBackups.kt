@@ -78,7 +78,10 @@ internal class ConfigBackups(
     }
     accounts.refresh()
     sessions.refresh()
-    val restored = runCatching { hostClient.restoreBackup(name, ::progress).optInt("restoredSessions").takeIf { it > 0 } }.getOrNull()
+    val restored =
+      runCatching {
+        hostClient.restoreBackup(name, ::progress).optInt("restoredSessions").takeIf { it > 0 }
+      }.getOrNull()
     BackupOutcome.Restored(restored)
   }
 

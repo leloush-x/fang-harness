@@ -299,7 +299,10 @@ private fun ChatHeader(process: AgentProcess, controls: PaneControls, onActions:
   val sessions by graph.sessionRepository.sessions.collectAsStateWithLifecycle()
   val hello by graph.hostClient.lastHello.collectAsStateWithLifecycle()
   val tabs = rememberWorkspaceTabs(controls.pane, process.cwd)
-  val firstMessage = remember(sessions, sessionFile) { sessions.firstOrNull { it.path == sessionFile }?.firstMessage?.takeIf { it.isNotBlank() } }
+  val firstMessage =
+    remember(sessions, sessionFile) {
+      sessions.firstOrNull { it.path == sessionFile }?.firstMessage?.takeIf { it.isNotBlank() }
+    }
   val statuses by process.extensionStatuses.collectAsStateWithLifecycle()
   val colors = fangColors
   val status = remember(statuses, colors) { extensionStatusLine(statuses, colors) }
