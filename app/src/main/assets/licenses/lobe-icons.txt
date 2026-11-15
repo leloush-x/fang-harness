@@ -1,4 +1,4 @@
-Lobe Icons, @lobehub/icons-static-svg 1.95.1 (https://github.com/lobehub/lobe-icons), MIT License. The OpenAI, Gemini, Kimi and Z.ai provider logos. The logos themselves are trademarks of their owners.
+Lobe Icons, @lobehub/icons-static-svg (https://github.com/lobehub/lobe-icons), MIT License. The provider logos: the OpenAI, Gemini, Kimi, Z.ai, OpenRouter and NVIDIA marks. The logos themselves are trademarks of their owners.
 
 MIT License
 
