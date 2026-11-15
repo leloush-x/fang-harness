@@ -213,7 +213,11 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
   }
 
   suspend fun accountStrategy(providerId: String, strategy: String) {
-    utilityData("accounts_strategy", JSONObject().put("providerId", providerId).put("strategy", strategy), UTILITY_TIMEOUT_MILLIS)
+    utilityData(
+      "accounts_strategy",
+      JSONObject().put("providerId", providerId).put("strategy", strategy),
+      UTILITY_TIMEOUT_MILLIS,
+    )
   }
 
   /** Runs `pi install [source]`, adding a Pi package that chats load when their Pi next starts. */
