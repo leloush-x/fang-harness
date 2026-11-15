@@ -53,6 +53,37 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
     AccountsStrategy(provider, accounts, scope, snackbar, failed, reloads) { reloads++ }
     AccountsList(provider, scope, accounts, snackbar, failed, reloads, onAdd = { addingLabel = true }) { reloads++ }
   }
+  AccountsDialogs(
+    addingLabel = addingLabel,
+    addingKey = addingKey,
+    deleting = deleting,
+    providerId = providerId,
+    accounts = accounts,
+    scope = scope,
+    snackbar = snackbar,
+    failed = failed,
+    onAddingLabelChange = { addingLabel = it },
+    onAddingKeyChange = { addingKey = it },
+    onDeletingChange = { deleting = it },
+    onReload = { reloads++ },
+  )
+}
+
+@Composable
+private fun AccountsDialogs(
+  addingLabel: Boolean,
+  addingKey: String?,
+  deleting: AccountInfo?,
+  providerId: String,
+  accounts: AccountRepository,
+  scope: kotlinx.coroutines.CoroutineScope,
+  snackbar: SnackbarStackState,
+  failed: String,
+  onAddingLabelChange: (Boolean) -> Unit,
+  onAddingKeyChange: (String?) -> Unit,
+  onDeletingChange: (AccountInfo?) -> Unit,
+  onReload: () -> Unit,
+) {
   if (addingLabel) {
     TextInputDialog(
       title = stringResource(R.string.accounts_label),
@@ -60,8 +91,8 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
       placeholder = null,
       confirmLabel = stringResource(R.string.accounts_add),
       multiline = false,
-      onConfirm = { label -> addingLabel = false; addingKey = label },
-      onDismiss = { addingLabel = false },
+      onConfirm = { label -> onAddingLabelChange(false); onAddingKeyChange(label) },
+      onDismiss = { onAddingLabelChange(false) },
     )
   }
   addingKey?.let { label ->
@@ -72,11 +103,11 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
       confirmLabel = stringResource(R.string.accounts_add),
       multiline = false,
       onConfirm = { key ->
-        addingKey = null
+        onAddingKeyChange(null)
         scope.launch {
           try {
             accounts.saveAccount(providerId, label, "api_key", key, null, true)
-            reloads++
+            onReload()
           } catch (failure: IOException) {
             snackbar.show(failure.message ?: failed)
           } catch (rejected: HostRejected) {
@@ -84,7 +115,7 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
           }
         }
       },
-      onDismiss = { addingKey = null },
+      onDismiss = { onAddingKeyChange(null) },
     )
   }
   deleting?.let { account ->
@@ -94,11 +125,11 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
       confirmLabel = stringResource(R.string.accounts_remove),
       destructive = true,
       onConfirm = {
-        deleting = null
+        onDeletingChange(null)
         scope.launch {
           try {
             accounts.removeAccount(account.id)
-            reloads++
+            onReload()
           } catch (failure: IOException) {
             snackbar.show(failure.message ?: failed)
           } catch (rejected: HostRejected) {
@@ -106,7 +137,7 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
           }
         }
       },
-      onDismiss = { deleting = null },
+      onDismiss = { onDeletingChange(null) },
     )
   }
 }
