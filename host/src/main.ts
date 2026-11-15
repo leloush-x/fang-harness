@@ -4,7 +4,7 @@ import { Connection } from "./connection.js";
 import { HostError, installedPiVersion, grantedSharedStorage, readHostEnv } from "./env.js";
 import { isObject, type JsonObject } from "./framing.js";
 import type { ModeContext } from "./mode.js";
-import { accountsActivate, accountsList, accountsRemove, accountsSave, accountsStrategy } from "./modes/accounts.js";
+import { accountsActivate, accountsCapture, accountsList, accountsRemove, accountsSave, accountsStrategy } from "./modes/accounts.js";
 import { authStatus } from "./modes/auth-status.js";
 import { createBackup, deleteBackup, listBackups, restoreBackup } from "./modes/backups.js";
 import { browse } from "./modes/browse.js";
@@ -148,6 +148,8 @@ async function main(): Promise<void> {
       return respond(ctx, accountsActivate);
     case "accounts_strategy":
       return respond(ctx, accountsStrategy);
+    case "accounts_capture":
+      return respond(ctx, accountsCapture);
     case "auth_status":
       return respond(ctx, authStatus);
     case "login":

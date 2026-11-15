@@ -61,6 +61,8 @@ internal class AccountRepository(
   /** Sign-in to a provider Pi ships, by OAuth or API key; cancelling the caller aborts it. */
   suspend fun login(providerId: String, ui: LoginUi) {
     keepAlive.acquire("sign-in").use { hostClient.login(providerId, ui) }
+    // Signing in keys the pool: the stored sign-in joins it so rotating keys covers this account too.
+    runCatching { hostClient.accountCapture(providerId) }
     changed()
   }
 

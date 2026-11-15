@@ -48,6 +48,7 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
   SettingsPage(title = stringResource(R.string.settings_accounts), onBack = onBack, snackbar = snackbar) {
     if (provider == null) {
       SettingsCaption(text = stringResource(R.string.accounts_empty))
+      DashedActionRow(label = stringResource(R.string.accounts_add), icon = R.drawable.ic_lucide_plus, onClick = { addingLabel = true })
       return@SettingsPage
     }
     AccountsStrategy(provider, accounts, scope, snackbar, failed) { reloads++ }
@@ -135,16 +136,7 @@ private fun AccountsDeleteDialog(
     destructive = true,
     onConfirm = {
       onDeletingChange(null)
-      scope.launch {
-        try {
-          accounts.removeAccount(account.id)
-          onReload()
-        } catch (failure: IOException) {
-          snackbar.show(failure.message ?: failed)
-        } catch (rejected: HostRejected) {
-          snackbar.show(rejected.error.ifEmpty { failed })
-        }
-      }
+      scope.launch { accountCall(Unit, snackbar, failed) { accounts.removeAccount(account.id); onReload() } }
     },
     onDismiss = { onDeletingChange(null) },
   )
@@ -171,16 +163,7 @@ private fun AccountsStrategy(
           },
         ),
         onClick = {
-          scope.launch {
-            try {
-              accounts.accountStrategy(provider.providerId, strategy)
-              onReload()
-            } catch (failure: IOException) {
-              snackbar.show(failure.message ?: failed)
-            } catch (rejected: HostRejected) {
-              snackbar.show(rejected.error.ifEmpty { failed })
-            }
-          }
+          scope.launch { accountCall(Unit, snackbar, failed) { accounts.accountStrategy(provider.providerId, strategy); onReload() } }
         },
       ) {
         if (selected) SettingsValue("✓")
@@ -208,21 +191,14 @@ private fun AccountsList(
       SettingsRow(
         title = account.label,
         subtitle = account.masked + " · " + account.state,
+        onClick = { scope.launch { accountCall(Unit, snackbar, failed) { accounts.activateAccount(account.id); onReload() } } },
       ) {
+        if (account.state == "active") SettingsValue("✓")
         IconButton28(
           icon = R.drawable.ic_lucide_trash_2,
           contentDescription = stringResource(R.string.accounts_remove),
           onClick = {
-            scope.launch {
-              try {
-                accounts.removeAccount(account.id)
-                onReload()
-              } catch (failure: IOException) {
-                snackbar.show(failure.message ?: failed)
-              } catch (rejected: HostRejected) {
-                snackbar.show(rejected.error.ifEmpty { failed })
-              }
-            }
+            scope.launch { accountCall(Unit, snackbar, failed) { accounts.removeAccount(account.id); onReload() } }
           },
           tint = fangColors.foregroundMuted,
         )
@@ -233,19 +209,29 @@ private fun AccountsList(
   }
 }
 
+/** Runs an account call, showing its failure in the snackbar; [default] when it failed. */
+private suspend fun <T> accountCall(
+  default: T,
+  snackbar: SnackbarStackState,
+  failed: String,
+  call: suspend () -> T,
+): T = try {
+  call()
+} catch (failure: IOException) {
+  snackbar.show(failure.message ?: failed)
+  default
+} catch (rejected: HostRejected) {
+  snackbar.show(rejected.error.ifEmpty { failed })
+  default
+}
+
 private suspend fun loadAccounts(
   accounts: AccountRepository,
   providerId: String,
   snackbar: SnackbarStackState,
   failed: String,
-): List<ProviderAccounts> = try {
+): List<ProviderAccounts> = accountCall(emptyList(), snackbar, failed) {
   accounts.accounts().filter { it.providerId == providerId }
-} catch (failure: IOException) {
-  snackbar.show(failure.message ?: failed)
-  emptyList()
-} catch (rejected: HostRejected) {
-  snackbar.show(rejected.error.ifEmpty { failed })
-  emptyList()
 }
 
 private suspend fun saveApiKey(
@@ -255,13 +241,7 @@ private suspend fun saveApiKey(
   apiKey: String,
   snackbar: SnackbarStackState,
   failed: String,
-): Boolean = try {
+): Boolean = accountCall(false, snackbar, failed) {
   accounts.saveAccount(providerId, label, "api_key", apiKey, null, true)
   true
-} catch (failure: IOException) {
-  snackbar.show(failure.message ?: failed)
-  false
-} catch (rejected: HostRejected) {
-  snackbar.show(rejected.error.ifEmpty { failed })
-  false
 }

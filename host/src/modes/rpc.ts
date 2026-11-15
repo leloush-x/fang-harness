@@ -18,6 +18,7 @@ import { nullableStringParam, stringParam } from "../params.js";
 import { installedFangExtensionFiles, fangExtensionFingerprintsParam } from "../fang-extensions.js";
 import { SYSTEM_APPEND } from "../prompt.js";
 import { openSettingsIfValid, readGlobalSettings, userPackages, type UserPackages } from "../settings.js";
+import { pickAccount, writeStoredCredential } from "./accounts.js";
 import { sessionEnv } from "../session.js";
 import { configBusy, isConfigLocked } from "../config-lock.js";
 
@@ -191,6 +192,19 @@ export async function rpc(ctx: ModeContext): Promise<void> {
   }
   args.push("--append-system-prompt", SYSTEM_APPEND);
   const env = await sessionEnv(ctx.env);
+  // Rotation: Pi starts on the pooled account its auth.json slot now holds — the least recently used key for
+  // round-robin, the active one for sticky/manual. OAuth stays on Pi's slot (its refresh tokens rotate with use);
+  // it switches through the accounts screen's Activate. Best effort: when the pool is busy or unreadable, Pi
+  // starts on whatever auth.json already holds.
+  const defaultProvider = isObject(settings) && typeof settings.defaultProvider === "string" ? settings.defaultProvider : undefined;
+  if (defaultProvider !== undefined) {
+    try {
+      const picked = await pickAccount(ctx, defaultProvider);
+      if (picked?.kind === "api_key") await writeStoredCredential(ctx.env.configDir, defaultProvider, picked);
+    } catch {
+      // Best effort: the chat must not fail because rotation could not read or write the pool.
+    }
+  }
   // The channel socket goes last, at CHANNEL_FD; Pi hands none of its fds past stderr to the commands it runs.
   const child = spawn(process.execPath, args, { cwd, env, stdio: ["pipe", "pipe", "pipe", "pipe"] });
   const channel = child.stdio[CHANNEL_FD] as Socket;
