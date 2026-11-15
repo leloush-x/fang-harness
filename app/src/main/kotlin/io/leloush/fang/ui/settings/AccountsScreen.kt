@@ -50,8 +50,8 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
       SettingsCaption(text = stringResource(R.string.accounts_empty))
       return@SettingsPage
     }
-    AccountsStrategy(provider, accounts, scope, snackbar, failed, reloads) { reloads++ }
-    AccountsList(provider, scope, accounts, snackbar, failed, reloads, onAdd = { addingLabel = true }) { reloads++ }
+    AccountsStrategy(provider, accounts, scope, snackbar, failed) { reloads++ }
+    AccountsList(provider, scope, accounts, snackbar, failed, onAdd = { addingLabel = true }) { reloads++ }
   }
   AccountsDialogs(
     addingLabel = addingLabel,
@@ -149,7 +149,6 @@ private fun AccountsStrategy(
   scope: kotlinx.coroutines.CoroutineScope,
   snackbar: SnackbarStackState,
   failed: String,
-  reloads: Int,
   onReload: () -> Unit,
 ) {
   SettingsSection(title = stringResource(R.string.accounts_strategy)) {
@@ -190,7 +189,6 @@ private fun AccountsList(
   accounts: AccountRepository,
   snackbar: SnackbarStackState,
   failed: String,
-  reloads: Int,
   onAdd: () -> Unit,
   onReload: () -> Unit,
 ) {
@@ -223,7 +221,7 @@ private fun AccountsList(
       }
       SettingsDivider()
     }
-    DashedActionRow(label = stringResource(R.string.accounts_add), onClick = onAdd)
+    DashedActionRow(label = stringResource(R.string.accounts_add), icon = R.drawable.ic_lucide_plus, onClick = onAdd)
   }
 }
 

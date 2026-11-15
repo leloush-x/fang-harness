@@ -53,7 +53,34 @@ describe("login", () => {
     await writeFile(settingsPath, JSON.stringify({ enabledModels: ["anthropic/*"] }));
     expect((await login(dirs, "google", "key-123")).result).toMatchObject({ ok: true });
     const settings: unknown = JSON.parse(await readFile(settingsPath, "utf8"));
-    expect(settings).toMatchObject({ enabledModels: ["anthropic/*", "google/*"] });
+    expect(settings).toMatchObject({
+      enabledModels: [
+        "anthropic/*",
+        "google/deep-research-max-preview-04-2026",
+        "google/deep-research-preview-04-2026",
+        "google/gemini-2.5-computer-use-preview-10-2025",
+        "google/gemini-2.5-flash",
+        "google/gemini-2.5-flash-lite",
+        "google/gemini-2.5-pro",
+        "google/gemini-3-flash-preview",
+        "google/gemini-3.1-flash-lite",
+        "google/gemini-3.1-flash-lite-preview",
+        "google/gemini-3.1-pro-preview",
+        "google/gemini-3.1-pro-preview-customtools",
+        "google/gemini-3.5-flash",
+        "google/gemini-3.5-flash-lite",
+        "google/gemini-3.6-flash",
+        "google/gemini-3.7-flash",
+        "google/gemini-3.8-flash",
+        "google/gemini-4-argon",
+        "google/gemini-flash-latest",
+        "google/gemini-flash-lite-latest",
+        "google/gemini-pro-latest",
+        "google/gemini-robotics-er-2-preview",
+        "google/gemma-4-26b-a4b-it",
+        "google/gemma-4-31b-it",
+      ],
+    });
   });
 
   it.each(["zai", "kimi-coding", "openrouter"])("leaves %s's models for the user to pick from its list", async (providerId) => {

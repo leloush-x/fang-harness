@@ -108,11 +108,15 @@ export const NO_MODELS = "_fang/no-models";
  * be empty, or `[NO_MODELS]` when there are none.
  */
 async function othersFallback(provider: string | undefined, universe: readonly ScopeModel[], resolve: ScopeResolver): Promise<string[]> {
-  const others = (await everyProvider(universe, resolve)).filter((pattern) => {
+  // Only providers that are actually signed in (usable models) can contribute a fallback; an unusable builtin such as
+  // NVIDIA NIM before it is signed in must not leak its catalogue into a scope that would otherwise be empty.
+  const usableProviders = new Set(universe.filter((model) => model.unusable !== true).map((model) => model.provider));
+  const usableUniverse = universe.filter((model) => usableProviders.has(model.provider));
+  const others = (await everyProvider(usableUniverse, resolve)).filter((pattern) => {
     const named = namedProvider(pattern);
     return named !== provider?.toLowerCase() && !hiddenUntilPicked(named);
   });
-  const kept = await dropMisdirected(others, universe, resolve);
+  const kept = await dropMisdirected(others, usableUniverse, resolve);
   return kept.length > 0 ? kept : [NO_MODELS];
 }
 
