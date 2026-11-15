@@ -257,13 +257,12 @@ private fun OutcomeCaption(outcome: BackupOutcome, failed: String) {
 }
 
 @Composable
-private fun restoredCaption(outcome: BackupOutcome): String {
-  return if (outcome is BackupOutcome.Restored && outcome.sessions != null) {
+private fun restoredCaption(outcome: BackupOutcome): String =
+  if (outcome is BackupOutcome.Restored && outcome.sessions != null) {
     stringResource(R.string.backups_restored_chats, outcome.sessions)
   } else {
     stringResource(R.string.backups_restored)
   }
-}
 
 /** The latest line of a backup or restore's progress, on one monospace line. */
 @Composable
