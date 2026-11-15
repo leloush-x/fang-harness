@@ -122,27 +122,40 @@ private fun AccountsDialogs(
     )
   }
   deleting?.let { account ->
-    ConfirmDialog(
-      title = stringResource(R.string.accounts_remove),
-      text = account.label,
-      confirmLabel = stringResource(R.string.accounts_remove),
-      destructive = true,
-      onConfirm = {
-        onDeletingChange(null)
-        scope.launch {
-          try {
-            accounts.removeAccount(account.id)
-            onReload()
-          } catch (failure: IOException) {
-            snackbar.show(failure.message ?: failed)
-          } catch (rejected: HostRejected) {
-            snackbar.show(rejected.error.ifEmpty { failed })
-          }
-        }
-      },
-      onDismiss = { onDeletingChange(null) },
-    )
+    AccountsDeleteDialog(account, accounts, scope, snackbar, failed, onDeletingChange, onReload)
   }
+}
+
+@Composable
+private fun AccountsDeleteDialog(
+  account: AccountInfo,
+  accounts: AccountRepository,
+  scope: kotlinx.coroutines.CoroutineScope,
+  snackbar: SnackbarStackState,
+  failed: String,
+  onDeletingChange: (AccountInfo?) -> Unit,
+  onReload: () -> Unit,
+) {
+  ConfirmDialog(
+    title = stringResource(R.string.accounts_remove),
+    text = account.label,
+    confirmLabel = stringResource(R.string.accounts_remove),
+    destructive = true,
+    onConfirm = {
+      onDeletingChange(null)
+      scope.launch {
+        try {
+          accounts.removeAccount(account.id)
+          onReload()
+        } catch (failure: IOException) {
+          snackbar.show(failure.message ?: failed)
+        } catch (rejected: HostRejected) {
+          snackbar.show(rejected.error.ifEmpty { failed })
+        }
+      }
+    },
+    onDismiss = { onDeletingChange(null) },
+  )
 }
 
 @Composable
