@@ -253,10 +253,10 @@ private fun OutcomeCaption(outcome: BackupOutcome, failed: String) {
         stringResource(R.string.backups_created) to fangColors.foregroundMuted
 
       is BackupOutcome.Restored -> {
-        (
+        val restoredText =
           if (outcome.sessions != null) stringResource(R.string.backups_restored_chats, outcome.sessions)
           else stringResource(R.string.backups_restored)
-        ) to fangColors.foregroundMuted
+        restoredText to fangColors.foregroundMuted
       }
 
       is BackupOutcome.Failed ->

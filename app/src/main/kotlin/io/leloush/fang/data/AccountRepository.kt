@@ -18,9 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.json.JSONObject
 import kotlinx.coroutines.withContext
 import org.json.JSONException
+import org.json.JSONObject
 
 /**
  * Sign-in state and custom providers. Every successful change re-reads [status] and reloads idle
