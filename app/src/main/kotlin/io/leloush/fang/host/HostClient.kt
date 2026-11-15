@@ -235,10 +235,9 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     call("backup_create", JSONObject(), BACKUP_TIMEOUT_MILLIS, progress(onProgress)).getJSONObject("backup"),
   )
 
-  /** Replaces the configuration with backup [name]'s; sessions stay. Every chat's Pi must be stopping already. */
-  suspend fun restoreBackup(name: String, onProgress: (String) -> Unit) {
+  /** Replaces the configuration with backup [name]'s and merges its sessions back. Every chat's Pi must be stopping already. */
+  suspend fun restoreBackup(name: String, onProgress: (String) -> Unit): JSONObject =
     call("backup_restore", JSONObject().put("name", name), BACKUP_TIMEOUT_MILLIS, progress(onProgress))
-  }
 
   suspend fun deleteBackup(name: String) {
     utilityData("backup_delete", JSONObject().put("name", name), UTILITY_TIMEOUT_MILLIS)

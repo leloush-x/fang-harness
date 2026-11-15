@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="backups_holds_chats">Settings, sign-ins and %1$d chats</string>
+    <string name="backups_restored_chats">Restored %1$d chats.</string>
+</resources>

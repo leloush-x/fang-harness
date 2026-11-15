@@ -39,7 +39,7 @@ const PROGRESS_INTERVAL_MS = 300;
  * space and logs. A backup leaves them out, and a restore leaves them where they are.
  */
 const NOT_CONFIGURATION: Record<string, true> = {
-  sessions: true,
+  // Everything under `sessions/` is chat history: it is now part of a backup (see below), so it is no longer excluded.
   bin: true,
   tmp: true,
   "pi-debug.log": true,
@@ -51,6 +51,7 @@ interface Manifest {
   version: number;
   createdAt: string;
   piVersion: string | null;
+  sessions?: number;
 }
 
 /** A backup's file name as the app names it: a plain `.tar.gz` name in the backups folder. */
@@ -97,6 +98,34 @@ async function openIfPresent(path: string): Promise<FileHandle | null> {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
   }
+}
+
+/** How many session files (chats) live under `configDir/sessions/`. */
+async function countSessions(configDir: string): Promise<number> {
+  let count = 0;
+  async function walk(dir: string): Promise<void> {
+    let names: string[];
+    try {
+      names = await readdir(dir);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
+    for (const name of names) {
+      const full = join(dir, name);
+      let stats;
+      try {
+        stats = await lstat(full);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+        throw error;
+      }
+      if (stats.isDirectory()) await walk(full);
+      else if (stats.isFile()) count++;
+    }
+  }
+  await walk(join(configDir, "sessions"));
+  return count;
 }
 
 /**
@@ -190,17 +219,19 @@ async function parseManifest(entry: TarEntry): Promise<Manifest> {
   }
   const createdAt = "createdAt" in manifest && typeof manifest.createdAt === "string" ? manifest.createdAt : "";
   const piVersion = "piVersion" in manifest && typeof manifest.piVersion === "string" ? manifest.piVersion : null;
-  return { format: FORMAT, version: VERSION, createdAt, piVersion };
+  const sessions = "sessions" in manifest && typeof manifest.sessions === "number" ? manifest.sessions : undefined;
+  return { format: FORMAT, version: VERSION, createdAt, piVersion, sessions };
 }
 
 async function backupInfo(env: HostEnv, name: string): Promise<JsonObject> {
   const path = backupPath(env, name);
   const stats = await stat(path);
-  const info: JsonObject = { name, size: stats.size, createdAt: stats.mtime.toISOString(), piVersion: null, error: null };
+  const info: JsonObject = { name, size: stats.size, createdAt: stats.mtime.toISOString(), piVersion: null, sessions: null, error: null };
   try {
     const manifest = await readManifest(path);
     if (!Number.isNaN(Date.parse(manifest.createdAt))) info.createdAt = manifest.createdAt;
     info.piVersion = manifest.piVersion;
+    info.sessions = manifest.sessions ?? null;
   } catch (error) {
     if (error instanceof HostError || error instanceof TarError) {
       info.error = error.message;
@@ -236,11 +267,13 @@ export async function createBackup(ctx: ModeContext): Promise<JsonObject> {
     await removePartialBackups(dir);
     const name = await newBackupName(dir);
     const partial = join(dir, `.${name}.partial-${process.pid}`);
+    const sessionCount = await countSessions(ctx.env.configDir);
     const manifest = JSON.stringify({
       format: FORMAT,
       version: VERSION,
       createdAt: new Date().toISOString(),
       piVersion: await installedPiVersion(ctx.env.root),
+      sessions: sessionCount,
     } satisfies Manifest);
     const counted = progress(ctx, "Backed up", "backup_progress_backed_up");
     async function* entries(): AsyncGenerator<TarEntry> {
@@ -399,24 +432,72 @@ async function exists(path: string): Promise<boolean> {
 }
 
 /**
+ * Merges a backed-up sessions folder into the live one: each backed-up session file is written over its path, so the
+ * backup's version of a chat wins, and files that exist only on the device are left alone. Folders are created as
+ * needed; symlinks in the backup were already rejected by `extract`, so there is nothing to guard against here.
+ */
+async function mergeSessions(from: string, to: string): Promise<number> {
+  let count = 0;
+  async function walk(dir: string, relative: string): Promise<void> {
+    for (const name of (await readdir(dir)).toSorted()) {
+      const source = join(dir, name);
+      const stats = await lstat(source);
+      if (stats.isDirectory()) {
+        await walk(source, relative === "" ? name : `${relative}/${name}`);
+        continue;
+      }
+      if (!stats.isFile()) continue;
+      const destination = join(to, relative, name);
+      await mkdir(dirname(destination), { recursive: true });
+      // Write through a temp file and rename, so a crash never leaves a half-written session.
+      const temporary = `${destination}.${process.pid}.tmp`;
+      const handle = await open(temporary, "w", 0o600);
+      try {
+        const sourceHandle = await open(source, "r");
+        try {
+          for await (const chunk of sourceHandle.createReadStream()) await handle.write(chunk);
+        } finally {
+          await sourceHandle.close();
+        }
+      } finally {
+        await handle.close();
+      }
+      await rename(temporary, destination);
+      count++;
+    }
+  }
+  await walk(from, "");
+  return count;
+}
+
+/**
  * Puts an unpacked backup in place of the configuration: first every configuration entry moves aside into `old`, then
  * every entry of `staging` moves in. Sessions and the rest of `NOT_CONFIGURATION` never move. Each step is a rename,
  * and a marker records the end of the first step, so a swap cut short by a crash is finished by the next one.
  */
-async function swap(configDir: string, staging: string, old: string): Promise<void> {
+async function swap(configDir: string, staging: string, old: string): Promise<number> {
   await mkdir(configDir, { recursive: true });
   if (!(await exists(`${old}.moved`))) {
     await mkdir(old, { recursive: true });
     for (const name of await readdir(configDir)) {
-      if (NOT_CONFIGURATION[name] !== true) await rename(join(configDir, name), join(old, name));
+      // Sessions are merged, not replaced, so they never move aside.
+      if (NOT_CONFIGURATION[name] !== true && name !== "sessions") await rename(join(configDir, name), join(old, name));
     }
     await writeFile(`${old}.moved`, "");
+  }
+  // Sessions are merged into the live folder rather than replaced: a chat made since the backup survives,
+  // and the backup's version of a chat wins when both exist.
+  let restoredSessions = 0;
+  if (await exists(join(staging, "sessions"))) {
+    restoredSessions = await mergeSessions(join(staging, "sessions"), join(configDir, "sessions"));
+    await rm(join(staging, "sessions"), { recursive: true, force: true });
   }
   for (const name of await readdir(staging)) await rename(join(staging, name), join(configDir, name));
   await rm(old, { recursive: true, force: true });
   await rm(staging, { recursive: true, force: true });
   await rm(`${staging}.complete`, { force: true });
   await rm(`${old}.moved`, { force: true });
+  return restoredSessions;
 }
 
 /**
@@ -446,6 +527,7 @@ async function settleRestores(env: HostEnv, signal?: AbortSignal): Promise<void>
     await rm(`${staging}.complete`, { force: true });
     await rm(old, { recursive: true, force: true });
     await rm(`${old}.moved`, { force: true });
+  return restoredSessions;
   }
 }
 
@@ -477,7 +559,7 @@ export async function restoreBackup(ctx: ModeContext): Promise<JsonObject> {
       await rm(`${staging}.complete`, { force: true });
       throw error;
     }
-    await swap(ctx.env.configDir, staging, `${ctx.env.configDir}.old-${id}`);
-    return {};
+    const restoredSessions = await swap(ctx.env.configDir, staging, `${ctx.env.configDir}.old-${id}`);
+    return { restoredSessions };
   });
 }

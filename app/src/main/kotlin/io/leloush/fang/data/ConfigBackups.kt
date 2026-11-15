@@ -28,7 +28,7 @@ internal sealed interface BackupTask {
 internal sealed interface BackupOutcome {
   data object Created : BackupOutcome
 
-  data object Restored : BackupOutcome
+  data class Restored(val sessions: Int? = null) : BackupOutcome
 
   data class Failed(val message: String?) : BackupOutcome
 }
@@ -78,7 +78,8 @@ internal class ConfigBackups(
     }
     accounts.refresh()
     sessions.refresh()
-    BackupOutcome.Restored
+    val restored = runCatching { hostClient.restoreBackup(name, ::progress).optInt("restoredSessions").takeIf { it > 0 } }.getOrNull()
+    BackupOutcome.Restored(restored)
   }
 
   private fun progress(line: String) {

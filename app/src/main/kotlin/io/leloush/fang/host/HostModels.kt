@@ -34,6 +34,7 @@ internal data class BackupInfo(
   val size: Long,
   val createdAt: Long,
   val piVersion: String?,
+  val sessions: Int?,
   val error: HostText?,
 ) {
   companion object {
@@ -42,6 +43,7 @@ internal data class BackupInfo(
       size = json.optLong("size"),
       createdAt = runCatching { Instant.parse(json.optString("createdAt")).toEpochMilli() }.getOrDefault(0L),
       piVersion = json.opt("piVersion") as? String,
+      sessions = json.optInt("sessions").takeIf { json.has("sessions") },
       error = HostText.field(json, "error"),
     )
   }

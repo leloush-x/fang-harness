@@ -221,6 +221,7 @@ private fun BackupRow(backup: BackupInfo, enabled: Boolean, onRestore: () -> Uni
   val subtitle =
     when {
       backup.error != null -> stringResource(R.string.backups_unreadable, backup.name, backup.error.localized())
+      backup.sessions != null -> "$size · ${stringResource(R.string.backups_holds_chats, backup.sessions)}"
       backup.piVersion != null -> "$size · ${stringResource(R.string.settings_pi_version, backup.piVersion)}"
       else -> size
     }
@@ -249,7 +250,7 @@ private fun OutcomeCaption(outcome: BackupOutcome, failed: String) {
   val (text, color) =
     when (outcome) {
       BackupOutcome.Created -> stringResource(R.string.backups_created) to fangColors.foregroundMuted
-      BackupOutcome.Restored -> stringResource(R.string.backups_restored) to fangColors.foregroundMuted
+      is BackupOutcome.Restored -> (if (outcome.sessions != null) stringResource(R.string.backups_restored_chats, outcome.sessions) else stringResource(R.string.backups_restored)) to fangColors.foregroundMuted
       is BackupOutcome.Failed -> (outcome.message ?: failed) to fangColors.destructive
     }
   SettingsCaption(text = text, color = color)
