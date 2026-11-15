@@ -220,11 +220,11 @@ private fun AccountsList(
           contentDescription = stringResource(R.string.accounts_remove),
           onClick = {
             scope.launch {
-        accountCall(Unit, snackbar, failed) {
-          accounts.removeAccount(account.id)
-          onReload()
-        }
-      }
+              accountCall(Unit, snackbar, failed) {
+                accounts.removeAccount(account.id)
+                onReload()
+              }
+            }
           },
           tint = fangColors.foregroundMuted,
         )
