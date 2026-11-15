@@ -247,18 +247,19 @@ private fun BackupRow(backup: BackupInfo, enabled: Boolean, onRestore: () -> Uni
 
 @Composable
 private fun OutcomeCaption(outcome: BackupOutcome, failed: String) {
-  val restoredText =
-    if (outcome is BackupOutcome.Restored && outcome.sessions != null) stringResource(R.string.backups_restored_chats, outcome.sessions)
-    else if (outcome is BackupOutcome.Restored) stringResource(R.string.backups_restored)
-    else null
-  val (text, color) =
-    when (outcome) {
-      BackupOutcome.Created -> stringResource(R.string.backups_created) to fangColors.foregroundMuted
-      is BackupOutcome.Restored -> (restoredText ?: stringResource(R.string.backups_restored)) to fangColors.foregroundMuted
-      is BackupOutcome.Failed -> (outcome.message ?: failed) to fangColors.destructive
-    }
+  val restoredText = restoredCaption(outcome)
+  val (text, color) = when (outcome) {
+    BackupOutcome.Created -> stringResource(R.string.backups_created) to fangColors.foregroundMuted
+    is BackupOutcome.Restored -> restoredText to fangColors.foregroundMuted
+    is BackupOutcome.Failed -> (outcome.message ?: failed) to fangColors.destructive
+  }
   SettingsCaption(text = text, color = color)
 }
+
+@Composable
+private fun restoredCaption(outcome: BackupOutcome): String =
+  if (outcome is BackupOutcome.Restored && outcome.sessions != null) stringResource(R.string.backups_restored_chats, outcome.sessions)
+  else stringResource(R.string.backups_restored)
 
 /** The latest line of a backup or restore's progress, on one monospace line. */
 @Composable
