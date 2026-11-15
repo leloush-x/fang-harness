@@ -122,6 +122,11 @@ internal class AccountRepository(
     changed()
   }
 
+  /** Copies the stored sign-in into the pool; a no-op when it is already pooled. */
+  suspend fun captureAccount(providerId: String) {
+    runCatching { hostClient.accountCapture(providerId) }
+  }
+
   suspend fun activateAccount(id: String) {
     hostClient.accountActivate(id)
     changed()

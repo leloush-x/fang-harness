@@ -56,7 +56,16 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
       return@SettingsPage
     }
     AccountsStrategy(provider, accounts, scope, snackbar, failed) { reloads++ }
-    AccountsList(provider, scope, accounts, snackbar, failed, onAdd = { addingLabel = true }) { reloads++ }
+    AccountsList(
+      provider,
+      scope,
+      accounts,
+      snackbar,
+      failed,
+      onAdd = { addingLabel = true },
+      onDelete = { deleting = it },
+      onReload = { reloads++ },
+    )
   }
   AccountsAddDialogs(
     addingLabel = addingLabel,
@@ -80,7 +89,7 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AccountsAddDialogs(
+internal fun AccountsAddDialogs(
   addingLabel: Boolean,
   addingKey: String?,
   onAddingLabelChange: (Boolean) -> Unit,
@@ -124,7 +133,7 @@ private fun AccountsAddDialogs(
 }
 
 @Composable
-private fun AccountsDeleteDialog(
+internal fun AccountsDeleteDialog(
   account: AccountInfo,
   accounts: AccountRepository,
   scope: kotlinx.coroutines.CoroutineScope,
@@ -187,6 +196,39 @@ private fun AccountsStrategy(
   }
 }
 
+/** One account row: tap to switch Pi's sign-in to it, ✓ when it's the active one, trash to ask for its removal. */
+@Composable
+internal fun AccountRow(
+  account: AccountInfo,
+  scope: kotlinx.coroutines.CoroutineScope,
+  accounts: AccountRepository,
+  snackbar: SnackbarStackState,
+  failed: String,
+  onDelete: (AccountInfo) -> Unit,
+  onReload: () -> Unit,
+) {
+  SettingsRow(
+    title = account.label,
+    subtitle = account.masked + " · " + account.state,
+    onClick = {
+      scope.launch {
+        accountCall(Unit, snackbar, failed) {
+          accounts.activateAccount(account.id)
+          onReload()
+        }
+      }
+    },
+  ) {
+    if (account.state == "active") SettingsValue("✓")
+    IconButton28(
+      icon = R.drawable.ic_lucide_trash_2,
+      contentDescription = stringResource(R.string.accounts_remove),
+      onClick = { onDelete(account) },
+      tint = fangColors.foregroundMuted,
+    )
+  }
+}
+
 @Composable
 private fun AccountsList(
   provider: ProviderAccounts,
@@ -195,6 +237,7 @@ private fun AccountsList(
   snackbar: SnackbarStackState,
   failed: String,
   onAdd: () -> Unit,
+  onDelete: (AccountInfo) -> Unit,
   onReload: () -> Unit,
 ) {
   SettingsSection(title = stringResource(R.string.settings_accounts)) {
@@ -202,41 +245,19 @@ private fun AccountsList(
       SettingsCaption(text = stringResource(R.string.accounts_empty))
     }
     provider.accounts.forEach { account ->
-      SettingsRow(
-        title = account.label,
-        subtitle = account.masked + " · " + account.state,
-        onClick = {
-          scope.launch {
-            accountCall(Unit, snackbar, failed) {
-              accounts.activateAccount(account.id)
-              onReload()
-            }
-          }
-        },
-      ) {
-        if (account.state == "active") SettingsValue("✓")
-        IconButton28(
-          icon = R.drawable.ic_lucide_trash_2,
-          contentDescription = stringResource(R.string.accounts_remove),
-          onClick = {
-            scope.launch {
-              accountCall(Unit, snackbar, failed) {
-                accounts.removeAccount(account.id)
-                onReload()
-              }
-            }
-          },
-          tint = fangColors.foregroundMuted,
-        )
-      }
+      AccountRow(account, scope, accounts, snackbar, failed, onDelete, onReload)
       SettingsDivider()
     }
-    DashedActionRow(label = stringResource(R.string.accounts_add), icon = R.drawable.ic_lucide_plus, onClick = onAdd)
+    DashedActionRow(
+      label = stringResource(R.string.accounts_add),
+      icon = R.drawable.ic_lucide_plus,
+      onClick = onAdd,
+    )
   }
 }
 
 /** Runs an account call, showing its failure in the snackbar; [default] when it failed. */
-private suspend fun <T> accountCall(
+internal suspend fun <T> accountCall(
   default: T,
   snackbar: SnackbarStackState,
   failed: String,
@@ -251,7 +272,7 @@ private suspend fun <T> accountCall(
   default
 }
 
-private suspend fun loadAccounts(
+internal suspend fun loadAccounts(
   accounts: AccountRepository,
   providerId: String,
   snackbar: SnackbarStackState,
@@ -260,7 +281,7 @@ private suspend fun loadAccounts(
   accounts.accounts().filter { it.providerId == providerId }
 }
 
-private suspend fun saveApiKey(
+internal suspend fun saveApiKey(
   accounts: AccountRepository,
   providerId: String,
   label: String,

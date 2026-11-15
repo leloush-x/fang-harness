@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,8 +59,11 @@ internal fun ProvidersScreen(
   val accounts = LocalContext.current.appGraph.accountRepository
   val status by accounts.status.collectAsStateWithLifecycle()
   val refreshError by accounts.refreshError.collectAsStateWithLifecycle()
+  val snackbar = remember { SnackbarStackState() }
+  var signingIn by remember { mutableStateOf<String?>(null) }
+  var signIns by remember { mutableIntStateOf(0) }
   LaunchedEffect(Unit) { accounts.refresh() }
-  SettingsPage(title = stringResource(R.string.providers_title), onBack = onBack) {
+  SettingsPage(title = stringResource(R.string.providers_title), onBack = onBack, snackbar = snackbar) {
     val current = status
     val signedIn = subscriptions.filter { current?.isSignedIn(it.id) == true }
     val custom = current?.custom.orEmpty()
@@ -79,12 +83,14 @@ internal fun ProvidersScreen(
             leading = { ProviderLogo(subscription.id) },
           ) { Chevron() }
           SettingsDivider()
-          SettingsRow(
-            title = stringResource(R.string.settings_accounts),
-            subtitle = stringResource(R.string.settings_accounts_summary),
-            onClick = { onOpenAccounts(subscription.id) },
-            leading = { RowIcon(R.drawable.ic_lucide_key_round) },
-          ) { Chevron() }
+          ProviderAccountsPanel(
+            subscription = subscription,
+            accounts = accounts,
+            snackbar = snackbar,
+            refreshKey = signIns,
+            onAddOauth = { signingIn = it },
+            onManageAccounts = onOpenAccounts,
+          )
         }
         custom.forEachIndexed { index, provider ->
           if (index > 0 || signedIn.isNotEmpty()) SettingsDivider()
@@ -100,6 +106,16 @@ internal fun ProvidersScreen(
     DashedActionRow(label = stringResource(R.string.providers_add), icon = R.drawable.ic_lucide_plus, onClick = onAdd)
     current?.modelsError?.let { SettingsCaption(text = it.localized(), color = fangColors.destructive) }
     refreshError?.let { SettingsCaption(text = it, color = fangColors.destructive) }
+  }
+  signingIn?.let { id ->
+    LoginSheet(
+      providerId = id,
+      onDismiss = {
+        signingIn = null
+        signIns++
+        accounts.refresh()
+      },
+    )
   }
 }
 
