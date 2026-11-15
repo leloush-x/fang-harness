@@ -115,8 +115,9 @@ internal fun Composer(
   val tabs = controller.view.widgetTabs
   val widgets by controller.process.extensionWidgets.collectAsStateWithLifecycle()
   LaunchedEffect(widgets) { tabs.track(widgets) }
-  val above = remember(widgets, tabs) { widgetEdge(widgets, tabs, belowEditor = false) }
-  val below = remember(widgets, tabs) { widgetEdge(widgets, tabs, belowEditor = true) }
+  // The open tab is part of the key: without it, tapping a tab never invalidates the remembered panel.
+  val above = remember(widgets, tabs, tabs.open(belowEditor = false)) { widgetEdge(widgets, tabs, belowEditor = false) }
+  val below = remember(widgets, tabs, tabs.open(belowEditor = true)) { widgetEdge(widgets, tabs, belowEditor = true) }
   val openWidget = { key: String -> onSheet(ChatSheet.Widget(key)) }
   Box(
     modifier =
