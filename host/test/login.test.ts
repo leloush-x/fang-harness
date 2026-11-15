@@ -36,7 +36,7 @@ describe("login", () => {
     await removeDirs(dirs);
   });
 
-  it.each(["google", "zai", "kimi-coding", "openrouter"])("stores the API key the app enters for %s", async (providerId) => {
+  it.each(["google", "zai", "kimi-coding", "openrouter", "nvidia"])("stores the API key the app enters for %s", async (providerId) => {
     const { prompts, result } = await login(dirs, providerId, "key-123");
     expect(result).toMatchObject({ ok: true });
     expect(prompts).toEqual([expect.objectContaining({ type: "secret" })]);

@@ -463,6 +463,7 @@ async function mergeSessions(from: string, to: string): Promise<number> {
         await handle.close();
       }
       await rename(temporary, destination);
+      await chmod(destination, stats.mode & 0o7777);
       count++;
     }
   }
@@ -527,7 +528,6 @@ async function settleRestores(env: HostEnv, signal?: AbortSignal): Promise<void>
     await rm(`${staging}.complete`, { force: true });
     await rm(old, { recursive: true, force: true });
     await rm(`${old}.moved`, { force: true });
-  return restoredSessions;
   }
 }
 

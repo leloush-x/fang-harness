@@ -82,7 +82,7 @@ describe("configuration backups", () => {
     await pipeline(Readable.from(tarStream(list(entries))), createGzip(), createWriteStream(path.join(backups, name)));
   }
 
-  it("restores the configuration as it was backed up, leaving sessions, caches and logs alone", async () => {
+  it("restores the configuration as it was backed up, merging the chats back", async () => {
     const backedUp = await snapshot(dirs.configDir);
     const name = await backUp();
     expect(name).toMatch(/^fang-config-\d{8}T\d{6}Z\.tar\.gz$/);
@@ -97,10 +97,11 @@ describe("configuration backups", () => {
     await writeFile(path.join(dirs.configDir, "bin/rg"), "updated binary");
     await writeFile(path.join(dirs.configDir, "pi-debug.log"), "more log");
 
-    expect(await runMode("backup_restore", dirs, { name })).toEqual({ type: "fang_result", ok: true, data: {} });
+    const result = await runMode("backup_restore", dirs, { name });
+    expect(result).toMatchObject({ type: "fang_result", ok: true, data: { restoredSessions: expect.any(Number) } });
     expect(await snapshot(dirs.configDir)).toEqual({
       ...backedUp,
-      "sessions/--home--/a.jsonl": "file 644 session a\nnewer message\n",
+      "sessions/--home--/a.jsonl": "file 644 session a\n",
       "sessions/--home--/b.jsonl": "file 644 session b\n",
       "bin/rg": "file 644 updated binary",
       "pi-debug.log": "file 644 more log",
@@ -114,7 +115,7 @@ describe("configuration backups", () => {
     await rm(dirs.configDir, { recursive: true });
     expect(await runMode("backup_restore", dirs, { name })).toMatchObject({ ok: true });
     expect(await snapshot(dirs.configDir)).toEqual(
-      Object.fromEntries(Object.entries(backedUp).filter(([entry]) => !/^(sessions|bin|tmp|pi-debug\.log|crashes\.json)/.test(entry))),
+      Object.fromEntries(Object.entries(backedUp).filter(([entry]) => !/^(bin|tmp|pi-debug\.log|crashes\.json)/.test(entry))),
     );
   });
 
@@ -172,7 +173,6 @@ describe("configuration backups", () => {
     ["a path that climbs out", [file("config/../escape.json", "{}")]],
     ["an absolute path", [file("/etc/escape.json", "{}")]],
     ["a file outside config/", [file("other/settings.json", "{}")]],
-    ["the sessions folder", [file("config/sessions/--home--/a.jsonl", "replaced")]],
     ["Pi's downloaded tools", [file("config/bin/rg", "replaced")]],
     ["the same path twice", [file("config/settings.json", "1"), file("config/settings.json", "2")]],
     [
