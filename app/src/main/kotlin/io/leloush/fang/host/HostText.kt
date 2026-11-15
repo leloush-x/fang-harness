@@ -152,6 +152,14 @@ private val templates: Map<String, Template> = mapOf(
   "archive_unsupported_entry" to Template.Text(R.string.host_archive_unsupported_entry, listOf("path")),
   "archive_empty" to Template.Text(R.string.host_archive_empty),
 
+  "accounts_not_found" to Template.Text(R.string.host_accounts_not_found),
+  "accounts_bad_provider" to Template.Text(R.string.host_accounts_bad_provider),
+  "accounts_bad_kind" to Template.Text(R.string.host_accounts_bad_kind),
+  "accounts_duplicate" to Template.Text(R.string.host_accounts_duplicate),
+  "accounts_no_key" to Template.Text(R.string.host_accounts_no_key),
+  "accounts_store_broken" to Template.Text(R.string.host_accounts_store_broken),
+  "accounts_no_account" to Template.Text(R.string.host_accounts_no_account),
+
   "not_a_folder" to Template.Text(R.string.host_not_a_folder),
   "files_no_access" to Template.Text(R.string.host_files_no_access),
   "files_gone" to Template.Text(R.string.host_files_gone),

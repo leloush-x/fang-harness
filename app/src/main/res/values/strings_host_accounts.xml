@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="host_accounts_not_found">This account no longer exists</string>
+    <string name="host_accounts_bad_provider">This provider cannot hold accounts</string>
+    <string name="host_accounts_bad_kind">This provider signs in instead of taking an API key</string>
+    <string name="host_accounts_duplicate">This provider already has an account with that label</string>
+    <string name="host_accounts_no_key">The account needs an API key</string>
+    <string name="host_accounts_store_broken">The account list can\'t be read</string>
+    <string name="host_accounts_no_account">This provider has no account to use</string>
+</resources>
