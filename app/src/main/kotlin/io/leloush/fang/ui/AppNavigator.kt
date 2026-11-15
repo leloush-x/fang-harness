@@ -38,6 +38,9 @@ sealed interface Destination {
   /** [id] null adds a provider; otherwise edits the custom provider with that id. */
   data class ProviderEditor(val id: String?) : Destination
 
+  /** The accounts held for the provider with [providerId]. */
+  data class Accounts(val providerId: String) : Destination
+
   /** Adds models to the draft of the nearest subscription or provider page below it. */
   data object AddModels : Destination
 

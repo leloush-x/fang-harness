@@ -53,6 +53,7 @@ internal fun ProvidersScreen(
   onAdd: () -> Unit,
   onOpenSubscription: (id: String) -> Unit,
   onEditProvider: (id: String) -> Unit,
+  onOpenAccounts: (id: String) -> Unit,
 ) {
   val accounts = LocalContext.current.appGraph.accountRepository
   val status by accounts.status.collectAsStateWithLifecycle()
@@ -76,6 +77,13 @@ internal fun ProvidersScreen(
             subtitle = stringResource(subscription.subtitle),
             onClick = { onOpenSubscription(subscription.id) },
             leading = { ProviderLogo(subscription.id) },
+          ) { Chevron() }
+          SettingsDivider()
+          SettingsRow(
+            title = stringResource(R.string.settings_accounts),
+            subtitle = stringResource(R.string.settings_accounts_summary),
+            onClick = { onOpenAccounts(subscription.id) },
+            leading = { RowIcon(R.drawable.ic_lucide_key_round) },
           ) { Chevron() }
         }
         custom.forEachIndexed { index, provider ->

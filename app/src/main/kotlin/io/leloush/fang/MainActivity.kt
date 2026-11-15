@@ -172,6 +172,7 @@ private fun Screen(
       onAdd = { navigator.push(Destination.AddProvider) },
       onOpenSubscription = { navigator.push(Destination.Subscription(it)) },
       onEditProvider = { navigator.push(Destination.ProviderEditor(it)) },
+      onOpenAccounts = { navigator.push(Destination.Accounts(it)) },
     )
 
     Destination.AddProvider -> AddProviderScreen(
@@ -194,6 +195,8 @@ private fun Screen(
       onAddModels = { navigator.push(Destination.AddModels) },
       onOpenModel = { navigator.push(Destination.ModelEditor(it)) },
     )
+
+    is Destination.Accounts -> AccountsScreen(providerId = top.providerId, onBack = { navigator.pop() })
 
     Destination.AddModels -> AddModelsScreen(draft = remember { drafts.owner(shown) }, onBack = { navigator.pop() })
 

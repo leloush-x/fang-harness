@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_accounts">Accounts</string>
+    <string name="settings_accounts_summary">Several keys for one provider, pooled and switched automatically</string>
+    <string name="accounts_empty">No accounts yet</string>
+    <string name="accounts_strategy">Rotation</string>
+    <string name="accounts_strategy_round_robin">Round-robin</string>
+    <string name="accounts_strategy_sticky">Stay on one</string>
+    <string name="accounts_strategy_manual">Manual</string>
+    <string name="accounts_add">Add an account</string>
+    <string name="accounts_label">Label</string>
+    <string name="accounts_key">API key</string>
+    <string name="accounts_remove">Remove account</string>
+    <string name="provider_failed">Failed</string>
+</resources>
