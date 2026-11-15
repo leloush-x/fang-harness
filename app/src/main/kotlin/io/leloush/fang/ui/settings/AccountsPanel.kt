@@ -31,7 +31,6 @@ import io.leloush.fang.R
 import io.leloush.fang.data.AccountRepository
 import io.leloush.fang.host.AccountInfo
 import io.leloush.fang.host.ProviderAccounts
-import io.leloush.fang.ui.components.DashedActionRow
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.theme.FangTokens
@@ -131,8 +130,10 @@ private fun AccountsExpanded(
     ) {
       when {
         list == null -> SettingsCaption(text = stringResource(R.string.accounts_loading))
+
         provider == null || provider.accounts.isEmpty() ->
           SettingsCaption(text = stringResource(R.string.accounts_empty))
+
         else -> AccountsPanelList(provider, actions, state, onReload)
       }
       AccountsPanelFooter(
