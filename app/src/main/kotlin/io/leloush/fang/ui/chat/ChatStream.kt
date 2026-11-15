@@ -64,7 +64,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** Scrolls past the end of the last item; the list clamps it to the bottom. */
-private const val FOLLOW_OFFSET = 1_000_000
+private const val FOLLOW_OFFSET = 4096
 
 /**
  * The longest a newly shown list waits for its replies' parses before drawing them unparsed. A parse is quick unless

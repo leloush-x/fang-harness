@@ -115,8 +115,8 @@ internal fun Composer(
   val tabs = controller.view.widgetTabs
   val widgets by controller.process.extensionWidgets.collectAsStateWithLifecycle()
   LaunchedEffect(widgets) { tabs.track(widgets) }
-  val above = widgetEdge(widgets, tabs, belowEditor = false)
-  val below = widgetEdge(widgets, tabs, belowEditor = true)
+  val above = remember(widgets, tabs) { widgetEdge(widgets, tabs, belowEditor = false) }
+  val below = remember(widgets, tabs) { widgetEdge(widgets, tabs, belowEditor = true) }
   val openWidget = { key: String -> onSheet(ChatSheet.Widget(key)) }
   Box(
     modifier =

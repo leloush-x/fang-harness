@@ -1,8 +1,15 @@
 package io.leloush.fang.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -39,7 +46,16 @@ fun SimmeringPot(
 ) {
   val icon = ImageVector.vectorResource(R.drawable.ic_launcher_foreground)
   val pot = remember(icon) { Pot(icon) }
-  Canvas(modifier.size(size)) { pot.draw(this, tint) }
+  // The pot breathes while it stands in for a running chat: a gentle alpha pulse is the only motion, so a
+  // reply that is still streaming gives a cue without redrawing the pot's paths every frame.
+  val transition = rememberInfiniteTransition(label = "simmering")
+  val alpha by transition.animateFloat(
+    initialValue = 0.55f,
+    targetValue = 1f,
+    animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+    label = "alpha",
+  )
+  Canvas(modifier.size(size)) { pot.draw(this, tint.copy(alpha = tint.alpha * alpha)) }
 }
 
 /** The launcher icon's parts as paths. */

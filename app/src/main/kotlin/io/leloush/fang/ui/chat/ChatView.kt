@@ -84,7 +84,10 @@ internal class ChatViews {
       .distinctUntilChanged()
       .collectLatest { hidden ->
         coroutineScope {
-          for (process in hidden) launch { warm(process) }
+          // Warming parses the tail of every hidden chat's markdown off the main thread, which is a steady
+          // CPU cost with several background chats. Cap how many are warmed at once so one chat switch can't
+          // trigger a parse storm.
+          for (process in hidden.take(4)) launch { warm(process) }
         }
       }
   }
