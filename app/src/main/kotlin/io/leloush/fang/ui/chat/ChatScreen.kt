@@ -85,6 +85,10 @@ internal fun ChatScreen(
     val controller = remember {
       ChatController(process, views[process], context.applicationContext, scope, snackbar, navigator)
     }
+    // One collector for the whole chat: the timeline drives the stream, the header, the dialog, the steering box
+    // and the composer, and a second collector (in ChatSheets) used to invalidate the sheet branch on every
+    // streamed token.
+    val timeline by process.screenTimeline.collectAsStateWithLifecycle()
     LaunchedEffect(controller) { controller.collectEffects() }
     LaunchedEffect(controller) { controller.steering.collectQueue() }
     ChatContent(
@@ -93,12 +97,14 @@ internal fun ChatScreen(
       controls,
       onOpenProviders,
       onOpenOnboarding,
+      timeline = timeline,
       onSheet = { sheet = it },
       modifier,
     )
     ChatSheets(
       controller,
       sheet,
+      timeline = timeline,
       onSheet = { sheet = it },
       onNewChat = { actions.newChat(controls.pane, it) },
       onNewTerminal = { context.appGraph.terminals.open(controls.pane, process.cwd) },
@@ -141,11 +147,11 @@ private fun ChatContent(
   controls: PaneControls,
   onOpenProviders: () -> Unit,
   onOpenOnboarding: () -> Unit,
+  timeline: TimelineState,
   onSheet: (ChatSheet) -> Unit,
   modifier: Modifier,
 ) {
   val process = controller.process
-  val timeline by process.screenTimeline.collectAsStateWithLifecycle()
   val working by process.working.collectAsStateWithLifecycle()
   val keyboard = LocalSoftwareKeyboardController.current
   val focus = LocalFocusManager.current
@@ -293,7 +299,7 @@ private fun ChatHeader(process: AgentProcess, controls: PaneControls, onActions:
   val sessions by graph.sessionRepository.sessions.collectAsStateWithLifecycle()
   val hello by graph.hostClient.lastHello.collectAsStateWithLifecycle()
   val tabs = rememberWorkspaceTabs(controls.pane, process.cwd)
-  val firstMessage = sessions.firstOrNull { it.path == sessionFile }?.firstMessage?.takeIf { it.isNotBlank() }
+  val firstMessage = remember(sessions, sessionFile) { sessions.firstOrNull { it.path == sessionFile }?.firstMessage?.takeIf { it.isNotBlank() } }
   val statuses by process.extensionStatuses.collectAsStateWithLifecycle()
   val colors = fangColors
   val status = remember(statuses, colors) { extensionStatusLine(statuses, colors) }
@@ -344,13 +350,13 @@ private fun PlaceholderChat(controls: PaneControls, modifier: Modifier) {
 private fun ChatSheets(
   controller: ChatController,
   sheet: ChatSheet?,
+  timeline: TimelineState,
   onSheet: (ChatSheet?) -> Unit,
   onNewChat: (cwd: String) -> Unit,
   onNewTerminal: () -> Unit,
   onArchive: (AgentProcess) -> Unit,
 ) {
   val process = controller.process
-  val timeline by process.screenTimeline.collectAsStateWithLifecycle()
   // Reloading or archiving ends Pi, and with it a run or background tasks.
   val holdsPi by process.holdsPi.collectAsStateWithLifecycle()
   val sessionFile by process.sessionFile.collectAsStateWithLifecycle()

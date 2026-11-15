@@ -51,7 +51,7 @@ interface Manifest {
   version: number;
   createdAt: string;
   piVersion: string | null;
-  sessions?: number;
+  sessions?: number | undefined;
 }
 
 /** A backup's file name as the app names it: a plain `.tar.gz` name in the backups folder. */
