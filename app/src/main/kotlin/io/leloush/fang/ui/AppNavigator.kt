@@ -112,6 +112,7 @@ class AppNavigator(initial: List<Destination>) {
       Destination.AddProvider -> ADD_PROVIDER
       is Destination.Subscription -> SUBSCRIPTION + d.id
       is Destination.ProviderEditor -> PROVIDER + d.id.orEmpty()
+      is Destination.Accounts -> ACCOUNTS + d.providerId
       Destination.AddModels -> ADD_MODELS
       is Destination.ModelEditor -> MODEL + d.modelId
       Destination.Archive, is Destination.ArchivedChat, is Destination.ArchivedSubagent -> archiveKey(d)
@@ -176,6 +177,7 @@ class AppNavigator(initial: List<Destination>) {
     private const val ONBOARDING = "onboarding"
     private const val PROVIDER = "provider:"
     private const val PROVIDERS = "providers"
+    private const val ACCOUNTS = "accounts:"
     private const val ADD_PROVIDER = "add-provider"
     private const val SUBSCRIPTION = "subscription:"
     private const val ADD_MODELS = "add-models"

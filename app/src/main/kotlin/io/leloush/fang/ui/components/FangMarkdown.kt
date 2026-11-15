@@ -58,10 +58,6 @@ fun FangMarkdown(markdown: String, modifier: Modifier = Modifier, cache: Markdow
     CodeBox(modifier = Modifier.padding(vertical = FangTokens.Spacing.s6)) { CodeText(text, language) }
   }
   val state = rememberParsedMarkdown(markdown, cache)
-  // The text-size animation relayouts every frame a streamed block grows and leaves the chat's end moving after
-  // the text has landed. Keep it for finished text (cache present) and turn it off while the reply is streaming.
-  val streaming = cache == null
-  val animations = if (streaming) null else markdownAnimations(animateTextSize = { this })
   SelectionContainer(modifier = modifier) {
     Markdown(
       state = state,
@@ -82,7 +78,9 @@ fun FangMarkdown(markdown: String, modifier: Modifier = Modifier, cache: Markdow
           codeBlock = { MarkdownCodeBlock(it.content, it.node, style = it.typography.code, block = codeBlock) },
           table = { MarkdownTable(it.content, it.node, it.typography.table) },
         ),
-      animations = animations,
+      // The library animates each text block's size by default, which relayouts every frame a streamed
+      // block grows and leaves the chat's end moving after the text has landed.
+      animations = markdownAnimations(animateTextSize = { this }),
       annotator = imageAltAnnotator(),
     )
   }

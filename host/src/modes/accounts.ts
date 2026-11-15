@@ -16,8 +16,8 @@ interface Account {
   id: string;
   label: string;
   kind: AccountKind;
-  key?: string;
-  credential?: { access: string; refresh: string; expires: number };
+  key?: string | undefined;
+  credential?: { access: string; refresh: string; expires: number } | undefined;
   enabled: boolean;
   state: "active" | "disabled" | "cooldown";
   failures: number;
