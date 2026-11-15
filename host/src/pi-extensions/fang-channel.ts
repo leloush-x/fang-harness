@@ -76,6 +76,14 @@ function hostSocketPresent(): boolean {
 
 const SHARED = Symbol.for("fang.channel");
 
+/**
+ * Whether this Pi runs under Fang's host, so that [fangChannel] reaches the app. An extension that can work both ways —
+ * asking on the channel when there is one, and falling back to Pi's own dialogs when there is not — asks this first.
+ */
+export function fangChannelAvailable(): boolean {
+  return hostSocketPresent();
+}
+
 /** This Pi's channel to the app, opened by the first extension that asks. */
 export function fangChannel(): FangChannel {
   const global = globalThis as { [SHARED]?: FangChannel };
