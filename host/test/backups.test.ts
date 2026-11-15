@@ -40,7 +40,8 @@ describe("configuration backups", () => {
 
   beforeEach(async () => {
     dirs = await makeDirs();
-    backups = path.join(dirs.base, "backups");
+    backups = path.join(dirs.shared, "Download", "fang-harness", "backup");
+    await mkdir(backups, { recursive: true });
     const config = dirs.configDir;
     await mkdir(path.join(config, "extensions/empty"), { recursive: true });
     await mkdir(path.join(config, "npm/node_modules/tool/bin"), { recursive: true });
@@ -106,7 +107,7 @@ describe("configuration backups", () => {
       "bin/rg": "file 644 updated binary",
       "pi-debug.log": "file 644 more log",
     });
-    expect((await readdir(dirs.base)).toSorted()).toEqual(["backups", "config", "home", "prefix", "root", "shared"]);
+    expect((await readdir(dirs.base)).toSorted()).toEqual(["config", "home", "prefix", "root", "shared"]);
   });
 
   it("restores into a config folder that no longer exists", async () => {
@@ -166,7 +167,7 @@ describe("configuration backups", () => {
     expect(await runMode("backup_restore", dirs, { name })).toMatchObject({ ok: false, code: "bad_backup" });
 
     expect(await snapshot(dirs.configDir)).toEqual(before);
-    expect((await readdir(dirs.base)).toSorted()).toEqual(["backups", "config", "home", "prefix", "root", "shared"]);
+    expect((await readdir(dirs.base)).toSorted()).toEqual(["config", "home", "prefix", "root", "shared"]);
   });
 
   it.each([
@@ -188,7 +189,7 @@ describe("configuration backups", () => {
     const before = await snapshot(dirs.configDir);
     expect(await runMode("backup_restore", dirs, { name: "crafted.tar.gz" })).toMatchObject({ ok: false, code: "bad_backup" });
     expect(await snapshot(dirs.configDir)).toEqual(before);
-    expect((await readdir(dirs.base)).toSorted()).toEqual(["backups", "config", "home", "prefix", "root", "shared"]);
+    expect((await readdir(dirs.base)).toSorted()).toEqual(["config", "home", "prefix", "root", "shared"]);
   });
 
   it("refuses an archive without Fang Harness's manifest", async () => {
@@ -241,7 +242,7 @@ describe("configuration backups", () => {
     expect(entries).toEqual(["bin", "crashes.json", "pi-debug.log", "sessions", "settings.json", "tmp"]);
     expect(await readFile(path.join(dirs.configDir, "settings.json"), "utf8")).toBe('{"restored":true}');
     expect(await readFile(path.join(dirs.configDir, "sessions/--home--/a.jsonl"), "utf8")).toBe("session a\n");
-    expect((await readdir(dirs.base)).toSorted()).toEqual(["backups", "config", "home", "prefix", "root", "shared"]);
+    expect((await readdir(dirs.base)).toSorted()).toEqual(["config", "home", "prefix", "root", "shared"]);
   });
 
   it("discards a restore that a crash cut short while unpacking", async () => {
@@ -251,11 +252,10 @@ describe("configuration backups", () => {
     await writeFile(path.join(staging, "settings.json"), "{ half");
     expect(await runMode("backup_create", dirs, {})).toMatchObject({ ok: true });
     expect(await snapshot(dirs.configDir)).toEqual(before);
-    expect((await readdir(dirs.base)).toSorted()).toEqual(["backups", "config", "home", "prefix", "root", "shared"]);
+    expect((await readdir(dirs.base)).toSorted()).toEqual(["config", "home", "prefix", "root", "shared"]);
   });
 
   it("removes a backup a crash left half-written", async () => {
-    await mkdir(backups);
     await writeFile(path.join(backups, ".fang-config-x.tar.gz.partial-123"), "half");
     const name = await backUp();
     expect(await readdir(backups)).toEqual([name]);
@@ -307,7 +307,7 @@ describe("configuration backups", () => {
       await rm(path.join(proc, "4242"), { recursive: true });
       expect(await restore).toMatchObject({ ok: true });
       expect(await readFile(path.join(dirs.configDir, "settings.json"), "utf8")).toBe('{"theme":"dark"}');
-      expect((await readdir(dirs.base)).toSorted()).toEqual(["backups", "config", "home", "prefix", "proc", "root", "shared"]);
+      expect((await readdir(dirs.base)).toSorted()).toEqual(["config", "home", "prefix", "proc", "root", "shared"]);
     });
 
     it("ignores Pi running on another config folder and other programs", async () => {
@@ -328,8 +328,25 @@ describe("configuration backups", () => {
         i18n: { key: "pi_running", args: { processes: expect.any(String) } },
       });
       expect(await readFile(path.join(dirs.configDir, "settings.json"), "utf8")).toBe("{ broken");
-      expect((await readdir(dirs.base)).toSorted()).toEqual(["backups", "config", "home", "prefix", "proc", "root", "shared"]);
+      expect((await readdir(dirs.base)).toSorted()).toEqual(["config", "home", "prefix", "proc", "root", "shared"]);
     });
+  });
+
+  it("moves backups made before they lived on shared storage into it", async () => {
+    const legacy = path.join(dirs.base, "backups");
+    await mkdir(legacy, { recursive: true });
+    await pipeline(Readable.from(tarStream(list([file("manifest.json", MANIFEST)]))), createGzip(), createWriteStream(path.join(legacy, "legacy.tar.gz")));
+    expect(await runMode("backups", dirs, {})).toMatchObject({ ok: true, data: { dir: backups } });
+    expect(await readdir(legacy)).toEqual([]);
+    expect(await readdir(backups)).toEqual(["legacy.tar.gz"]);
+  });
+
+  it("keeps backups private when shared storage is not granted", async () => {
+    const nowhere = path.join(dirs.base, "nowhere");
+    expect(await runMode("backup_create", dirs, {}, { EXTERNAL_STORAGE: nowhere })).toMatchObject({ ok: true });
+    const result = await runMode("backups", dirs, {}, { EXTERNAL_STORAGE: nowhere });
+    expect(result).toMatchObject({ ok: true, data: { dir: path.join(dirs.base, "backups") } });
+    expect(await readdir(path.join(dirs.base, "backups"))).toHaveLength(1);
   });
 
   it("keeps the backup's file permissions", async () => {
