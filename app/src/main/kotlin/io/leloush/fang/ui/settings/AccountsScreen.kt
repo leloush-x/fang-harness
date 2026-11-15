@@ -1,7 +1,6 @@
 package io.leloush.fang.ui.settings
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,6 +21,7 @@ import io.leloush.fang.host.AccountInfo
 import io.leloush.fang.host.HostRejected
 import io.leloush.fang.host.ProviderAccounts
 import io.leloush.fang.ui.chat.ConfirmDialog
+import io.leloush.fang.ui.chat.TextInputDialog
 import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.theme.FangTokens
@@ -29,10 +29,6 @@ import io.leloush.fang.ui.theme.fangColors
 import java.io.IOException
 import kotlinx.coroutines.launch
 
-/**
- * The accounts held for one provider, with the rotation strategy. A provider can hold several API keys or sign-ins;
- * Fang Harness picks one per chat and disables or cools down one that fails.
- */
 @Composable
 internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
   val context = LocalContext.current
@@ -46,13 +42,7 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
   var deleting by remember { mutableStateOf<AccountInfo?>(null) }
   val failed = stringResource(R.string.provider_failed)
   LaunchedEffect(reloads) {
-    list = try {
-      accounts.accounts().filter { it.providerId == providerId }
-    } catch (failure: IOException) {
-      emptyList()
-    } catch (rejected: HostRejected) {
-      emptyList()
-    }
+    list = loadAccounts(accounts, providerId, snackbar, failed)
   }
   val provider = list.firstOrNull()
   SettingsPage(title = stringResource(R.string.settings_accounts), onBack = onBack, snackbar = snackbar) {
@@ -60,57 +50,8 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
       SettingsCaption(text = stringResource(R.string.accounts_empty))
       return@SettingsPage
     }
-    // Strategy
-    SettingsSection(title = stringResource(R.string.accounts_strategy)) {
-      listOf("round_robin", "sticky", "manual").forEach { strategy ->
-        val selected = provider.strategy == strategy
-        SettingsRow(
-          title = stringResource(
-            when (strategy) {
-              "sticky" -> R.string.accounts_strategy_sticky
-              "manual" -> R.string.accounts_strategy_manual
-              else -> R.string.accounts_strategy_round_robin
-            },
-          ),
-          onClick = {
-            scope.launch {
-              try {
-                accounts.accountStrategy(providerId, strategy)
-                reloads++
-              } catch (failure: IOException) {
-                snackbar.show(failure.message ?: failed)
-              } catch (rejected: HostRejected) {
-                snackbar.show(rejected.error.ifEmpty { failed })
-              }
-            }
-          },
-        ) {
-          if (selected) SettingsValue("✓")
-        }
-        SettingsDivider()
-      }
-    }
-    // Accounts
-    SettingsSection(title = stringResource(R.string.settings_accounts)) {
-      if (provider.accounts.isEmpty()) {
-        SettingsCaption(text = stringResource(R.string.accounts_empty))
-      }
-      provider.accounts.forEach { account ->
-        SettingsRow(
-          title = account.label,
-          subtitle = account.masked + " · " + account.state,
-        ) {
-          IconButton28(
-            icon = R.drawable.ic_lucide_trash_2,
-            contentDescription = stringResource(R.string.accounts_remove),
-            onClick = { deleting = account },
-            tint = fangColors.foregroundMuted,
-          )
-        }
-        SettingsDivider()
-      }
-      DashedActionRow(label = stringResource(R.string.accounts_add), onClick = { addingLabel = true })
-    }
+    AccountsStrategy(provider, accounts, scope, snackbar, failed, reloads) { reloads++ }
+    AccountsList(provider, scope, accounts, snackbar, failed, reloads, onAdd = { addingLabel = true }) { reloads++ }
   }
   if (addingLabel) {
     TextInputDialog(
@@ -119,10 +60,7 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
       placeholder = null,
       confirmLabel = stringResource(R.string.accounts_add),
       multiline = false,
-      onConfirm = { label ->
-        addingLabel = false
-        addingKey = label
-      },
+      onConfirm = { label -> addingLabel = false; addingKey = label },
       onDismiss = { addingLabel = false },
     )
   }
@@ -171,4 +109,104 @@ internal fun AccountsScreen(providerId: String, onBack: () -> Unit) {
       onDismiss = { deleting = null },
     )
   }
+}
+
+@Composable
+private fun AccountsStrategy(
+  provider: ProviderAccounts,
+  accounts: AccountRepository,
+  scope: kotlinx.coroutines.CoroutineScope,
+  snackbar: SnackbarStackState,
+  failed: String,
+  reloads: Int,
+  onReload: () -> Unit,
+) {
+  SettingsSection(title = stringResource(R.string.accounts_strategy)) {
+    listOf("round_robin", "sticky", "manual").forEach { strategy ->
+      val selected = provider.strategy == strategy
+      SettingsRow(
+        title = stringResource(
+          when (strategy) {
+            "sticky" -> R.string.accounts_strategy_sticky
+            "manual" -> R.string.accounts_strategy_manual
+            else -> R.string.accounts_strategy_round_robin
+          },
+        ),
+        onClick = {
+          scope.launch {
+            try {
+              accounts.accountStrategy(provider.providerId, strategy)
+              onReload()
+            } catch (failure: IOException) {
+              snackbar.show(failure.message ?: failed)
+            } catch (rejected: HostRejected) {
+              snackbar.show(rejected.error.ifEmpty { failed })
+            }
+          }
+        },
+      ) {
+        if (selected) SettingsValue("✓")
+      }
+      SettingsDivider()
+    }
+  }
+}
+
+@Composable
+private fun AccountsList(
+  provider: ProviderAccounts,
+  scope: kotlinx.coroutines.CoroutineScope,
+  accounts: AccountRepository,
+  snackbar: SnackbarStackState,
+  failed: String,
+  reloads: Int,
+  onAdd: () -> Unit,
+  onReload: () -> Unit,
+) {
+  SettingsSection(title = stringResource(R.string.settings_accounts)) {
+    if (provider.accounts.isEmpty()) {
+      SettingsCaption(text = stringResource(R.string.accounts_empty))
+    }
+    provider.accounts.forEach { account ->
+      SettingsRow(
+        title = account.label,
+        subtitle = account.masked + " · " + account.state,
+      ) {
+        IconButton28(
+          icon = R.drawable.ic_lucide_trash_2,
+          contentDescription = stringResource(R.string.accounts_remove),
+          onClick = {
+            scope.launch {
+              try {
+                accounts.removeAccount(account.id)
+                onReload()
+              } catch (failure: IOException) {
+                snackbar.show(failure.message ?: failed)
+              } catch (rejected: HostRejected) {
+                snackbar.show(rejected.error.ifEmpty { failed })
+              }
+            }
+          },
+          tint = fangColors.foregroundMuted,
+        )
+      }
+      SettingsDivider()
+    }
+    DashedActionRow(label = stringResource(R.string.accounts_add), onClick = onAdd)
+  }
+}
+
+private suspend fun loadAccounts(
+  accounts: AccountRepository,
+  providerId: String,
+  snackbar: SnackbarStackState,
+  failed: String,
+): List<ProviderAccounts> = try {
+  accounts.accounts().filter { it.providerId == providerId }
+} catch (failure: IOException) {
+  snackbar.show(failure.message ?: failed)
+  emptyList()
+} catch (rejected: HostRejected) {
+  snackbar.show(rejected.error.ifEmpty { failed })
+  emptyList()
 }

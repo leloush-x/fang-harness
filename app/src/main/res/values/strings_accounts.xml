@@ -11,5 +11,4 @@
     <string name="accounts_label">Label</string>
     <string name="accounts_key">API key</string>
     <string name="accounts_remove">Remove account</string>
-    <string name="provider_failed">Failed</string>
 </resources>
