@@ -12,8 +12,8 @@ import io.leloush.fang.host.ModelConfig
 import io.leloush.fang.host.ProviderAccounts
 import io.leloush.fang.host.ProviderConfig
 import java.io.IOException
-import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
+import org.json.JSONObject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -95,7 +95,14 @@ internal class AccountRepository(
 
   suspend fun accounts(): List<ProviderAccounts> = hostClient.accounts()
 
-  suspend fun saveAccount(providerId: String, label: String, kind: String, apiKey: String, credential: JSONObject?, enabled: Boolean) {
+  suspend fun saveAccount(
+    providerId: String,
+    label: String,
+    kind: String,
+    apiKey: String,
+    credential: JSONObject?,
+    enabled: Boolean,
+  ) {
     hostClient.accountSave(
       JSONObject()
         .put("providerId", providerId)

@@ -42,6 +42,7 @@ import io.leloush.fang.ui.archive.ArchiveScreen
 import io.leloush.fang.ui.archive.ArchivedChatScreen
 import io.leloush.fang.ui.onboarding.OnboardingScreen
 import io.leloush.fang.ui.onboarding.PermissionsScreen
+import io.leloush.fang.ui.settings.AccountsScreen
 import io.leloush.fang.ui.settings.AddModelsScreen
 import io.leloush.fang.ui.settings.AddProviderScreen
 import io.leloush.fang.ui.settings.AdvancedScreen
@@ -52,7 +53,6 @@ import io.leloush.fang.ui.settings.ModelEditorScreen
 import io.leloush.fang.ui.settings.ProviderDrafts
 import io.leloush.fang.ui.settings.ProviderEditorScreen
 import io.leloush.fang.ui.settings.ProvidersScreen
-import io.leloush.fang.ui.settings.AccountsScreen
 import io.leloush.fang.ui.settings.SettingsScreen
 import io.leloush.fang.ui.settings.SubscriptionScreen
 import io.leloush.fang.ui.settings.ownsDraft

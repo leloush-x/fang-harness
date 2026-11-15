@@ -91,7 +91,10 @@ private fun AccountsDialogs(
       placeholder = null,
       confirmLabel = stringResource(R.string.accounts_add),
       multiline = false,
-      onConfirm = { label -> onAddingLabelChange(false); onAddingKeyChange(label) },
+      onConfirm = { label ->
+        onAddingLabelChange(false)
+        onAddingKeyChange(label)
+      },
       onDismiss = { onAddingLabelChange(false) },
     )
   }

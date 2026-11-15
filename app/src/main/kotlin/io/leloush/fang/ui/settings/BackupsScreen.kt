@@ -250,7 +250,11 @@ private fun OutcomeCaption(outcome: BackupOutcome, failed: String) {
   val (text, color) =
     when (outcome) {
       BackupOutcome.Created -> stringResource(R.string.backups_created) to fangColors.foregroundMuted
-      is BackupOutcome.Restored -> (if (outcome.sessions != null) stringResource(R.string.backups_restored_chats, outcome.sessions) else stringResource(R.string.backups_restored)) to fangColors.foregroundMuted
+      is BackupOutcome.Restored ->
+        (
+          if (outcome.sessions != null) stringResource(R.string.backups_restored_chats, outcome.sessions)
+          else stringResource(R.string.backups_restored)
+        ) to fangColors.foregroundMuted
       is BackupOutcome.Failed -> (outcome.message ?: failed) to fangColors.destructive
     }
   SettingsCaption(text = text, color = color)
