@@ -462,7 +462,7 @@ internal class AgentProcess(
    * too, so their notices wait for the new history. The new session starts with the notices that followed messages it
    * kept, unless it has saved notices of its own.
    */
-  suspend fun moveSession(command: String, params: JSONObject = JSONObject()): JSONObject? {
+  suspend fun moveSession(command: String, params: JSONObject = JSONObject(), removeOld: Boolean = false): JSONObject? {
     val left = takeDownExtensionUi()
     val previousFile = sessionFileState.value
     timeline.awaitHistory()
@@ -482,6 +482,9 @@ internal class AgentProcess(
     applyState(call("get_state"))
     val messages = getMessages()
     val path = sessionFileState.value
+    // Edit and delete fork to a fresh file: drop the one left behind so the chat does not show twice. The move already
+    // happened, so a failed cleanup is not reported as a failed edit.
+    if (removeOld && previousFile != null && previousFile != path) runCatching { sessions.delete(listOf(previousFile)) }
     val saved = path?.let { withContext(Dispatchers.IO) { sessions.notices.load(it) } }.orEmpty()
     val kept = messageTimestamps(messages)
     timeline.restoreNotices { placed -> saved.ifEmpty { placed.filter { it.after == null || it.after in kept } } }

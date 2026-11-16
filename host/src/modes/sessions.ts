@@ -20,7 +20,12 @@ async function isDirectory(path: string): Promise<boolean> {
  */
 export async function sessions(ctx: ModeContext): Promise<JsonObject> {
   const { SessionManager } = await loadPi(ctx.env.root);
-  const all = await SessionManager.listAll(undefined, ctx.signal);
+  const seen = new Set<string>();
+  const all = (await SessionManager.listAll(undefined, ctx.signal)).filter((session) => {
+    if (seen.has(session.path)) return false;
+    seen.add(session.path);
+    return true;
+  });
   all.sort((a, b) => b.modified.getTime() - a.modified.getTime());
   const cwds = [...new Set(all.map((session) => session.cwd))];
   const [exists, subagents] = await Promise.all([

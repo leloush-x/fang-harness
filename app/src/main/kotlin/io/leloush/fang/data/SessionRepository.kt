@@ -74,6 +74,11 @@ internal class SessionRepository(
   suspend fun delete(paths: Collection<String>) {
     hostClient.deleteSessions(paths.toList())
     notices.delete(paths)
+    paths.forEach { path ->
+      extensionTitles.keep(path, null)
+      extensionStatuses.keep(path, null)
+      extensionWidgets.keep(path, null)
+    }
     sessionsState.value = sessionsState.value.filterNot { it.path in paths }
     refresh()
   }
@@ -83,7 +88,7 @@ internal class SessionRepository(
 
   private suspend fun load() {
     try {
-      sessionsState.value = hostClient.sessions()
+      sessionsState.value = hostClient.sessions().distinctBy { it.path }
     } catch (error: IOException) {
       Log.w(TAG, "Refreshing sessions failed", error)
     } catch (error: HostRejected) {

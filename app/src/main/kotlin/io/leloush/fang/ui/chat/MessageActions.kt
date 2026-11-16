@@ -17,7 +17,8 @@ import kotlinx.coroutines.launch
  * [ChatController.setDraftText], [ChatController.process]).
  *
  * Pi has no command to change a message that was sent, so editing and deleting fork the chat: the session is cut
- * before that message and continues in a new one, which is what `/fork` does as well.
+ * before that message and continues in a new one. Unlike `/fork`, which keeps both branches, these actions delete the
+ * old session so the edited chat replaces the original instead of appearing as a duplicate.
  */
 internal class MessageActions(private val controller: ChatController) {
   /** The message whose deletion the user is asked to confirm. */
@@ -45,7 +46,7 @@ internal class MessageActions(private val controller: ChatController) {
       controller.show(R.string.chat_message_action_failed)
       return@launchRpc
     }
-    val text = controller.process.fork(entryId)
+    val text = controller.process.fork(entryId, removeOld = true)
     if (text == null) {
       controller.show(R.string.chat_message_action_failed)
     } else {
@@ -61,10 +62,8 @@ internal class MessageActions(private val controller: ChatController) {
       controller.show(R.string.chat_message_action_failed)
       return@launchRpc
     }
-    val text = controller.process.fork(entryId)
-    if (text ==
-      null
-    ) {
+    val text = controller.process.fork(entryId, removeOld = true)
+    if (text == null) {
       controller.show(R.string.chat_message_action_failed)
     } else {
       controller.show(R.string.chat_message_deleted)

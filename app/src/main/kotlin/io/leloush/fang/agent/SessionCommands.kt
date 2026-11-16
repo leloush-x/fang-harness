@@ -35,8 +35,8 @@ internal suspend fun AgentProcess.forkMessages(): List<JSONObject> =
  * composer, or null when an extension cancelled the fork. Waits without a deadline: Pi answers after the extensions'
  * `session_before_fork` handlers, which can wait on the user.
  */
-internal suspend fun AgentProcess.fork(entryId: String): String? {
-  val data = moveSession("fork", JSONObject().put("entryId", entryId)) ?: return null
+internal suspend fun AgentProcess.fork(entryId: String, removeOld: Boolean = false): String? {
+  val data = moveSession("fork", JSONObject().put("entryId", entryId), removeOld = removeOld) ?: return null
   return typedText(data.optString("text"))
 }
 
