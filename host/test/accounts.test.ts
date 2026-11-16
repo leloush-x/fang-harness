@@ -74,6 +74,17 @@ describe("account pool", () => {
     expect(providerCount(list)).toBe(1);
   });
 
+  it("migrates only providers whose pool is empty", async () => {
+    await writeFile(
+      path.join(dirs.configDir, "auth.json"),
+      JSON.stringify({ zai: { type: "api_key", key: "key-zai" }, google: { type: "api_key", key: "key-google" } }),
+    );
+    await runOp("accounts_save", dirs, { providerId: "zai", label: "A", kind: "api_key", apiKey: "key-zai" });
+    expect(await runOp("accounts_migrate", dirs, {})).toMatchObject({ data: { added: 1 } });
+    expect(await runOp("accounts_migrate", dirs, {})).toMatchObject({ data: { added: 0 } });
+    expect(providerCount(await runOp("accounts_list", dirs, {}))).toBe(2);
+  });
+
   it("rotates the least recently used key and advances its last use", async () => {
     await runOp("accounts_save", dirs, { providerId: "zai", label: "A", kind: "api_key", apiKey: "key-a" });
     await runOp("accounts_save", dirs, { providerId: "zai", label: "B", kind: "api_key", apiKey: "key-b" });

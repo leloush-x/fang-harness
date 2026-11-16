@@ -310,6 +310,24 @@ export async function accountsCapture(ctx: ModeContext): Promise<JsonObject> {
   });
 }
 
+/**
+ * Copies stored sign-ins into pools that are still empty, for installs that predate capture. Safe on every page visit:
+ * a provider that already has accounts is left alone, so a rotated OAuth token never adds a second entry.
+ */
+export async function accountsMigrate(ctx: ModeContext): Promise<JsonObject> {
+  return withConfigLock(ctx.env, async () => {
+    const stored = await readAuthFile(ctx.env.configDir);
+    const data = await readAccounts(ctx.env.configDir);
+    let added = 0;
+    for (const providerId of BUILTIN_PROVIDERS) {
+      if ((data.providers[providerId]?.accounts.length ?? 0) > 0) continue;
+      if (await captureInto(data, providerId, stored[providerId])) added++;
+    }
+    if (added > 0) await writeAccounts(ctx.env.configDir, data);
+    return { added };
+  });
+}
+
 /** One pooled account the host can run, as the picker needs it. */
 export interface PickedAccount {
   accountId: string;

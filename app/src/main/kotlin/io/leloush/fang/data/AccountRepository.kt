@@ -122,6 +122,11 @@ internal class AccountRepository(
     changed()
   }
 
+  /** Fills pools that predate capture; safe to call whenever the providers page opens. */
+  suspend fun migrateAccounts() {
+    runCatching { hostClient.accountMigrate() }
+  }
+
   suspend fun activateAccount(id: String) {
     hostClient.accountActivate(id)
     changed()

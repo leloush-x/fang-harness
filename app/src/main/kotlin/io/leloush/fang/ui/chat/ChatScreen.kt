@@ -14,6 +14,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -89,6 +90,7 @@ internal fun ChatScreen(
     // and the composer, and a second collector (in ChatSheets) used to invalidate the sheet branch on every
     // streamed token.
     val timeline by process.screenTimeline.collectAsStateWithLifecycle()
+    DisposableEffect(controller) { onDispose { controller.abandonEdit() } }
     LaunchedEffect(controller) { controller.collectEffects() }
     LaunchedEffect(controller) { controller.steering.collectQueue() }
     ChatContent(

@@ -212,6 +212,12 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     return AccountInfo.from(data.getJSONObject("account"))
   }
 
+  /** Fills pools left empty by older installs; a no-op once every provider has an account. */
+  suspend fun accountMigrate(): Int {
+    val data = utilityData("accounts_migrate", JSONObject(), UTILITY_TIMEOUT_MILLIS)
+    return data.optInt("added")
+  }
+
   /** Asks the host to copy the stored sign-in for [providerId] into the pool; every sign-in joins the pool. */
   suspend fun accountCapture(providerId: String): Boolean {
     val data = utilityData("accounts_capture", JSONObject().put("providerId", providerId), UTILITY_TIMEOUT_MILLIS)

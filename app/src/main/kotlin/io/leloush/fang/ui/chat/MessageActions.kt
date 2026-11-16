@@ -71,7 +71,15 @@ internal class MessageActions(private val controller: ChatController) {
       controller.show(R.string.chat_message_action_failed)
     } else {
       val current = controller.process.sessionFile.value
-      if (previous != null && previous != current) runCatching { controller.process.removeSessionFile(previous) }
+      if (previous != null && previous != current) {
+        try {
+          controller.process.removeSessionFile(previous)
+        } catch (error: RpcError) {
+          controller.show(error.message)
+        } catch (error: IOException) {
+          controller.show(error.message.orEmpty())
+        }
+      }
       controller.show(R.string.chat_message_deleted)
     }
   }
@@ -89,6 +97,7 @@ internal class MessageActions(private val controller: ChatController) {
         } else {
           controller.process.prompt(item.text, item.images)
         }
+        controller.clearPendingOldSession()
         controller.show(R.string.chat_message_resent)
       } catch (error: RpcError) {
         controller.show(error.message)

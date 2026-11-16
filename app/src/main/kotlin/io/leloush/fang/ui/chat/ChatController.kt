@@ -139,6 +139,28 @@ internal class ChatController(
     return true
   }
 
+  /** Removes the session an edit forked from once text was sent on the new one; reports a failed cleanup. */
+  suspend fun clearPendingOldSession() {
+    val old = pendingOldSession ?: return
+    pendingOldSession = null
+    try {
+      process.removeSessionFile(old)
+    } catch (error: RpcError) {
+      show(error.message)
+    } catch (error: IOException) {
+      show(error.message.orEmpty())
+    }
+  }
+
+  /** Called when the chat closes: an unsent edit is abandoned, so keep the original and drop its empty fork. */
+  fun abandonEdit() {
+    val old = pendingOldSession ?: return
+    pendingOldSession = null
+    val fork = process.sessionFile.value ?: return
+    if (fork == old || sending) return
+    scope.launch { runCatching { process.removeSessionFile(fork) } }
+  }
+
   /** Runs [block] with [sending] set from now on, so a second send waits and Stop applies to it. */
   fun launchSending(command: Boolean, block: suspend () -> Unit) {
     sending = true
@@ -162,10 +184,7 @@ internal class ChatController(
     val typed = text.trim()
     val message = withFilePaths(typed, paths)
     val disposition = process.prompt(message, picked.filterIsInstance<Attachment.Image>().map { it.part })
-    pendingOldSession?.let { old ->
-      pendingOldSession = null
-      runCatching { process.removeSessionFile(old) }
-    }
+    clearPendingOldSession()
     if (disposition == "queued") steering.record(message, typed, picked)
     abortIfStopped(disposition)
   }
@@ -182,6 +201,7 @@ internal class ChatController(
     }
     val first = steers.first()
     val disposition = process.prompt(first.message, first.images)
+    clearPendingOldSession()
     if (disposition == "queued") steering.record(first)
     abortIfStopped(disposition)
   }
