@@ -17,8 +17,8 @@ import kotlinx.coroutines.launch
  * [ChatController.setDraftText], [ChatController.process]).
  *
  * Pi has no command to change a message that was sent, so editing and deleting fork the chat: the session is cut
- * before that message and continues in a new one. Unlike `/fork`, which keeps both branches, these actions delete the
- * old session so the edited chat replaces the original instead of appearing as a duplicate.
+ * before that message and continues in a new one. Unlike `/fork`, which keeps both branches, the old session is
+ * deleted: on Delete at once (it is confirmed), on Edit only when the edited text is sent.
  */
 internal class MessageActions(private val controller: ChatController) {
   /** The message whose deletion the user is asked to confirm. */
@@ -46,10 +46,13 @@ internal class MessageActions(private val controller: ChatController) {
       controller.show(R.string.chat_message_action_failed)
       return@launchRpc
     }
-    val text = controller.process.fork(entryId, removeOld = true)
+    val previous = controller.process.sessionFile.value
+    val text = controller.process.fork(entryId)
     if (text == null) {
       controller.show(R.string.chat_message_action_failed)
     } else {
+      val current = controller.process.sessionFile.value
+      controller.pendingOldSession = previous?.takeIf { it != current }
       controller.setDraftText(text)
       controller.show(R.string.chat_message_edited)
     }
@@ -62,10 +65,13 @@ internal class MessageActions(private val controller: ChatController) {
       controller.show(R.string.chat_message_action_failed)
       return@launchRpc
     }
-    val text = controller.process.fork(entryId, removeOld = true)
+    val previous = controller.process.sessionFile.value
+    val text = controller.process.fork(entryId)
     if (text == null) {
       controller.show(R.string.chat_message_action_failed)
     } else {
+      val current = controller.process.sessionFile.value
+      if (previous != null && previous != current) runCatching { controller.process.removeSessionFile(previous) }
       controller.show(R.string.chat_message_deleted)
     }
   }

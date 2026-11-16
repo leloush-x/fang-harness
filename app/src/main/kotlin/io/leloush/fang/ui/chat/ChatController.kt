@@ -71,6 +71,9 @@ internal class ChatController(
   val attachments = mutableStateListOf<Attachment>()
 
   /** True from a send until Pi answered its `prompt`. */
+  /** The session an edit forked from; removed only once the edited text is actually sent. */
+  var pendingOldSession: String? = null
+
   var sending by mutableStateOf(false)
     private set
 
@@ -159,6 +162,10 @@ internal class ChatController(
     val typed = text.trim()
     val message = withFilePaths(typed, paths)
     val disposition = process.prompt(message, picked.filterIsInstance<Attachment.Image>().map { it.part })
+    pendingOldSession?.let { old ->
+      pendingOldSession = null
+      runCatching { process.removeSessionFile(old) }
+    }
     if (disposition == "queued") steering.record(message, typed, picked)
     abortIfStopped(disposition)
   }
