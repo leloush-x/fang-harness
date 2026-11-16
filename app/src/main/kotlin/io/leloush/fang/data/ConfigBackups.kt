@@ -77,7 +77,7 @@ internal class ConfigBackups(
       }
       accounts.refresh()
       sessions.refresh()
-      BackupOutcome.Restored(reply.optInt("restoredSessions").takeIf { it > 0 })
+      BackupOutcome.Restored(reply.optInt("restoredSessions").takeIf { count -> count > 0 })
     }
   }
 
