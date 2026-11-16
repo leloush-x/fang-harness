@@ -59,7 +59,7 @@ describe("account pool", () => {
     return JSON.parse(await readFile(path.join(dirs.configDir, "auth.json"), "utf8")) as Record<string, Record<string, unknown>>;
   }
 
-  it("captures a stored sign-in once, and captures all sign-ins in one call", async () => {
+  it("captures a stored sign-in once, ignoring custom providers", async () => {
     await writeFile(
       path.join(dirs.configDir, "auth.json"),
       JSON.stringify({
@@ -70,10 +70,8 @@ describe("account pool", () => {
     );
     expect(await runOp("accounts_capture", dirs, { providerId: "zai" })).toMatchObject({ data: { added: true } });
     expect(await runOp("accounts_capture", dirs, { providerId: "zai" })).toMatchObject({ data: { added: false } });
-    expect(await runOp("accounts_capture_all", dirs, {})).toMatchObject({ data: { added: 1 } });
-    expect(await runOp("accounts_capture_all", dirs, {})).toMatchObject({ data: { added: 0 } });
     const list = await runOp("accounts_list", dirs, {});
-    expect(providerCount(list)).toBe(2);
+    expect(providerCount(list)).toBe(1);
   });
 
   it("rotates the least recently used key and advances its last use", async () => {

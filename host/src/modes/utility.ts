@@ -1,5 +1,5 @@
 import { isObject, type JsonObject } from "../framing.js";
-import { accountsActivate, accountsCapture, accountsCaptureAll, accountsList, accountsRemove, accountsSave, accountsStrategy } from "./accounts.js";
+import { accountsActivate, accountsCapture, accountsList, accountsRemove, accountsSave, accountsStrategy } from "./accounts.js";
 import { failure, type ModeContext } from "../mode.js";
 import { authStatus } from "./auth-status.js";
 import { deleteBackup, listBackups } from "./backups.js";
@@ -28,7 +28,6 @@ const OPERATIONS: Record<string, (ctx: ModeContext) => Promise<JsonObject>> = {
   accounts_activate: accountsActivate,
   accounts_strategy: accountsStrategy,
   accounts_capture: accountsCapture,
-  accounts_capture_all: accountsCaptureAll,
   sessions,
   session_messages: sessionMessages,
   subagent_sessions: subagentSessions,

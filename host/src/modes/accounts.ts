@@ -310,23 +310,6 @@ export async function accountsCapture(ctx: ModeContext): Promise<JsonObject> {
   });
 }
 
-/**
- * One call for the whole providers screen: catches sign-ins made before capture existed without holding the config
- * lock once per panel, and writes the pool once instead of once per provider.
- */
-export async function accountsCaptureAll(ctx: ModeContext): Promise<JsonObject> {
-  return withConfigLock(ctx.env, async () => {
-    const stored = await readAuthFile(ctx.env.configDir);
-    const data = await readAccounts(ctx.env.configDir);
-    let added = 0;
-    for (const providerId of BUILTIN_PROVIDERS) {
-      if (await captureInto(data, providerId, stored[providerId])) added++;
-    }
-    if (added > 0) await writeAccounts(ctx.env.configDir, data);
-    return { added };
-  });
-}
-
 /** One pooled account the host can run, as the picker needs it. */
 export interface PickedAccount {
   accountId: string;

@@ -212,12 +212,6 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     return AccountInfo.from(data.getJSONObject("account"))
   }
 
-  /** Copies every stored sign-in into its pool in one call; the providers page uses this before listing them. */
-  suspend fun accountCaptureAll(): Int {
-    val data = utilityData("accounts_capture_all", JSONObject(), UTILITY_TIMEOUT_MILLIS)
-    return data.optInt("added")
-  }
-
   /** Asks the host to copy the stored sign-in for [providerId] into the pool; every sign-in joins the pool. */
   suspend fun accountCapture(providerId: String): Boolean {
     val data = utilityData("accounts_capture", JSONObject().put("providerId", providerId), UTILITY_TIMEOUT_MILLIS)

@@ -67,7 +67,9 @@ internal fun ProvidersScreen(
   var signingIn by remember { mutableStateOf<String?>(null) }
   var pools by remember { mutableStateOf<List<ProviderAccounts>?>(null) }
   var reloads by remember { mutableIntStateOf(0) }
-  LoadAccountPools(accounts, snackbar, failed, reloads, { reloads = it }) { pools = it }
+  LaunchedEffect(reloads) {
+    pools = accountCall(emptyList(), snackbar, failed) { accounts.accounts() }
+  }
   SettingsPage(title = stringResource(R.string.providers_title), onBack = onBack, snackbar = snackbar) {
     val current = status
     val signedIn = subscriptions.filter { current?.isSignedIn(it.id) == true }
@@ -102,25 +104,6 @@ internal fun ProvidersScreen(
   ProviderSignInSheet(signingIn, accounts, scope) {
     signingIn = null
     reloads++
-  }
-}
-
-/** One capture and one list load for the whole page, not one per provider panel. */
-@Composable
-private fun LoadAccountPools(
-  accounts: AccountRepository,
-  snackbar: SnackbarStackState,
-  failed: String,
-  reloads: Int,
-  onReloads: (Int) -> Unit,
-  onPools: (List<ProviderAccounts>?) -> Unit,
-) {
-  LaunchedEffect(Unit) {
-    accounts.captureAccounts()
-    onReloads(reloads + 1)
-  }
-  LaunchedEffect(reloads) {
-    onPools(accountCall(null, snackbar, failed) { accounts.accounts() })
   }
 }
 
