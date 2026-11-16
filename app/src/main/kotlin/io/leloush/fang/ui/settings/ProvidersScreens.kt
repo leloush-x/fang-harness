@@ -131,7 +131,7 @@ private fun ProviderSignInSheet(
   scope: kotlinx.coroutines.CoroutineScope,
   onDismiss: () -> Unit,
 ) {
-  if (id === null) return
+  if (id == null) return
   LoginSheet(
     providerId = id,
     onDismiss = {
