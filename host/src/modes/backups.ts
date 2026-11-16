@@ -1,4 +1,4 @@
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, type Stats } from "node:fs";
 import {
   type FileHandle,
   chmod,
@@ -93,12 +93,11 @@ async function migrateLegacyBackups(env: HostEnv, target: string): Promise<void>
  * A backup's file name as the app names it: a plain `.tar.gz` name. Prefers the shared folder and falls back to one
  * left in private storage by a failed migration, so a backup never disappears from the list.
  */
-async function backupPath(env: HostEnv, name: string): Promise<string> {
+async function backupPath(env: HostEnv, name: string, dir?: string): Promise<string> {
   if (basename(name) !== name || name.startsWith(".") || !name.endsWith(".tar.gz") || name.includes("\0")) {
     throw new HostError("bad_name", `Not a backup name: ${name}`);
   }
-  const dir = await resolveBackupsDir(env);
-  const shared = join(dir, name);
+  const shared = join(dir ?? (await resolveBackupsDir(env)), name);
   if (await stat(shared).then((stats) => stats.isFile(), () => false)) return shared;
   const legacy = join(backupsDir(env), name);
   if (legacy !== shared && (await stat(legacy).then((stats) => stats.isFile(), () => false))) return legacy;
@@ -266,9 +265,9 @@ async function parseManifest(entry: TarEntry): Promise<Manifest> {
   return { format: FORMAT, version: VERSION, createdAt, piVersion, sessions };
 }
 
-async function backupInfo(env: HostEnv, name: string): Promise<JsonObject> {
-  const path = await backupPath(env, name);
-  const stats = await stat(path);
+async function backupInfo(env: HostEnv, name: string, dir?: string, known?: { path: string; stats: Stats }): Promise<JsonObject> {
+  const path = known?.path ?? (await backupPath(env, name, dir));
+  const stats = known?.stats ?? (await stat(path));
   const info: JsonObject = { name, size: stats.size, createdAt: stats.mtime.toISOString(), piVersion: null, sessions: null, error: null };
   try {
     const manifest = await readManifest(path);
@@ -296,9 +295,10 @@ export async function listBackups(ctx: ModeContext): Promise<JsonObject> {
   const backups: JsonObject[] = [];
   for (const name of names) {
     if (name.startsWith(".") || !name.endsWith(".tar.gz")) continue;
-    const path = await backupPath(ctx.env, name);
-    if (!(await stat(path).then((stats) => stats.isFile(), () => false))) continue;
-    backups.push(await backupInfo(ctx.env, name));
+    const path = await backupPath(ctx.env, name, dir);
+    const stats = await stat(path).catch(() => undefined);
+    if (!stats?.isFile()) continue;
+    backups.push(await backupInfo(ctx.env, name, dir, { path, stats }));
   }
   backups.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || String(b.name).localeCompare(String(a.name)));
   return { dir, backups };

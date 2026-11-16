@@ -25,7 +25,6 @@ After the push lands: `git merge-base --is-ancestor HEAD origin/main`, then
 ./gradlew :app:testDebugUnitTest --tests "io.leloush.fang.host.HostServerTest"
 cd host && pnpm run check           # typecheck + lint + test
 cd host && pnpm vitest run test/terminal-busy.test.ts
-cd site && pnpm run check
 ```
 
 `./gradlew check` is the gate: it runs `:app:check` (ktlint, detekt, Android lint, unit tests)
@@ -244,8 +243,6 @@ licenses lists every `.txt` under the APK's `licenses/` and `syntax/licenses/` a
 - tree-sitter and the grammars: the `syntaxSources` task in `app/build.gradle.kts` copies each
   source's license, plus the `notices` of code inside a source its own license doesn't cover.
 
-The website serves its own notices in `site/public/licenses.txt`; update it when the site starts
-serving another project's code, fonts or icons.
 
 ## Vendored pi-web-access
 

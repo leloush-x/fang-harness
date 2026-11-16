@@ -1,6 +1,8 @@
 package io.leloush.fang.data
 
 import android.util.Log
+import io.leloush.fang.AppStrings
+import io.leloush.fang.R
 import io.leloush.fang.agent.ExtensionWidget
 import io.leloush.fang.agent.KeptBySession
 import io.leloush.fang.host.HostClient
@@ -20,7 +22,7 @@ import org.json.JSONException
 /**
  * Pi's session list, newest first. Refreshed on app foreground, when the sidebar or a tab menu opens, when a new
  * chat's first message creates its session file, after a run settles and after renames and deletes. A failed refresh
- * keeps the previous list; the host failure is reported through [HostClient.lastFailure].
+ * keeps the previous list and reports why through [refreshError].
  */
 internal class SessionRepository(
   private val hostClient: HostClient,
@@ -30,6 +32,7 @@ internal class SessionRepository(
 ) {
   private val sessionsState = MutableStateFlow<List<SessionInfo>>(emptyList())
   private val loadedState = MutableStateFlow(false)
+  private val refreshErrorState = MutableStateFlow<String?>(null)
   private val requests = Channel<Unit>(Channel.CONFLATED)
 
   /** The extension titles of sessions whose Pi stopped, which a later Pi on the session starts with. */
@@ -52,6 +55,9 @@ internal class SessionRepository(
 
   /** True once the first refresh finished, successfully or not. */
   val loaded: StateFlow<Boolean> = loadedState.asStateFlow()
+
+  /** Why the last refresh failed; null after a successful one. */
+  val refreshError: StateFlow<String?> = refreshErrorState.asStateFlow()
 
   init {
     scope.launch { requests.receiveAsFlow().collect { load() } }
@@ -89,12 +95,16 @@ internal class SessionRepository(
   private suspend fun load() {
     try {
       sessionsState.value = hostClient.sessions().distinctBy { it.path }
+      refreshErrorState.value = null
     } catch (error: IOException) {
       Log.w(TAG, "Refreshing sessions failed", error)
+      refreshErrorState.value = error.message ?: AppStrings.get(R.string.sessions_refresh_failed)
     } catch (error: HostRejected) {
       Log.w(TAG, "Refreshing sessions refused: ${error.code}")
+      refreshErrorState.value = error.message
     } catch (error: JSONException) {
       Log.w(TAG, "Refreshing sessions returned malformed data", error)
+      refreshErrorState.value = AppStrings.get(R.string.sessions_refresh_failed)
     } finally {
       loadedState.value = true
     }

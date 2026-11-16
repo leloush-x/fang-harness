@@ -3,6 +3,7 @@ package io.leloush.fang.ui.sidebar
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -83,6 +84,7 @@ internal fun Sidebar(
   val sessions by graph.sessionArchive.active.collectAsStateWithLifecycle()
   val added by graph.preferences.workspaces.collectAsStateWithLifecycle()
   val hello by graph.hostClient.lastHello.collectAsStateWithLifecycle()
+  val sessionError by graph.sessionRepository.refreshError.collectAsStateWithLifecycle()
   val home = hello?.home?.takeIf { it.isNotEmpty() } ?: actions.home
   val workspaces = remember(sessions, added) { workspaces(sessions, added) }
   val removal = remember(actions) { WorkspaceRemoval(actions) }
@@ -113,6 +115,7 @@ internal fun Sidebar(
       onActions = { menuFor = it },
       modifier = Modifier.weight(1f),
     )
+    SessionErrorCaption(sessionError) { graph.sessionRepository.refresh() }
     SidebarFooter(
       onAddWorkspace = { pickerOpen = true },
       onOpenArchive = onOpenArchive,
@@ -134,6 +137,21 @@ internal fun Sidebar(
   }
   RemoveWorkspaceDialog(removal, home)
   if (pickerOpen) AddWorkspacePicker(home, workspaces, onDismiss = { pickerOpen = false })
+}
+
+/** A tap-to-retry caption below the chat list when the host could not list chats. */
+@Composable
+private fun SessionErrorCaption(error: String?, onRetry: () -> Unit) {
+  if (error == null) return
+  Text(
+    text = stringResource(R.string.sessions_refresh_failed),
+    color = fangColors.destructive,
+    fontSize = FangTokens.FontSize.sm,
+    modifier = Modifier
+      .fillMaxWidth()
+      .clickable(onClick = onRetry)
+      .padding(horizontal = FangTokens.Spacing.s16, vertical = FangTokens.Spacing.s8),
+  )
 }
 
 /** The add-workspace sheet over the sidebar, which adds the folder picked as a workspace. */

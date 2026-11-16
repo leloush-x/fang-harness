@@ -1,7 +1,7 @@
 name: Release
 
-# Every push to main publishes a signed APK as GitHub release v0.0.N, where N, also the APK's versionCode, is one more
-# than the latest release's. A rerun for a commit that already has a release reuses its version. The jobs split the work
+# Every push to main publishes a signed APK as GitHub release v0.1.N, one more than the latest release's number.
+# The APK's versionCode is 100 + N. A rerun for a commit that already has a release reuses its version. The jobs split the work
 # so that each credential is held by as little as possible:
 #   build    runs ./gradlew check and builds the unsigned APK, with read-only repository access and no secrets, so
 #            nothing the build runs, such as Gradle plugins or npm packages, can reach the signing key

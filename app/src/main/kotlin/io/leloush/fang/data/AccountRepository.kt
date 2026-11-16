@@ -124,7 +124,7 @@ internal class AccountRepository(
 
   /** Fills pools that predate capture; safe to call whenever the providers page opens. */
   suspend fun migrateAccounts() {
-    runCatching { hostClient.accountMigrate() }
+    hostClient.accountMigrate()
   }
 
   suspend fun activateAccount(id: String) {
@@ -134,7 +134,8 @@ internal class AccountRepository(
 
   suspend fun accountStrategy(providerId: String, strategy: String) {
     hostClient.accountStrategy(providerId, strategy)
-    changed()
+    // Rotation only affects future chat starts, so no running Pi needs reloading.
+    refresh()
   }
 
   /** Installs a Pi package with `pi install`; idle chats restart to load it. Cancelling the caller aborts it. */

@@ -68,7 +68,7 @@ internal fun ProvidersScreen(
   var pools by remember { mutableStateOf<List<ProviderAccounts>?>(null) }
   var reloads by remember { mutableIntStateOf(0) }
   LaunchedEffect(Unit) {
-    accounts.migrateAccounts()
+    accountCall(Unit, snackbar, failed) { accounts.migrateAccounts() }
     reloads++
   }
   LaunchedEffect(reloads) {
