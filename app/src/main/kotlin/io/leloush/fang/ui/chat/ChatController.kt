@@ -71,11 +71,11 @@ internal class ChatController(
   val attachments = mutableStateListOf<Attachment>()
 
   /** True from a send until Pi answered its `prompt`. */
-  /** The session an edit forked from; removed only once the edited text is actually sent. */
-  var pendingOldSession: String? = null
-
   var sending by mutableStateOf(false)
     private set
+
+  /** The session an edit forked from; removed only once the edited text is actually sent. */
+  var pendingOldSession: String? = null
 
   /** Whether [sending] a slash command, which Pi answers only once the command finished. */
   var sendingCommand by mutableStateOf(false)
