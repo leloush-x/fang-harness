@@ -48,7 +48,7 @@ export async function providerSave(ctx: ModeContext): Promise<JsonObject> {
     apiKey: apiKey === "" ? NO_API_KEY : apiKey,
     models: models.map((model) => mergeManagedFields(model, existingModels.get(model.id))),
   };
-  await writeModelsJson(ctx.env.configDir, document);
+  await writeModelsJson(ctx.env, document);
 
   if (settings !== undefined && settings.enabledModels.length > 0) {
     const saved = models.map((model) => ({ provider: id, id: model.id, name: model.name ?? model.id }));

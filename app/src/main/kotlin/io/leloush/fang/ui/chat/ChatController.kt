@@ -357,7 +357,7 @@ internal suspend fun ChatController.clearPendingOldSession() {
 }
 
 /** Called when the chat closes: an unsent edit is abandoned, so keep the original and drop its empty fork. */
-internal fun ChatController.abandonEdit() {
+internal fun ChatController.abandonEdit(scope: CoroutineScope) {
   val old = pendingOldSession ?: return
   pendingOldSession = null
   val fork = process.sessionFile.value ?: return

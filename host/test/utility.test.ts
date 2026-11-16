@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { JsonObject } from "../src/framing.js";
 import { type Dirs, type HostRun, makeDirs, removeDirs, startHost } from "./harness.js";
@@ -52,6 +54,27 @@ describe("utility mode", () => {
     expect(first?.id).toBe(1);
     expect(second?.type).toBe("fang_result");
     expect(second?.id).toBe(2);
+  });
+
+  /**
+   * The app sends every one-off operation here. The accounts operations went missing from the registry once and every
+   * call returned unknown_op, so a new op registered only in main.ts must fail this test.
+   */
+  it("registers every operation the app sends to the utility host", async () => {
+    const client = await readFile(
+      path.join(import.meta.dirname, "../../app/src/main/kotlin/io/leloush/fang/host/HostClient.kt"),
+      "utf8",
+    );
+    const ops = [...new Set([...client.matchAll(/utilityData\(\s*"([a-z_]+)"/g)].map((match) => match[1] as string))];
+    expect(ops.length).toBeGreaterThan(15);
+    await start();
+    await run.next();
+    for (const op of ops) {
+      const answer = await ask(op);
+      expect(answer).toBeDefined();
+      // Most operations need a real Pi install and fail with their own code; that is fine. Being unregistered is not.
+      expect({ op, code: answer?.code }).not.toHaveProperty("code", "unknown_op");
+    }
   });
 
   it("says so for an operation it does not have", async () => {

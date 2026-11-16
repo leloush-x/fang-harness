@@ -90,7 +90,7 @@ internal fun ChatScreen(
     // and the composer, and a second collector (in ChatSheets) used to invalidate the sheet branch on every
     // streamed token.
     val timeline by process.screenTimeline.collectAsStateWithLifecycle()
-    DisposableEffect(controller) { onDispose { controller.abandonEdit() } }
+    DisposableEffect(controller) { onDispose { controller.abandonEdit(context.appGraph.scope) } }
     LaunchedEffect(controller) { controller.collectEffects() }
     LaunchedEffect(controller) { controller.steering.collectQueue() }
     ChatContent(

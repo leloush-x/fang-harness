@@ -345,8 +345,10 @@ async function readAuthFile(configDir: string): Promise<Record<string, JsonObjec
   let raw: string;
   try {
     raw = await readFile(join(configDir, "auth.json"), "utf8");
-  } catch {
-    return {};
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    // A failed read must not become an empty map: every other provider's credential would be dropped on the next write.
+    throw new HostError("auth_unreadable", "Pi's auth.json cannot be read, so the pool leaves it alone", { key: "auth_unreadable" });
   }
   let parsed: unknown;
   try {

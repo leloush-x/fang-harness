@@ -13,7 +13,7 @@ export async function providerRemove(ctx: ModeContext): Promise<JsonObject> {
   const settings = openSettingsIfValid(ctx, await loadPi(ctx.env.root));
   if (id in document.providers) {
     delete document.providers[id];
-    await writeModelsJson(ctx.env.configDir, document);
+    await writeModelsJson(ctx.env, document);
   }
   if (settings !== undefined) {
     const patterns = dropProvider(settings.enabledModels, id);

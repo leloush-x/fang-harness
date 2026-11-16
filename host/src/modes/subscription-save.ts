@@ -103,7 +103,7 @@ export async function subscriptionSave(ctx: ModeContext): Promise<JsonObject> {
   else delete entry.modelOverrides;
   if (Object.keys(entry).length > 0) document.providers[providerId] = entry;
   else delete document.providers[providerId];
-  if (!isDeepStrictEqual(before, document.providers[providerId])) await writeModelsJson(ctx.env.configDir, document);
+  if (!isDeepStrictEqual(before, document.providers[providerId])) await writeModelsJson(ctx.env, document);
 
   const all = [...ids].every((id) => enabled.includes(id));
   if (settings.enabledModels.length === 0 && all) return {};

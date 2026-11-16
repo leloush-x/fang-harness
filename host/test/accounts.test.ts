@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { HostEnv } from "../src/env.js";
@@ -83,6 +83,12 @@ describe("account pool", () => {
     expect(await runOp("accounts_migrate", dirs, {})).toMatchObject({ data: { added: 1 } });
     expect(await runOp("accounts_migrate", dirs, {})).toMatchObject({ data: { added: 0 } });
     expect(providerCount(await runOp("accounts_list", dirs, {}))).toBe(2);
+  });
+
+  it("refuses to rewrite an auth.json it cannot read", async () => {
+    // A directory at the file's path makes readFile fail even as root; other providers' credentials must not be dropped.
+    await mkdir(path.join(dirs.configDir, "auth.json"));
+    expect(await runOp("accounts_capture", dirs, { providerId: "zai" })).toMatchObject({ ok: false, code: "auth_unreadable" });
   });
 
   it("rotates the least recently used key and advances its last use", async () => {

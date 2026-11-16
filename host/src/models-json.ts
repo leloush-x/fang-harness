@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { HostError } from "./env.js";
+import { HostError, type HostEnv } from "./env.js";
+import { withConfigLock } from "./config-lock.js";
 import { isObject, type JsonObject } from "./framing.js";
 
 export const MODELS_INVALID = "models.json is not valid JSON. Ask the agent to fix it.";
@@ -40,9 +41,12 @@ export async function readModelsJson(configDir: string): Promise<ModelsJson> {
 }
 
 /** Replaces `models.json` atomically so Pi never reads a half-written file. */
-export async function writeModelsJson(configDir: string, models: ModelsJson): Promise<void> {
-  await mkdir(configDir, { recursive: true });
-  const path = join(configDir, "models.json");
-  await writeFile(`${path}.tmp`, `${JSON.stringify({ ...models.root, providers: models.providers }, null, 2)}\n`);
-  await rename(`${path}.tmp`, path);
+export async function writeModelsJson(env: HostEnv, models: ModelsJson): Promise<void> {
+  await withConfigLock(env, async () => {
+    await mkdir(env.configDir, { recursive: true });
+    const path = join(env.configDir, "models.json");
+    const temporary = `${path}.${process.pid}.tmp`;
+    await writeFile(temporary, `${JSON.stringify({ ...models.root, providers: models.providers }, null, 2)}\n`);
+    await rename(temporary, path);
+  });
 }

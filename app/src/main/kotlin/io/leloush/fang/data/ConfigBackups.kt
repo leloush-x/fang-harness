@@ -69,20 +69,16 @@ internal class ConfigBackups(
   fun restore(name: String) = run(BackupTask.Restoring(name)) {
     keepAlive.acquire("restoring").use {
       registry.stopAll()
-      try {
+      val reply = try {
         hostClient.restoreBackup(name, ::progress)
       } finally {
         // Also after a failed restore, which leaves the configuration as it was, so the chats work again.
         withContext(NonCancellable) { registry.restartShown() }
       }
+      accounts.refresh()
+      sessions.refresh()
+      BackupOutcome.Restored(reply.optInt("restoredSessions").takeIf { it > 0 })
     }
-    accounts.refresh()
-    sessions.refresh()
-    val restored =
-      runCatching {
-        hostClient.restoreBackup(name, ::progress).optInt("restoredSessions").takeIf { it > 0 }
-      }.getOrNull()
-    BackupOutcome.Restored(restored)
   }
 
   private fun progress(line: String) {
