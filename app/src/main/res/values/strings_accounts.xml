@@ -12,6 +12,7 @@
     <string name="accounts_key">API key</string>
     <string name="accounts_remove">Remove account</string>
     <string name="accounts_loading">Loading accounts…</string>
+    <string name="accounts_kind_oauth">OAuth sign-in</string>
     <string name="accounts_add_key">Add API key</string>
     <string name="accounts_add_oauth">Add OAuth account</string>
     <string name="accounts_manage_all">Rotation and manage all accounts</string>

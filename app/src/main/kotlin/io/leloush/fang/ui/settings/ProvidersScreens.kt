@@ -34,6 +34,7 @@ import io.leloush.fang.appGraph
 import io.leloush.fang.data.AccountRepository
 import io.leloush.fang.host.AuthStatus
 import io.leloush.fang.host.HostRejected
+import io.leloush.fang.host.ProviderAccounts
 import io.leloush.fang.ui.auth.LoginSheet
 import io.leloush.fang.ui.auth.ProviderLogo
 import io.leloush.fang.ui.components.HeaderBar
@@ -62,9 +63,11 @@ internal fun ProvidersScreen(
   val refreshError by accounts.refreshError.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarStackState() }
   val scope = rememberCoroutineScope()
+  val failed = stringResource(R.string.provider_failed)
   var signingIn by remember { mutableStateOf<String?>(null) }
-  var signIns by remember { mutableIntStateOf(0) }
-  LaunchedEffect(Unit) { accounts.refresh() }
+  var pools by remember { mutableStateOf<List<ProviderAccounts>?>(null) }
+  var reloads by remember { mutableIntStateOf(0) }
+  LoadAccountPools(accounts, snackbar, failed, reloads, { reloads = it }) { pools = it }
   SettingsPage(title = stringResource(R.string.providers_title), onBack = onBack, snackbar = snackbar) {
     val current = status
     val signedIn = subscriptions.filter { current?.isSignedIn(it.id) == true }
@@ -80,38 +83,78 @@ internal fun ProvidersScreen(
           if (index > 0) SettingsDivider()
           SignedInProviderRow(
             subscription = subscription,
+            pool = pools?.firstOrNull { it.providerId == subscription.id },
             accounts = accounts,
             snackbar = snackbar,
-            refreshKey = signIns,
             onOpenSubscription = onOpenSubscription,
             onManageAccounts = onOpenAccounts,
             onSignIn = { signingIn = it },
+            onChanged = { reloads++ },
           )
         }
-        custom.forEachIndexed { index, provider ->
-          if (index > 0 || signedIn.isNotEmpty()) SettingsDivider()
-          SettingsRow(
-            title = provider.id,
-            subtitle = provider.baseUrl,
-            onClick = { onEditProvider(provider.id) },
-            leading = { RowIcon(R.drawable.ic_lucide_key_round) },
-          ) { Chevron() }
-        }
+        CustomProviderRows(custom, signedIn.isNotEmpty(), onEditProvider)
       }
     }
     DashedActionRow(label = stringResource(R.string.providers_add), icon = R.drawable.ic_lucide_plus, onClick = onAdd)
     current?.modelsError?.let { SettingsCaption(text = it.localized(), color = fangColors.destructive) }
     refreshError?.let { SettingsCaption(text = it, color = fangColors.destructive) }
   }
-  signingIn?.let { id ->
-    LoginSheet(
-      providerId = id,
-      onDismiss = {
-        signingIn = null
-        signIns++
-        scope.launch { accounts.refresh() }
-      },
-    )
+  ProviderSignInSheet(signingIn, accounts, scope) {
+    signingIn = null
+    reloads++
+  }
+}
+
+/** One capture and one list load for the whole page, not one per provider panel. */
+@Composable
+private fun LoadAccountPools(
+  accounts: AccountRepository,
+  snackbar: SnackbarStackState,
+  failed: String,
+  reloads: Int,
+  onReloads: (Int) -> Unit,
+  onPools: (List<ProviderAccounts>?) -> Unit,
+) {
+  LaunchedEffect(Unit) {
+    accounts.captureAccounts()
+    onReloads(reloads + 1)
+  }
+  LaunchedEffect(reloads) {
+    onPools(accountCall(null, snackbar, failed) { accounts.accounts() })
+  }
+}
+
+@Composable
+private fun ProviderSignInSheet(
+  id: String?,
+  accounts: AccountRepository,
+  scope: kotlinx.coroutines.CoroutineScope,
+  onDismiss: () -> Unit,
+) {
+  if (id === null) return
+  LoginSheet(
+    providerId = id,
+    onDismiss = {
+      onDismiss()
+      scope.launch { accounts.refresh() }
+    },
+  )
+}
+
+@Composable
+private fun CustomProviderRows(
+  custom: List<io.leloush.fang.host.ProviderConfig>?,
+  hasSignedIn: Boolean,
+  onEditProvider: (id: String) -> Unit,
+) {
+  custom.orEmpty().forEachIndexed { index, provider ->
+    if (index > 0 || hasSignedIn) SettingsDivider()
+    SettingsRow(
+      title = provider.id,
+      subtitle = provider.baseUrl,
+      onClick = { onEditProvider(provider.id) },
+      leading = { RowIcon(R.drawable.ic_lucide_key_round) },
+    ) { Chevron() }
   }
 }
 
@@ -119,12 +162,13 @@ internal fun ProvidersScreen(
 @Composable
 private fun SignedInProviderRow(
   subscription: Subscription,
+  pool: ProviderAccounts?,
   accounts: AccountRepository,
   snackbar: SnackbarStackState,
-  refreshKey: Int,
   onOpenSubscription: (id: String) -> Unit,
   onManageAccounts: (id: String) -> Unit,
   onSignIn: (id: String) -> Unit,
+  onChanged: () -> Unit,
 ) {
   SettingsRow(
     title = stringResource(subscription.title),
@@ -135,11 +179,12 @@ private fun SignedInProviderRow(
   SettingsDivider()
   ProviderAccountsPanel(
     subscription = subscription,
+    pool = pool,
     accounts = accounts,
     snackbar = snackbar,
-    refreshKey = refreshKey,
     onAddOauth = onSignIn,
     onManageAccounts = onManageAccounts,
+    onChanged = onChanged,
   )
 }
 

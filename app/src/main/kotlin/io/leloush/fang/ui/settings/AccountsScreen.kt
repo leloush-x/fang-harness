@@ -207,9 +207,10 @@ internal fun AccountRow(
   onDelete: (AccountInfo) -> Unit,
   onReload: () -> Unit,
 ) {
+  val detail = if (account.kind == "oauth") stringResource(R.string.accounts_kind_oauth) else account.masked
   SettingsRow(
     title = account.label,
-    subtitle = account.masked + " · " + account.state,
+    subtitle = detail + " · " + account.state,
     onClick = {
       scope.launch {
         accountCall(Unit, snackbar, failed) {

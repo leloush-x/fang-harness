@@ -5,7 +5,7 @@ import { isObject, type JsonObject } from "../framing.js";
 import type { ModeContext } from "../mode.js";
 import { stringParam } from "../params.js";
 import { withConfigLock } from "../config-lock.js";
-import { createRuntime } from "../runtime.js";
+import { BUILTIN_PROVIDERS, createRuntime } from "../runtime.js";
 
 const ACCOUNTS_FILE = "fang-accounts.json";
 const VERSION = 1;
@@ -141,17 +141,13 @@ function nextLabel(pa: ProviderAccounts): string {
   }
 }
 
-async function builtinName(ctx: ModeContext, id: string): Promise<string> {
-  const runtime = await createRuntime(ctx, { builtinOnly: true });
-  return runtime.getProvider(id)?.name ?? id;
-}
-
 export async function accountsList(ctx: ModeContext): Promise<JsonObject> {
   const data = await readAccounts(ctx.env.configDir);
-  const providers: JsonObject[] = [];
-  for (const [id, pa] of Object.entries(data.providers)) {
-    providers.push(toProviderInfo(id, pa, await builtinName(ctx, id).catch(() => id)));
-  }
+  // One runtime for every name: loading Pi once per provider makes the providers page much slower than it needs to be.
+  const runtime = await createRuntime(ctx, { builtinOnly: true }).catch(() => undefined);
+  const providers: JsonObject[] = Object.entries(data.providers).map(([id, pa]) =>
+    toProviderInfo(id, pa, runtime?.getProvider(id)?.name ?? id),
+  );
   return { providers };
 }
 
@@ -277,36 +273,57 @@ export async function accountsStrategy(ctx: ModeContext): Promise<JsonObject> {
   });
 }
 
-/**
- * Copies the stored sign-in of [providerId] into the pool; every sign-in joins the pool this way, keyed for rotation
- * without a re-add. The stored credential stays Pi's, so signing in never signs the provider out. Returns whether a
- * new account was added.
- */
+/** Copies one stored credential into [data]'s pool; the stored credential stays Pi's, so signing in never signs out. */
+async function captureInto(data: AccountsFile, providerId: string, stored: JsonObject | undefined): Promise<boolean> {
+  if (!stored || !BUILTIN_PROVIDERS.includes(providerId)) return false;
+  const pa = data.providers[providerId] ?? { strategy: "round_robin", accounts: [] };
+  let account: Account;
+  if (stored.type === "api_key") {
+    const key = typeof stored.key === "string" ? stored.key.trim() : "";
+    if (key === "" || pa.accounts.some((a) => a.kind === "api_key" && a.key === key)) return false;
+    account = { id: newAccountId(), label: nextLabel(pa), kind: "api_key", key, enabled: true, state: "active", failures: 0, cooldownUntil: 0, lastUsedAt: 0, needsSignIn: false };
+  } else if (stored.type === "oauth") {
+    const access = typeof stored.access === "string" ? stored.access : "";
+    if (access === "") return false;
+    const refresh = typeof stored.refresh === "string" ? stored.refresh : "";
+    const expires = typeof stored.expires === "number" ? stored.expires : 0;
+    if (pa.accounts.some((a) => a.kind === "oauth" && a.credential?.access === access && a.credential.refresh === refresh)) return false;
+    account = { id: newAccountId(), label: nextLabel(pa), kind: "oauth", credential: { access, refresh, expires }, enabled: true, state: "active", failures: 0, cooldownUntil: 0, lastUsedAt: 0, needsSignIn: false };
+  } else {
+    return false;
+  }
+  pa.accounts.push(account);
+  data.providers[providerId] = pa;
+  return true;
+}
+
+/** Copies the [providerId] sign-in into the pool; every sign-in joins it, keyed for rotation without a re-add. */
 export async function accountsCapture(ctx: ModeContext): Promise<JsonObject> {
   const providerId = stringParam(ctx.params, "providerId");
   if (providerId === "") throw new HostError("accounts_bad_provider", "This provider cannot hold accounts", { key: "accounts_bad_provider" });
   return withConfigLock(ctx.env, async () => {
     const stored = (await readAuthFile(ctx.env.configDir))[providerId];
-    if (!stored) return { added: false };
     const data = await readAccounts(ctx.env.configDir);
-    const pa = data.providers[providerId] ?? { strategy: "round_robin", accounts: [] };
-    let account: Account;
-    if (stored.type === "api_key") {
-      const key = typeof stored.key === "string" ? stored.key.trim() : "";
-      if (key === "" || pa.accounts.some((a) => a.kind === "api_key" && a.key === key)) return { added: false };
-      account = { id: newAccountId(), label: nextLabel(pa), kind: "api_key", key, enabled: true, state: "active", failures: 0, cooldownUntil: 0, lastUsedAt: 0, needsSignIn: false };
-    } else {
-      const access = typeof stored.access === "string" ? stored.access : "";
-      if (access === "") return { added: false };
-      const refresh = typeof stored.refresh === "string" ? stored.refresh : "";
-      const expires = typeof stored.expires === "number" ? stored.expires : 0;
-      if (pa.accounts.some((a) => a.kind === "oauth" && a.credential?.access === access && a.credential.refresh === refresh)) return { added: false };
-      account = { id: newAccountId(), label: nextLabel(pa), kind: "oauth", credential: { access, refresh, expires }, enabled: true, state: "active", failures: 0, cooldownUntil: 0, lastUsedAt: 0, needsSignIn: false };
-    }
-    pa.accounts.push(account);
-    data.providers[providerId] = pa;
+    if (!(await captureInto(data, providerId, stored))) return { added: false };
     await writeAccounts(ctx.env.configDir, data);
     return { added: true };
+  });
+}
+
+/**
+ * One call for the whole providers screen: catches sign-ins made before capture existed without holding the config
+ * lock once per panel, and writes the pool once instead of once per provider.
+ */
+export async function accountsCaptureAll(ctx: ModeContext): Promise<JsonObject> {
+  return withConfigLock(ctx.env, async () => {
+    const stored = await readAuthFile(ctx.env.configDir);
+    const data = await readAccounts(ctx.env.configDir);
+    let added = 0;
+    for (const providerId of BUILTIN_PROVIDERS) {
+      if (await captureInto(data, providerId, stored[providerId])) added++;
+    }
+    if (added > 0) await writeAccounts(ctx.env.configDir, data);
+    return { added };
   });
 }
 

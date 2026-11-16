@@ -1,4 +1,5 @@
 import { isObject, type JsonObject } from "../framing.js";
+import { accountsActivate, accountsCapture, accountsCaptureAll, accountsList, accountsRemove, accountsSave, accountsStrategy } from "./accounts.js";
 import { failure, type ModeContext } from "../mode.js";
 import { authStatus } from "./auth-status.js";
 import { deleteBackup, listBackups } from "./backups.js";
@@ -21,6 +22,13 @@ import { subscriptionSave } from "./subscription-save.js";
  * one long-lived host can answer them all. Requests that stream progress or prompts keep a host of their own.
  */
 const OPERATIONS: Record<string, (ctx: ModeContext) => Promise<JsonObject>> = {
+  accounts_list: accountsList,
+  accounts_save: accountsSave,
+  accounts_remove: accountsRemove,
+  accounts_activate: accountsActivate,
+  accounts_strategy: accountsStrategy,
+  accounts_capture: accountsCapture,
+  accounts_capture_all: accountsCaptureAll,
   sessions,
   session_messages: sessionMessages,
   subagent_sessions: subagentSessions,
