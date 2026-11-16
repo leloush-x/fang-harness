@@ -143,7 +143,7 @@ private fun ProviderSignInSheet(
 
 @Composable
 private fun CustomProviderRows(
-  custom: List<io.leloush.fang.host.ProviderConfig>?,
+  custom: List<io.leloush.fang.host.CustomProvider>?,
   hasSignedIn: Boolean,
   onEditProvider: (id: String) -> Unit,
 ) {

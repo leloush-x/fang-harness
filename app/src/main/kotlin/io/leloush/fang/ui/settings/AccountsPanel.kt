@@ -117,9 +117,7 @@ private fun AccountsExpanded(
     ) {
       when {
         pool == null -> SettingsCaption(text = stringResource(R.string.accounts_loading))
-
         pool.accounts.isEmpty() -> SettingsCaption(text = stringResource(R.string.accounts_empty))
-
         else -> AccountsPanelList(pool, actions, state, onChanged)
       }
       AccountsPanelFooter(
