@@ -437,4 +437,3 @@ private class AskSession(private val request: AskRequest, private val onSubmit: 
 }
 
 private const val DISABLED_ALPHA = 0.5f
-private const val SKIPPED = "skipped"
