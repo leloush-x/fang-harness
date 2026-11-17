@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 /** Installs a Pi package (extension, skill, prompt or theme) into Fang Harness's config with `pi install`. */
 @Composable
-private fun InstallPackageRow(graph: AppGraph, snackbar: SnackbarStackState) {
+internal fun InstallPackageRow(graph: AppGraph, snackbar: SnackbarStackState) {
   val scope = rememberCoroutineScope()
   val failed = stringResource(R.string.provider_failed)
   val done = stringResource(R.string.settings_install_extension_done)
@@ -47,7 +47,7 @@ private fun InstallPackageRow(graph: AppGraph, snackbar: SnackbarStackState) {
       installing = true
       scope.launch {
         try {
-          graph.accountRepository.installPackage(trimmed) { line -> if (line.isNotBlank()) snackbar.show(line) }
+          graph.accountRepository.installPackage(trimmed) { }
           snackbar.show(done)
         } catch (failure: IOException) {
           snackbar.show(failure.message ?: failed)
