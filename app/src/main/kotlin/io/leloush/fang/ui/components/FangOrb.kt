@@ -17,18 +17,12 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.unit.Dp
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
-import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.isActive
 
-private const val ORB_RADIUS_PT = 30f
-private const val ORB_BLEED_PT = 10f
-private const val GRID_COLUMNS = 9f
-private const val GRID_PITCH = 2f * ORB_RADIUS_PT / GRID_COLUMNS
-private const val FINALE_MS = 550
-private const val FINALE_FLASH_GLOW = 1.25f
-private const val DONE_SETTLED_GLOW = 0.60f
-private val TAU = 2f * PI.toFloat()
+private const val FINALE_MS = 550L
+private const val TAU = 2f * 3.14159265f
 
 /** The AGSL orb on API 33+, falling back to the simmering pot so no device gets a blank indicator. */
 @Composable
@@ -41,12 +35,11 @@ internal fun FangOrb(
   agentLevel: Float = 0f,
 ) {
   val handle = OrbShader.rememberOrbShaders()
-  val scaled = size * orbSizeScale()
   if (handle == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-    SimmeringPot(modifier = modifier, size = scaled, tint = tint)
+    SimmeringPot(modifier = modifier, size = size, tint = tint)
     return
   }
-  ShaderFangOrb(handle, modifier, scaled, mood, userLevel, agentLevel)
+  ShaderFangOrb(handle, modifier, size, mood, userLevel, agentLevel)
 }
 
 /** The shader path; every call here needs API 33, which the caller guards with a positive SDK check. */
@@ -68,8 +61,7 @@ private fun ShaderFangOrb(
       withFrameMillis { millis -> frame.longValue = millis }
     }
   }
-  // The finale is one finite flash per DONE episode; the clock above keeps breathing in every mood. Freezing
-  // mid-flash skips the animation but still marks it spent, so unfreezing cannot re-trigger a finished orb.
+  // One finite green flash per DONE episode. Freezing mid-flash marks it spent so unfreezing cannot replay it.
   val burst = remember { mutableFloatStateOf(0f) }
   val finaleSpent = remember { mutableStateOf(false) }
   LaunchedEffect(mood) {
@@ -93,133 +85,108 @@ private fun ShaderFangOrb(
     }
   }
   val brush = remember(handle) { ShaderBrush(handle.orb) }
-  val colors = fangColors
-  val palette = OrbPalette(
-    user = themeTint(OrbShader.USER_BASE, colors.accent, 0.18f),
-    agent = themeTint(OrbShader.AGENT_BASE, colors.dotSuccess, 0.24f),
-  )
   Canvas(modifier.size(size)) {
-    val layout = orbLayout(widthPx = this.size.width, heightPx = this.size.height)
-    val time = if (frozen) 0L else frame.longValue
-    handle.setState(stateFor(mood, time, userLevel, agentLevel, burst.floatValue, palette), layout)
+    val seconds = if (frozen) 0f else frame.longValue / 1000f
+    val breath = 0.5f - cos(TAU * seconds / OrbShader.BREATH_SECONDS) * 0.5f
+    val extent = this.size
+    val ppp = minOf(extent.width, extent.height) / (OrbShader.Tuning().diameter + 20f)
+    val layout = OrbShader.Layout(
+      width = extent.width,
+      height = extent.height,
+      centreX = extent.width * 0.5f,
+      centreY = extent.height * 0.5f,
+      pixelsPerPoint = ppp,
+    )
+    handle.setState(stateFor(mood, seconds, breath, userLevel, agentLevel, burst.floatValue), layout)
     drawRect(brush = brush)
   }
 }
 
-/** Maps pixel bounds into the shader's point space, leaving room for the 10pt wisp bleed. */
-private fun orbLayout(widthPx: Float, heightPx: Float): OrbShader.Layout {
-  val extent = ORB_RADIUS_PT + ORB_BLEED_PT
-  return OrbShader.Layout(
-    width = widthPx,
-    height = heightPx,
-    centreX = widthPx * 0.5f,
-    centreY = heightPx * 0.5f,
-    radius = ORB_RADIUS_PT,
-    pitch = GRID_PITCH,
-    columns = GRID_COLUMNS,
-    pixelsPerPoint = (minOf(widthPx, heightPx) * 0.5f) / extent,
+/** Level targets from b0e.a(..., z = true): listening 0.36 you; speaking 0.42 agent; both 0.38/0.4. */
+private data class Drive(
+  val palette: OrbShader.Palette,
+  val you: Float = 0f,
+  val agent: Float = 0f,
+  val confirm: Float = 0f,
+  val muted: Float = 0f,
+  val live: Boolean = false,
+  val pulse: Float = 0f,
+  val intensity: Float = 0.5f,
+  val halo: Float = 0f,
+)
+
+/** Maps the five legacy moods onto the exact seven-mode palette and level targets. */
+private fun driveFor(mood: OrbMood, burst: Float): Drive = when (mood) {
+  OrbMood.IDLE -> Drive(palette = OrbShader.Palette.SLEEPING, pulse = 0.25f, intensity = 0.55f, halo = 0.10f)
+
+  OrbMood.LISTENING -> Drive(
+    palette = OrbShader.Palette.LISTENING,
+    you = 0.36f,
+    live = true,
+    pulse = 0.50f,
+    intensity = 1f,
+    halo = 0.25f,
+  )
+
+  OrbMood.SPEAKING -> Drive(
+    palette = OrbShader.Palette.SPEAKING,
+    agent = 0.42f,
+    live = true,
+    pulse = 0.60f,
+    intensity = 1f,
+    halo = 0.35f,
+  )
+
+  OrbMood.DONE -> if (burst > 0f) {
+    // The 0.55 s finale flashes the speaking green before settling into the ended/sleeping palette.
+    Drive(
+      palette = OrbShader.Palette.SPEAKING,
+      agent = 0.42f,
+      live = true,
+      pulse = 0.60f,
+      intensity = 1f,
+      halo = burst,
+    )
+  } else {
+    Drive(palette = OrbShader.Palette.SLEEPING, pulse = 0.25f, intensity = 0.55f, halo = 0.10f)
+  }
+
+  OrbMood.FAILED -> Drive(
+    palette = OrbShader.Palette.CONFIRMING,
+    confirm = 1f,
+    muted = 1f,
+    pulse = 0.10f,
+    intensity = 0.35f,
   )
 }
 
-/** The kit palette, with the app's theme blended into the two live tints by [themeTint]. */
-private data class OrbPalette(val user: Color, val agent: Color)
-
-/** Picks the side, energy and tint each mode drives; levels come from the caller. */
-private fun driveFor(mood: OrbMood, userLevel: Float, agentLevel: Float, palette: OrbPalette): MoodDrive = when (mood) {
-  OrbMood.IDLE -> MoodDrive(
-    glow = 0.05f,
-    tint = OrbShader.MUTED_PLATE,
-    energy = Energy(pulse = 0.25f, intensity = 0.55f, halo = 0.10f),
-  )
-
-  OrbMood.LISTENING -> MoodDrive(
-    rimX = userLevel,
-    glow = userLevel,
-    tint = palette.user,
-    energy = Energy(pulse = 0.50f, intensity = 0.80f, halo = 0.25f),
-  )
-
-  OrbMood.SPEAKING -> MoodDrive(
-    rimY = agentLevel,
-    glow = agentLevel,
-    tint = palette.agent,
-    energy = Energy(pulse = 0.60f, intensity = 1f, halo = 0.35f),
-  )
-
-  OrbMood.DONE -> MoodDrive(
-    rimY = 1f,
-    glow = DONE_SETTLED_GLOW,
-    tint = palette.agent,
-    energy = Energy(pulse = 0.30f, intensity = 0.85f, halo = 0.20f),
-  )
-
-  OrbMood.FAILED -> MoodDrive(
-    mixBX = 1f,
-    mixBY = 1f,
-    glow = 0f,
-    tint = OrbShader.MUTED_RIM,
-    energy = Energy(pulse = 0.10f, intensity = 0.35f, halo = 0f),
-  )
-}
-
-/** [tint] drives both tint uniforms; [rimX]/[rimY] are the rim sides and [glow] the settled core. */
-private data class MoodDrive(
-  val mixBX: Float = 0f,
-  val mixBY: Float = 0f,
-  val rimX: Float = 0f,
-  val rimY: Float = 0f,
-  val glow: Float = 0.55f,
-  val tint: Color,
-  val energy: Energy,
-)
-
-/** The child cells shader's liveliness, kept per mode so a mode change reads in one place. */
-private data class Energy(val pulse: Float, val intensity: Float, val halo: Float)
-
-/** A gentle blending of the kit hue with the theme accent; the kit tint stays the fallback. */
-private fun themeTint(base: Color, theme: Color, amount: Float): Color = Color(
-  red = base.red + (theme.red - base.red) * amount,
-  green = base.green + (theme.green - base.green) * amount,
-  blue = base.blue + (theme.blue - base.blue) * amount,
-  alpha = base.alpha,
-)
-
-/** Resolves a mode into shader uniforms; the Done flash lifts both the core glow and the dot halo. */
+/** Resolves a mood and its breath into the full uniform state; caller levels override the fixed targets. */
 private fun stateFor(
   mood: OrbMood,
-  timeMs: Long,
+  seconds: Float,
+  breath: Float,
   userLevel: Float,
   agentLevel: Float,
   burst: Float,
-  palette: OrbPalette,
 ): OrbShader.State {
-  val seconds = timeMs / 1000f
-  val breath = 0.5f + 0.5f * sin(TAU * seconds / OrbShader.BREATH_SECONDS)
-  val drive = driveFor(mood, userLevel, agentLevel, palette)
-  // A slow, small gaze keeps the orb alive without bouncing while text streams.
-  val gazeX = 0.14f * sin(TAU * seconds / 7.3f) * drive.energy.intensity
-  val gazeY = 0.10f * sin(TAU * seconds / 5.7f + 1.1f) * drive.energy.intensity
-  val flash = if (mood == OrbMood.DONE) burst else 0f
+  val drive = driveFor(mood, burst)
+  val tune = OrbShader.Tuning()
+  val you = if (userLevel > 0f) userLevel.coerceIn(0f, 1f) else drive.you
+  val agent = if (agentLevel > 0f) agentLevel.coerceIn(0f, 1f) else drive.agent
   return OrbShader.State(
     time = seconds,
-    userTint = if (mood == OrbMood.DONE) palette.agent else palette.user,
-    agentTint = palette.agent,
-    mutedPlate = OrbShader.MUTED_PLATE,
-    mutedRim = OrbShader.MUTED_RIM,
-    tintBase = drive.tint,
-    tintCore = drive.tint,
-    userLevel = userLevel,
-    agentLevel = agentLevel,
-    mixBX = drive.mixBX,
-    mixBY = drive.mixBY,
-    rimX = drive.rimX,
-    rimY = drive.rimY,
-    glowX = drive.glow + (FINALE_FLASH_GLOW - drive.glow) * flash,
-    burst = flash,
-    pulse = drive.energy.pulse * (0.7f + 0.3f * breath),
-    intensity = drive.energy.intensity,
-    halo = drive.energy.halo,
-    gazeX = gazeX,
-    gazeY = gazeY,
+    palette = drive.palette,
+    youLevel = you,
+    agentLevel = agent,
+    confirmWeight = drive.confirm,
+    mutedWeight = drive.muted,
+    isLive = drive.live,
+    breath = breath,
+    pulse = drive.pulse * (0.7f + 0.3f * breath),
+    intensity = drive.intensity,
+    halo = drive.halo,
+    gazeX = 0.14f * sin(TAU * seconds / 7.3f) * tune.gazeBlend,
+    gazeY = 0.10f * sin(TAU * seconds / 5.7f + 1.1f) * tune.gazeBlend,
+    glowGain = 1f + burst,
   )
 }

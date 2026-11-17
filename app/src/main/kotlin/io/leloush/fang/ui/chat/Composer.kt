@@ -114,9 +114,15 @@ internal fun Composer(
   val shape = RoundedCornerShape(FangTokens.Radius.xxl)
   val tabs = controller.view.widgetTabs
   val widgets by controller.process.extensionWidgets.collectAsStateWithLifecycle()
+  val askRequest by controller.process.ask.request.collectAsStateWithLifecycle()
+  val askFailed by controller.process.ask.failed.collectAsStateWithLifecycle()
   LaunchedEffect(widgets) { tabs.track(widgets) }
+  // A new request starts folded, and the tab goes away with the one it answered.
+  LaunchedEffect(askRequest?.id) { tabs.closeAsk() }
   // The open tab is part of the key: without it, tapping a tab never invalidates the remembered panel.
-  val above = remember(widgets, tabs, tabs.open(belowEditor = false)) { widgetEdge(widgets, tabs, belowEditor = false) }
+  val above = remember(widgets, askRequest, tabs, tabs.open(belowEditor = false)) {
+    widgetEdge(widgets, tabs, belowEditor = false, ask = askRequest)
+  }
   val below = remember(widgets, tabs, tabs.open(belowEditor = true)) { widgetEdge(widgets, tabs, belowEditor = true) }
   val openWidget = { key: String -> onSheet(ChatSheet.Widget(key)) }
   Box(
@@ -144,7 +150,16 @@ internal fun Composer(
         // An open panel is weighted like the field, so it shrinks to the room left once the toolbar is measured. A
         // closed one isn't: a column doesn't pass on a weighted child's unused share, so it would cap the draft.
         val panelWeight = Modifier.weight(1f, fill = false)
-        WidgetPanelSlot(above.shown, tabs, false, tight, openWidget, if (above.shown != null) panelWeight else Modifier)
+        WidgetPanelSlot(
+          above.shown,
+          tabs,
+          false,
+          tight,
+          openWidget,
+          if (above.shown != null) panelWeight else Modifier,
+          askFailed,
+          controller::sendAskAnswer,
+        )
         if (controller.attachments.isNotEmpty()) {
           AttachmentTray(controller.attachments, onRemove = { controller.attachments.remove(it) })
         }

@@ -57,22 +57,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.leloush.fang.R
+import io.leloush.fang.agent.AskRequest
 import io.leloush.fang.agent.ExtensionWidget
 import io.leloush.fang.ui.components.FangSheet
 import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
+import org.json.JSONObject
 
 private val TAB_HEIGHT = 28.dp
 private val TAB_CORNER = 10.dp
 private val TAB_LABEL_MAX_WIDTH = 150.dp
 
+/** Reserved upper-edge tab key for the extension's ask request, so it shares the widgets' strip and panel slot. */
+internal const val ASK_TAB_KEY = "\u0000ask"
+
 /** How tall a widget's lines grow inside the composer before they scroll; the sheet shows them all. */
 private val PANEL_MAX_HEIGHT = 180.dp
 
 /** The same while the keyboard is up or a dialog waits: four lines, so the field and the dialog keep their room. */
-private val PANEL_TIGHT_MAX_HEIGHT = 72.dp
+internal val PANEL_TIGHT_MAX_HEIGHT = 72.dp
 
 /** Lowers the panel's lines so the first one centres on the 28 dp expand button beside it: (28 - 18) / 2. */
 private val PANEL_TEXT_TOP = 5.dp
@@ -82,8 +87,8 @@ private val SCROLL_FADE = 24.dp
 
 private const val SHEET_MAX_HEIGHT = 0.9f
 
-/** A widget with its key, as a tab or panel shows it. */
-internal class KeyedWidget(val key: String, val widget: ExtensionWidget)
+/** A widget with its key, as a tab or panel shows it; [ask] is set on the synthetic tab for a pending ask request. */
+internal class KeyedWidget(val key: String, val widget: ExtensionWidget, val ask: AskRequest? = null)
 
 /**
  * Which widget tab is open on each edge of the composer, and which widgets changed since the user last saw them. Kept
@@ -94,14 +99,44 @@ internal class WidgetTabs {
   private var openAbove by mutableStateOf<String?>(null)
   private var openBelow by mutableStateOf<String?>(null)
   private val seen = mutableStateMapOf<String, List<String>>()
+  private var askOpen by mutableStateOf(false)
+  private var askSession: AskSession? = null
 
-  /** The key of the tab open on the editor's [belowEditor] edge; null when none is. */
-  fun open(belowEditor: Boolean): String? = if (belowEditor) openBelow else openAbove
+  /** The key of the tab open on the editor's [belowEditor] edge; the ask tab owns the upper edge when open. */
+  fun open(belowEditor: Boolean): String? = when {
+    belowEditor -> openBelow
+    askOpen -> ASK_TAB_KEY
+    else -> openAbove
+  }
 
   /** Opens [key]'s tab in place of its edge's open one, or closes it when it is the open one. */
   fun toggle(key: String, belowEditor: Boolean) {
+    if (key == ASK_TAB_KEY) return toggleAsk()
     val next = key.takeIf { it != open(belowEditor) }
-    if (belowEditor) openBelow = next else openAbove = next
+    if (belowEditor) {
+      openBelow = next
+    } else {
+      openAbove = next
+      if (next != null) askOpen = false
+    }
+  }
+
+  /** Opens or folds the ask tab; opening it folds whichever widget tab was open above the editor. */
+  fun toggleAsk() {
+    askOpen = !askOpen
+    if (askOpen) openAbove = null
+  }
+
+  /** Folds the ask tab, e.g. after a drag down on its panel. */
+  fun closeAsk() {
+    askOpen = false
+  }
+
+  /** The answers for [request], kept while the ask tab folds so folding never discards what the user typed. */
+  fun askSessionFor(request: AskRequest, onSubmit: (JSONObject) -> Unit): AskSession {
+    val current = askSession
+    if (current != null && current.requestId == request.id) return current
+    return AskSession(request, onSubmit).also { askSession = it }
   }
 
   /** Whether [widget] changed since the user last saw it; a widget counts as seen when it first shows. */
@@ -118,7 +153,8 @@ internal class WidgetTabs {
   fun track(widgets: Map<String, ExtensionWidget>) {
     seen.keys.retainAll(widgets.keys)
     for ((key, widget) in widgets) if (key !in seen) seen[key] = widget.lines
-    if (openAbove?.let { widgets[it] }?.belowEditor != false) openAbove = null
+    val above = openAbove
+    if (above != null && above != ASK_TAB_KEY && widgets[above]?.belowEditor != false) openAbove = null
     if (openBelow?.let { widgets[it] }?.belowEditor != true) openBelow = null
   }
 }
@@ -126,9 +162,22 @@ internal class WidgetTabs {
 /** The widgets on one edge of the composer, and the one whose panel shows; null while none does. */
 internal class WidgetEdge(val widgets: List<KeyedWidget>, val shown: KeyedWidget?)
 
-/** The [widgets] on the editor's [belowEditor] edge, in their order, and the open tab's widget. */
-internal fun widgetEdge(widgets: Map<String, ExtensionWidget>, tabs: WidgetTabs, belowEditor: Boolean): WidgetEdge {
-  val edge = widgets.filterValues { it.belowEditor == belowEditor }.map { KeyedWidget(it.key, it.value) }
+/**
+ * The [widgets] on the editor's [belowEditor] edge, in their order, and the open tab's widget. A pending [ask] joins the
+ * upper edge as a synthetic tab, so it uses the same strip and panel as the extension widgets.
+ */
+internal fun widgetEdge(
+  widgets: Map<String, ExtensionWidget>,
+  tabs: WidgetTabs,
+  belowEditor: Boolean,
+  ask: AskRequest? = null,
+): WidgetEdge {
+  val edge = widgets.filterValues {
+    it.belowEditor == belowEditor
+  }.map { KeyedWidget(it.key, it.value) }.toMutableList()
+  if (!belowEditor && ask != null) {
+    edge.add(0, KeyedWidget(ASK_TAB_KEY, ExtensionWidget(emptyList(), false), ask))
+  }
   val open = tabs.open(belowEditor)
   return WidgetEdge(edge, edge.firstOrNull { it.key == open })
 }
@@ -155,13 +204,29 @@ internal fun WidgetTabStrip(edge: WidgetEdge, tabs: WidgetTabs, belowEditor: Boo
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
   ) {
     items(widgets, key = { it.key }) { item ->
+      val ask = item.ask
+      val open = item.key == edge.shown?.key
       WidgetTab(
-        label = widgetLabel(item.key),
-        open = item.key == edge.shown?.key,
-        changed = tabs.changed(item.key, item.widget),
+        label = if (ask != null) {
+          pluralStringResource(R.plurals.chat_ask_bulge_count, ask.questions.size, ask.questions.size)
+        } else {
+          widgetLabel(item.key)
+        },
+        icon = when {
+          ask != null -> R.drawable.ic_lucide_message_circle_question
+          belowEditor -> R.drawable.ic_lucide_panel_bottom
+          else -> R.drawable.ic_lucide_panel_top
+        },
+        open = open,
+        changed = ask == null && tabs.changed(item.key, item.widget),
         belowEditor = belowEditor,
         onClick = { tabs.toggle(item.key, belowEditor) },
         modifier = Modifier,
+        actionLabel = if (ask != null) {
+          stringResource(if (open) R.string.chat_ask_bulge_fold else R.string.chat_ask_bulge_show)
+        } else {
+          null
+        },
       )
     }
   }
@@ -175,11 +240,13 @@ internal fun WidgetTabStrip(edge: WidgetEdge, tabs: WidgetTabs, belowEditor: Boo
 @Composable
 private fun WidgetTab(
   label: String,
+  icon: Int,
   open: Boolean,
   changed: Boolean,
   belowEditor: Boolean,
   onClick: () -> Unit,
   modifier: Modifier,
+  actionLabel: String? = null,
 ) {
   val colors = fangColors
   val shape = if (belowEditor) {
@@ -189,7 +256,7 @@ private fun WidgetTab(
   }
   val fill = if (open) colors.surface1 else colors.surface0
   val description = if (changed) stringResource(R.string.chat_widget_changed, label) else label
-  val action = stringResource(if (open) R.string.chat_widget_close else R.string.chat_widget_open)
+  val action = actionLabel ?: stringResource(if (open) R.string.chat_widget_close else R.string.chat_widget_open)
   Row(
     modifier = modifier
       .height(TAB_HEIGHT)
@@ -216,7 +283,7 @@ private fun WidgetTab(
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
   ) {
     LucideIcon(
-      icon = if (belowEditor) R.drawable.ic_lucide_panel_bottom else R.drawable.ic_lucide_panel_top,
+      icon = icon,
       contentDescription = null,
       size = FangTokens.IconSize.sm,
       tint = if (open) colors.accent else colors.foregroundMuted,
@@ -269,9 +336,9 @@ private fun Modifier.fadeScrolledEdges(state: ScrollableState, vertical: Boolean
   }
 
 /**
- * The open tab's widget inside the composer: above the text field for a widget above the editor, under the toolbar for
- * one below it. It grows open and folds closed, and switching tabs eases from one widget's height to the other's. The
- * user has seen the widget's lines for as long as they show. A [tight] panel keeps to a few lines.
+ * The open tab inside the composer: a widget above the text field or under the toolbar, or the pending ask request's
+ * questions. It grows open and folds closed, and switching tabs eases from one height to the other's. The user has seen
+ * the widget's lines for as long as they show. A [tight] panel keeps to a few lines.
  */
 @Composable
 internal fun WidgetPanelSlot(
@@ -281,10 +348,16 @@ internal fun WidgetPanelSlot(
   tight: Boolean,
   onExpand: (String) -> Unit,
   modifier: Modifier = Modifier,
+  askFailed: Boolean = false,
+  onSubmit: (JSONObject) -> Unit = {},
 ) {
-  LaunchedEffect(shown?.key, shown?.widget) { shown?.let { tabs.see(it.key, it.widget) } }
-  if (shown != null) {
-    Box(modifier) {
+  val ask = shown?.ask
+  LaunchedEffect(shown?.key, shown?.widget) { if (ask == null) shown?.let { tabs.see(it.key, it.widget) } }
+  if (shown == null) return
+  Box(modifier) {
+    if (ask != null) {
+      AskPanel(tabs.askSessionFor(ask, onSubmit), askFailed, tight, onFold = tabs::closeAsk)
+    } else {
       WidgetPanel(shown, belowEditor, tight, onExpand = { onExpand(shown.key) })
     }
   }

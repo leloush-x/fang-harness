@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- A capsule's label. %1$s is the agent's name, such as Explore, %2$s the few words the model gave its task. -->
-    <string name="capsule_title">%1$s · %2$s</string>
-    <!-- Name used for a run with no agent name, as the %1$s of capsule_open and capsule_restore. -->
+    <!-- Name used for a run with neither an agent name nor a task, as the %1$s of capsule_open and capsule_restore. -->
     <string name="capsule_unnamed">subagent</string>
     <!-- TalkBack's action for tapping an open capsule. %1$s is the subagent's name. -->
     <string name="capsule_open">Open subagent %1$s</string>

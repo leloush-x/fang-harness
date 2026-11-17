@@ -51,7 +51,7 @@ internal fun ChatMainBody(
               modifier = Modifier.padding(bottom = FangTokens.Spacing.s8),
             )
           }
-          PendingDialogCard(controller, timeline, state.askRequest, state.askFailed, state.answered)
+          PendingDialogCard(controller, timeline, state.answered)
         }
       },
       steering = { PendingSteeringBox(controller, timeline, compact = state.tight) },

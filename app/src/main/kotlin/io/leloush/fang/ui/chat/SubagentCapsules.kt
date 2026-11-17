@@ -24,6 +24,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.leloush.fang.R
 import io.leloush.fang.ui.components.FangOrb
@@ -56,12 +58,14 @@ internal fun SubagentCapsules(
   }
 }
 
-/** One subagent's pill: an orb and its label, folding to a small capsule under a fling. */
+/** One subagent's pill: an orb and its short name, folding to just the orb under a fling. */
 @Composable
 private fun CapsulePill(fact: SubagentFacts, onOpen: (SubagentFacts) -> Unit, modifier: Modifier = Modifier) {
   var folded by remember(fact.toolCallId) { mutableStateOf(false) }
-  val name = fact.agent.ifBlank { stringResource(R.string.capsule_unnamed) }
+  val name = fact.agent.ifBlank { fact.description.ifBlank { stringResource(R.string.capsule_unnamed) } }
   val action = stringResource(if (folded) R.string.capsule_restore else R.string.capsule_open, name)
+  // The task stays available to TalkBack without widening the pill's one-line label.
+  val details = fact.description.ifBlank { name }
   val mood = when {
     fact.phase.active -> OrbMood.SPEAKING
     fact.phase == SubagentPhase.Failed -> OrbMood.FAILED
@@ -72,6 +76,7 @@ private fun CapsulePill(fact: SubagentFacts, onOpen: (SubagentFacts) -> Unit, mo
       // subagent-capsule-press: clip to the pill so the press ripple keeps both ends rounded
       .clip(RoundedCornerShape(50))
       .background(fangColors.surface2)
+      .semantics { contentDescription = details }
       .pointerInput(fact.toolCallId) { foldOnFling { folded = true } }
       .clickable(onClickLabel = action) { if (folded) folded = false else onOpen(fact) }
       .widthIn(max = 220.dp)
@@ -80,10 +85,10 @@ private fun CapsulePill(fact: SubagentFacts, onOpen: (SubagentFacts) -> Unit, mo
         vertical = if (folded) FangTokens.Spacing.s4 else FangTokens.Spacing.s8,
       ),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
+    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
   ) {
     FangOrb(size = FangTokens.IconSize.sm, mood = mood)
-    if (!folded) SubagentText(agent = name, description = fact.description)
+    if (!folded) SubagentText(label = name)
   }
 }
 

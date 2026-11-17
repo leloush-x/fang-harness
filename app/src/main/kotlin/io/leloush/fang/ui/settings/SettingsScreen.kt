@@ -306,7 +306,6 @@ private fun AppearanceSection(preferences: Preferences) {
   if (theme == ThemeMode.AMOLED) {
     SettingsCaption(text = stringResource(R.string.settings_theme_amoled_summary))
   }
-  OrbSettingsRows(preferences = preferences)
 }
 
 /** Whether chats that finish or need an answer off screen show in the pill; Android's own settings cover the rest. */

@@ -1,12 +1,5 @@
 package io.leloush.fang.ui.chat
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
@@ -36,8 +28,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,7 +45,6 @@ import io.leloush.fang.agent.AskOption
 import io.leloush.fang.agent.AskQuestion
 import io.leloush.fang.agent.AskRequest
 import io.leloush.fang.ui.components.LucideIcon
-import io.leloush.fang.ui.theme.FangColors
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import kotlinx.coroutines.delay
@@ -66,55 +55,32 @@ import org.json.JSONObject
 private val ASK_PANEL_MAX_HEIGHT = 280.dp
 
 /**
- * An extension's `ask` request as a small square bulge at the composer's top edge, like a widget tab: tap it to grow the
- * question card out of the composer, drag the card down or tap its chevron to fold it back. Questions show one at a time;
- * Skip leaves one unanswered and Dismiss cancels the whole request. Only the last question's Continue becomes Submit,
- * which sends every answer through [onSubmit]. A failed send keeps the card with Retry.
+ * The pending `ask` request as the panel of the composer's Ask tab: a fixed heading with a fold chevron, and a capped,
+ * scrollable question body with the action row pinned below it. Questions show one at a time; Skip leaves one unanswered
+ * and Dismiss cancels the whole request. Only the last question's Continue becomes Submit, which sends every answer
+ * through [onSubmit] via [AskSession]. A failed send keeps the panel with Retry. A drag down folds the tab.
  */
 @Composable
-internal fun AskUserCard(
-  request: AskRequest,
+internal fun AskPanel(
+  session: AskSession,
   failed: Boolean,
-  onSubmit: (JSONObject) -> Unit,
+  tight: Boolean,
+  onFold: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val session = remember(request.id) { AskSession(request, onSubmit) }
-  // Pi's own timeout aborts its wait; tell it the card is gone when that deadline passes too.
-  val expiresAt = remember(request.id) { request.timeout?.let { System.currentTimeMillis() + it } }
+  val colors = fangColors
+  val expiresAt = session.expiresAt
+  // Pi's own timeout aborts its wait; tell it the panel is gone when that deadline passes too.
   LaunchedEffect(expiresAt) {
     if (expiresAt == null) return@LaunchedEffect
     delay((expiresAt - System.currentTimeMillis()).coerceAtLeast(0))
     session.cancel()
   }
-  var folded by remember(request.id) { mutableStateOf(false) }
-  val colors = fangColors
-  val counter = stringResource(R.string.chat_ask_counter, session.index + 1, request.questions.size)
-  Box(modifier = modifier.fillMaxWidth().padding(horizontal = FangTokens.Spacing.s16), Alignment.TopStart) {
-    Column(modifier = Modifier.widthIn(max = FangTokens.contentMaxWidth).fillMaxWidth()) {
-      AskBulge(counter, request.questions.size, expanded = !folded, failed, onToggle = { folded = !folded })
-      AnimatedVisibility(
-        visible = !folded,
-        enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMedium)) + fadeIn(),
-        exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMedium)) + fadeOut(),
-      ) {
-        AskPanel(request, session, failed, colors) { folded = true }
-      }
-    }
-  }
-}
-
-/** The card grown out of the bulge: a fixed heading with a fold chevron, and a capped, scrollable question body. */
-@Composable
-private fun AskPanel(
-  request: AskRequest,
-  session: AskSession,
-  failed: Boolean,
-  colors: FangColors,
-  onFold: () -> Unit,
-) {
+  val request = session.request
   val shape = RoundedCornerShape(FangTokens.Radius.lg)
   Column(
-    modifier = Modifier
+    modifier = modifier
+      .fillMaxWidth()
       .clip(shape)
       .background(colors.surface1)
       .border(1.dp, colors.borderAccent, shape)
@@ -143,18 +109,18 @@ private fun AskPanel(
     Column(
       modifier = Modifier
         .padding(FangTokens.Spacing.s12)
-        .heightIn(max = ASK_PANEL_MAX_HEIGHT)
+        .heightIn(max = if (tight) PANEL_TIGHT_MAX_HEIGHT else ASK_PANEL_MAX_HEIGHT)
         .verticalScroll(rememberScrollState()),
       verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
     ) {
       QuestionSection(request.questions[session.index], request.allowComment, session.answers[session.index])
       if (failed) AskFailure(session)
-      AskActions(session)
     }
+    AskActions(session, Modifier.padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8))
   }
 }
 
-/** The failure row inside the expanded card, with the same Retry the folded bulge hides away. */
+/** The failure row inside the expanded panel, with the Retry the closed tab can't reach. */
 @Composable
 private fun AskFailure(session: AskSession) {
   val colors = fangColors
@@ -292,8 +258,8 @@ private fun InlineField(state: TextFieldState, hint: String) {
 
 /** Skip and Dismiss on one row, Back and the answer action on the next; Continue is off until something is picked. */
 @Composable
-private fun AskActions(session: AskSession) {
-  Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
+private fun AskActions(session: AskSession, modifier: Modifier = Modifier) {
+  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
     Row(horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
       AskButton(stringResource(R.string.chat_ask_skip), onClick = session::skip)
       AskButton(stringResource(R.string.chat_dismiss), onClick = session::dismiss)
@@ -345,8 +311,10 @@ private class AnswerState {
   }
 }
 
-/** Navigation and the answer JSON for one [AskRequest], held across recompositions for its card. */
-private class AskSession(private val request: AskRequest, private val onSubmit: (JSONObject) -> Unit) {
+/** Navigation and the answer JSON for one [AskRequest], held across folds of its tab. */
+internal class AskSession(internal val request: AskRequest, private val onSubmit: (JSONObject) -> Unit) {
+  val requestId: String = request.id
+  val expiresAt: Long? = request.timeout?.let { System.currentTimeMillis() + it }
   val answers = List(request.questions.size) { AnswerState() }
   var index by mutableIntStateOf(0)
     private set
@@ -377,7 +345,7 @@ private class AskSession(private val request: AskRequest, private val onSubmit: 
 
   fun dismiss() = submit(cancelled = true)
 
-  /** Pi's deadline passed: cancel with empty answers, exactly as the timeout did before folding existed. */
+  /** Pi's deadline passed: cancel with empty answers, exactly as before the tab existed. */
   fun cancel() {
     val data = JSONObject().put("id", request.id).put("answers", JSONArray()).put("cancelled", true)
     submitted = data

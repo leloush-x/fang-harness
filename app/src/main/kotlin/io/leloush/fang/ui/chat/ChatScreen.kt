@@ -34,7 +34,6 @@ import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcess
 import io.leloush.fang.agent.AgentProcessState
 import io.leloush.fang.agent.AskAnswered
-import io.leloush.fang.agent.AskRequest
 import io.leloush.fang.agent.TimelineState
 import io.leloush.fang.appGraph
 import io.leloush.fang.ui.ShellActions
@@ -165,7 +164,6 @@ private fun ChatContent(
   val openFact = selectedId?.let { id -> facts.firstOrNull { it.toolCallId == id } }
   LaunchedEffect(selectedId, facts) { if (selectedId != null && openFact == null) selectedId = null }
   val askRequest by process.ask.request.collectAsStateWithLifecycle()
-  val askFailed by process.ask.failed.collectAsStateWithLifecycle()
   val answered by process.ask.answered.collectAsStateWithLifecycle()
   val keyboard = LocalSoftwareKeyboardController.current
   val focus = LocalFocusManager.current
@@ -178,16 +176,7 @@ private fun ChatContent(
   // The keyboard and a dialog both take the room the steering box and widget panels would use, so then the steering
   // box keeps to one line and a panel to a few.
   val tight = WindowInsets.isImeVisible || timeline.pendingUi != null || askRequest != null || answered != null
-  val bodyState = ChatMainState(
-    working,
-    tight,
-    askRequest,
-    askFailed,
-    answered,
-    facts,
-    { selectedId = it },
-    dismissKeyboard,
-  )
+  val bodyState = ChatMainState(working, tight, answered, facts, { selectedId = it }, dismissKeyboard)
   Box(modifier = modifier.fillMaxSize()) {
     ChatMainBody(controller, snackbar, controls, timeline, bodyState, onOpenProviders, onOpenOnboarding, onSheet)
     openFact?.let { SubagentChatScreen(process, it, { selectedId = null }, controller::show) }
@@ -209,8 +198,6 @@ internal fun StreamArea(
   val processState by process.state.collectAsStateWithLifecycle()
   val backgroundTasks by process.backgroundTasks.collectAsStateWithLifecycle()
   val copyText = rememberCopyText()
-  val floatedOrb by LocalContext.current.appGraph.preferences.orbFloats.collectAsStateWithLifecycle()
-  val busy by process.busy.collectAsStateWithLifecycle()
   Box(modifier = Modifier.fillMaxSize().onUnhandledTap(dismissKeyboard)) {
     ChatStream(
       timeline = timeline,
@@ -231,8 +218,6 @@ internal fun StreamArea(
       },
       backgroundTasks = backgroundTasks,
     )
-    // Drawn after the stream so the opt-in floating work badge sits above the chat, not behind it.
-    FloatingWorkBadge(floatedOrb && busy)
     SnackbarStack(snackbar, Modifier.align(Alignment.BottomCenter).padding(FangTokens.Spacing.s16))
     SlashMenuHost(controller, ready = processState == AgentProcessState.Ready, Modifier.align(Alignment.BottomCenter))
     val pendingDelete = controller.messageActions.pendingDelete
@@ -258,13 +243,7 @@ internal fun StreamArea(
 
 /** The first extension dialog Pi waits on, the active `ask` card, or its answered summary, above the composer. */
 @Composable
-internal fun PendingDialogCard(
-  controller: ChatController,
-  timeline: TimelineState,
-  askRequest: AskRequest?,
-  askFailed: Boolean,
-  answered: AskAnswered?,
-) {
+internal fun PendingDialogCard(controller: ChatController, timeline: TimelineState, answered: AskAnswered?) {
   val request = timeline.pendingUi
   if (request != null) {
     ExtensionUiCard(
@@ -273,14 +252,6 @@ internal fun PendingDialogCard(
       count = timeline.pendingUiCount,
       onAnswer = { controller.respondUi(request.id, it) },
       modifier = Modifier.padding(bottom = FangTokens.Spacing.s8),
-    )
-    return
-  }
-  if (askRequest != null) {
-    AskUserCard(
-      request = askRequest,
-      failed = askFailed,
-      onSubmit = { controller.sendAskAnswer(it) },
     )
     return
   }
