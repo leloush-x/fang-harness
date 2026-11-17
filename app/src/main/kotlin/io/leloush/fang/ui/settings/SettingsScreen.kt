@@ -36,7 +36,9 @@ import io.leloush.fang.data.BundledExtension
 import io.leloush.fang.data.PiExtensionUpdate
 import io.leloush.fang.data.PiExtensionUpdateOutcome
 import io.leloush.fang.data.Preferences
+import io.leloush.fang.host.HostRejected
 import io.leloush.fang.ui.chat.ConfirmDialog
+import io.leloush.fang.ui.chat.TextInputDialog
 import io.leloush.fang.ui.components.HeaderBar
 import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.components.LucideIcon
@@ -46,6 +48,7 @@ import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.ThemeMode
 import io.leloush.fang.ui.theme.fangColors
+import java.io.IOException
 import java.security.MessageDigest
 import kotlinx.coroutines.launch
 
@@ -115,7 +118,7 @@ private fun SettingsContent(
     ) {
       ProvidersSection(onOpenProviders = onOpenProviders)
       AgentSection(graph = graph, snackbar = snackbar, onOpenBackups = onOpenBackups)
-      ExtensionsSection(graph = graph)
+      ExtensionsSection(graph = graph, snackbar = snackbar)
       AppearanceSection(preferences = graph.preferences)
       NotificationsSection(preferences = graph.preferences)
       RuntimeSection(graph = graph, onOpenPermissions = onOpenPermissions)
@@ -239,12 +242,57 @@ private fun UpdateExtensionsRow(update: PiExtensionUpdate, snackbar: SnackbarSta
   }
 }
 
+/** Installs a Pi package (extension, skill, prompt or theme) into Fang Harness's config with `pi install`. */
+@Composable
+private fun InstallPackageRow(graph: AppGraph, snackbar: SnackbarStackState) {
+  val scope = rememberCoroutineScope()
+  val failed = stringResource(R.string.provider_failed)
+  val done = stringResource(R.string.settings_install_extension_done)
+  var source by rememberSaveable { mutableStateOf<String?>(null) }
+  var installing by remember { mutableStateOf(false) }
+  SettingsRow(
+    title = stringResource(R.string.settings_install_extension),
+    subtitle = stringResource(R.string.settings_install_extension_subtitle),
+    enabled = !installing,
+    onClick = { source = "" },
+  ) {
+    if (installing) SimmeringPot()
+  }
+  val initial = source ?: return
+  TextInputDialog(
+    title = stringResource(R.string.settings_install_extension),
+    initial = initial,
+    placeholder = stringResource(R.string.settings_install_extension_placeholder),
+    confirmLabel = stringResource(R.string.settings_install_extension_action),
+    multiline = false,
+    onConfirm = { value ->
+      source = null
+      val trimmed = value.trim()
+      if (trimmed.isEmpty()) return@TextInputDialog
+      installing = true
+      scope.launch {
+        try {
+          graph.accountRepository.installPackage(trimmed) { line -> if (line.isNotBlank()) snackbar.show(line) }
+          snackbar.show(done)
+        } catch (failure: IOException) {
+          snackbar.show(failure.message ?: failed)
+        } catch (rejected: HostRejected) {
+          snackbar.show(rejected.error.ifEmpty { failed })
+        } finally {
+          installing = false
+        }
+      }
+    },
+    onDismiss = { source = null },
+  )
+}
+
 /**
  * A switch for each extension Fang Harness bundles. A change reloads idle chats so they pick it up at once; a working chat
  * picks it up when its agent next starts.
  */
 @Composable
-private fun ExtensionsSection(graph: AppGraph) {
+private fun ExtensionsSection(graph: AppGraph, snackbar: SnackbarStackState) {
   val disabled by graph.preferences.disabledExtensions.collectAsStateWithLifecycle()
   Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12)) {
     SettingsSection(title = stringResource(R.string.settings_section_extensions)) {
@@ -265,6 +313,7 @@ private fun ExtensionsSection(graph: AppGraph) {
         }
       }
     }
+    InstallPackageRow(graph = graph, snackbar = snackbar)
     SettingsCaption(text = stringResource(R.string.settings_extensions_caption))
   }
 }

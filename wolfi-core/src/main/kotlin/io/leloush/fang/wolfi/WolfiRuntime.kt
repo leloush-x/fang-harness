@@ -234,6 +234,33 @@ class WolfiRuntime(context: Context) {
   private fun ensureMachineFiles() {
     if (!rootfsReady()) return
     MachineFiles.ensure(File(rootfs, "etc"))
+    ensurePiCommand()
+  }
+
+  /**
+   * Puts the pinned Pi on the terminal's PATH. Pi is shipped under the app's runtime folder, not Wolfi's /usr, so a
+   * plain `pi install npm:…` in a terminal tab would say "command not found". The wrapper sets Pi's config folder so
+   * packages and settings go where Fang Harness looks, then execs the CLI that ensure installs. Written for every
+   * process so a runtime unpacked before this existed gets it; an existing, unchanged file is left alone.
+   */
+  private fun ensurePiCommand() {
+    val script = File(rootfs, "usr/local/bin/pi")
+    val pi = File(hostDir, "pi/node_modules/@earendil-works/pi-coding-agent")
+    val content = """
+      #!/bin/sh
+      export PI_CODING_AGENT_DIR='${configDir.absolutePath}'
+      PI='${pi.absolutePath}'
+      if [ -f "\$PI/dist/bundle/cli.js" ]; then
+        exec /usr/bin/node "\$PI/dist/bundle/cli.js" "\$@"
+      fi
+      exec /usr/bin/node "\$PI/dist/cli.js" "\$@"
+    """.trimIndent() + "\n"
+    if (script.exists() && runCatching { script.readText() }.getOrNull() == content) return
+    runCatching {
+      script.parentFile?.mkdirs()
+      script.writeText(content)
+      script.setExecutable(true)
+    }
   }
 
   private fun rootfsReady(): Boolean = File(rootfs, "usr/bin/bash").exists() && File(rootfs, "etc/os-release").exists()

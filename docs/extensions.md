@@ -33,16 +33,13 @@ Pi packages bundle extensions, skills, prompts, and themes from npm or git. Inst
 
 Then reload the chat with **Chat actions → Reload agent** or `/reload`. Pi installs missing packages when the agent starts.
 
-**Run Pi's install command** in a terminal tab. Fang Harness's Pi isn't on the terminal's `PATH`, so give its path and config folder:
+**Use Settings → Extensions → Install a Pi package**, or run Pi's command in a terminal tab:
 
 ```sh
-APP=/data/data/io.leloush.fang/files/wolfi
-PI_CODING_AGENT_DIR="$APP/pi" \
-  node "$APP/runtime/pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js" \
-  install npm:@example/pi-tools
+pi install npm:@example/pi-tools
 ```
 
-For Fang Harness Dev, use `/data/data/io.leloush.fang.debug/files/wolfi`. Use `remove` to uninstall or `list` to list packages, then reload the chat. Without `PI_CODING_AGENT_DIR`, Pi installs into `~/.pi/agent`, which Fang Harness ignores.
+The `pi` command in the Wolfi terminal points at Fang Harness's pinned Pi and its config folder, so packages land where the app looks. Use `pi remove` to uninstall or `pi list` to list packages, then reload the chat.
 
 Pi's [packages documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md) covers git sources, version pinning, and partial loading. Packages run code with the agent's permissions; review them before installing.
 

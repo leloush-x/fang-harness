@@ -305,4 +305,9 @@
   <string name="models_list_failed">Couldn\'t get the provider\'s list of models, so these are the ones Pi knows: %1$s</string>
   <string name="models_add_custom">Add \"%1$s\" as a custom model</string>
   <string name="sessions_refresh_failed">Couldn\'t load chats. Tap to retry.</string>
+  <string name="settings_install_extension">Install a Pi package</string>
+  <string name="settings_install_extension_subtitle">Extensions, skills and prompts from npm or git</string>
+  <string name="settings_install_extension_placeholder">npm:@example/pi-tools</string>
+  <string name="settings_install_extension_action">Install</string>
+  <string name="settings_install_extension_done">Installed. Reload the chat to use it.</string>
 </resources>
