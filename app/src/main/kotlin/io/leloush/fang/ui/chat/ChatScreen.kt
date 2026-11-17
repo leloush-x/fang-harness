@@ -163,9 +163,7 @@ private fun ChatContent(
   // Keep the id, not a snapshot: a live run's detail updates while the sheet is open and closes when the run leaves.
   var selectedId by remember { mutableStateOf<String?>(null) }
   val openFact = selectedId?.let { id -> facts.firstOrNull { it.toolCallId == id } }
-  LaunchedEffect(selectedId, facts) {
-    if (selectedId != null && openFact == null) selectedId = null
-  }
+  LaunchedEffect(selectedId, facts) { if (selectedId != null && openFact == null) selectedId = null }
   val askRequest by process.ask.request.collectAsStateWithLifecycle()
   val askFailed by process.ask.failed.collectAsStateWithLifecycle()
   val answered by process.ask.answered.collectAsStateWithLifecycle()
