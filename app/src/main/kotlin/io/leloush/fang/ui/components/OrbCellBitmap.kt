@@ -87,24 +87,23 @@ private fun floatToHalfBits(value: Float): Short {
   val sign = (bits ushr 16) and 0x8000
   val exp = (bits ushr 23) and 0xff
   val mant = bits and 0x7fffff
-  if (exp == 0xff) return (sign or 0x7c00 or (mant ushr 13)).toShort()
   val hExp = exp - 112
-  if (hExp >= 31) return (sign or 0x7c00).toShort()
-  if (hExp > 0) {
-    var e = hExp
-    var m = (mant ushr 13) + ((mant ushr 12) and 1)
-    if (m == 0x400) {
-      m = 0
-      e++
-    }
-    if (e >= 31) return (sign or 0x7c00).toShort()
-    return (sign or (e shl 10) or m).toShort()
+  val normal = hExp > 0
+  var e = hExp
+  var m = (mant ushr 13) + ((mant ushr 12) and 1)
+  if (normal && m == 0x400) {
+    m = 0
+    e++
   }
-  if (hExp > -10) {
-    val m = mant or 0x800000
-    val shift = 14 - hExp
-    val rounded = (m + (1 shl (shift - 1))) ushr shift
-    return (sign or rounded).toShort()
+  val subM = mant or 0x800000
+  val shift = 14 - hExp
+  val rounded = (subM + (1 shl (shift - 1))) ushr shift
+  val result = when {
+    exp == 0xff -> sign or 0x7c00 or (mant ushr 13)
+    hExp >= 31 || (normal && e >= 31) -> sign or 0x7c00
+    normal -> sign or (e shl 10) or m
+    hExp > -10 -> sign or rounded
+    else -> sign
   }
-  return sign.toShort()
+  return result.toShort()
 }
