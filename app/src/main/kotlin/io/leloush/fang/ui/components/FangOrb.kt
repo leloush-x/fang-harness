@@ -17,8 +17,6 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlinx.coroutines.isActive
 
-internal enum class OrbMood { CONNECTING, LISTENING, WORKING, SPEAKING, WAITING, DONE }
-
 private val USER_BASE = Color(0.60f, 0.90f, 0.98f)
 private val AGENT_BASE = Color(0.44f, 0.91f, 0.68f)
 

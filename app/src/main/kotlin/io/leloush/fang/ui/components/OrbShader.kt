@@ -1,9 +1,9 @@
 package io.leloush.fang.ui.components
 
-import android.annotation.RequiresApi
 import android.content.Context
 import android.graphics.RuntimeShader
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
@@ -80,7 +80,7 @@ object OrbShader {
   fun create(context: Context): Handle {
     val orb = RuntimeShader(readRawShader(context, R.raw.shader_03))
     val cells = RuntimeShader(readRawShader(context, R.raw.shader_07))
-    orb.setChildShader("cells", cells)
+    orb.setInputShader("cells", cells)
     return Handle(orb, cells)
   }
 
