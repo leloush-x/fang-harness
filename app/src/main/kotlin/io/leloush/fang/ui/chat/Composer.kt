@@ -237,7 +237,9 @@ private fun AttachmentTray(attachments: List<Attachment>, onRemove: (Attachment)
     attachments.forEach { attachment ->
       when (attachment) {
         is Attachment.Image -> AttachmentThumbnail(attachment, onRemove = { onRemove(attachment) })
+
         is Attachment.File -> FileChip(attachment, onRemove = { onRemove(attachment) })
+
         is Attachment.Text -> PastedTextChip(
           onOpen = { openedText = attachment },
           onRemove = { onRemove(attachment) },
@@ -385,7 +387,9 @@ private fun receiveContent(
       else -> controller.show(R.string.chat_paste_images_text_only)
     }
     rest ?: return null
-  } else content
+  } else {
+    content
+  }
   val clip = afterImages.clipEntry.clipData
   val hasText = (0 until clip.itemCount).any { !clip.getItemAt(it).text.isNullOrEmpty() }
   if (!hasText) {
@@ -400,7 +404,9 @@ private fun receiveContent(
         if (text.length >= PASTED_TEXT_MIN_LENGTH) {
           controller.attachments += Attachment.Text(text)
           true
-        } else false
+        } else {
+          false
+        }
       } ?: false
     }
   }.getOrElse {
