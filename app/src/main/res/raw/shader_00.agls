@@ -1,0 +1,41 @@
+uniform float2 size;
+uniform float4 radii;
+uniform float density;
+layout(color) uniform half4 liftIn;
+layout(color) uniform half4 glowIn;
+uniform float fillLift;
+uniform float innerGlow;
+
+half4 main(float2 position) {
+  if ((fillLift <= 1e-4 && innerGlow <= 1e-4) || size.x <= 0.0 || size.y <= 0.0) {
+    return half4(0.0);
+  }
+  // The Metal shader works in points; do the same so the 7 pt falloff matches.
+  float2 sizePt = size / density;
+  float2 halfSize = sizePt * 0.5;
+  float2 p = position / density - halfSize;
+  float r = p.x > 0.0 ? (p.y > 0.0 ? radii.w : radii.z) : (p.y > 0.0 ? radii.y : radii.x);
+  r = min(r, min(halfSize.x, halfSize.y));
+  float2 q = abs(p) - halfSize + r;
+  float2 qPos = max(q, 0.0);
+  float cornerDist = r > 1e-3
+    ? pow(pow(qPos.x / r, 2.4) + pow(qPos.y / r, 2.4), 1.0 / 2.4) * r
+    : length(qPos);
+  float sd = min(max(q.x, q.y), 0.0) + cornerDist - r;
+  if (sd >= 0.5) {
+    return half4(0.0);
+  }
+  float edgeMask = clamp(0.5 - sd, 0.0, 1.0);
+  float depth = max(0.0, -sd);
+
+  float aLift = clamp(fillLift, 0.0, 1.0);
+  float3 premul = float3(liftIn.rgb) * aLift;
+  float alpha = aLift;
+
+  float shoulder = 1.0 - 0.24 * exp(-depth * depth / 5.5);
+  float aGlow = clamp(innerGlow * shoulder * exp(-depth / 7.0), 0.0, 1.0);
+  premul = premul * (1.0 - aGlow) + float3(glowIn.rgb) * aGlow;
+  alpha = alpha * (1.0 - aGlow) + aGlow;
+
+  return half4(half3(premul * edgeMask), half(alpha * edgeMask));
+}

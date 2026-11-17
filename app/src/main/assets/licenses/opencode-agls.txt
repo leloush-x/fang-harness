@@ -1,0 +1,11 @@
+OpenCode Mobile 0.7.0 (ai.opencode.mobilecode, version code 178), license not supplied with the artifact; Fang Harness uses its AGSL shader sources for the Wisp Orb foundation.
+
+Source: base.apk from OpenCode.zip, package ai.opencode.mobilecode, version 0.7.0 (178).
+APK SHA-256: c6c70b689e0095a36cf70dbb22b0ee29d0cc75cd09c860edc74e93e442e1f802.
+Files used: AGSL shader sources copied statically from the APK's DEX string pool into
+app/src/main/res/raw/shader_00.agls through shader_06.agls (the Wisp Orb uses shader_03).
+
+License status: license not supplied with the artifact; static extraction; confirm before redistribution.
+There is no license file in OpenCode.zip and no license notice in the extracted sources. The
+copyright holder and terms are therefore unknown. Do not redistribute these shaders outside
+Fang Harness until the upstream license has been confirmed.

@@ -1,8 +1,15 @@
 package io.leloush.fang.ui.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,11 +44,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.leloush.fang.R
+import io.leloush.fang.agent.AskAnswered
 import io.leloush.fang.agent.AskOption
 import io.leloush.fang.agent.AskQuestion
 import io.leloush.fang.agent.AskRequest
@@ -52,21 +63,27 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * An extension's `ask` request as a card above the composer, like [ExtensionUiCard]: the chat stays usable while it
- * waits. Questions show one at a time; Skip leaves one unanswered and Dismiss cancels the whole request. Only the last
- * question's Continue becomes Submit, which sends every answer, skipped ones included, through [onSubmit].
+ * An extension's `ask` request as a card growing out of the composer, like [ExtensionUiCard]: the chat stays usable
+ * while it waits. Questions show one at a time; Skip leaves one unanswered and Dismiss cancels the whole request. Only
+ * the last question's Continue becomes Submit, which sends every answer through [onSubmit]. Drag the card down or tap
+ * its chevron to fold it into a bar; tap the bar to bring it back. A failed send keeps the card with Retry.
  */
 @Composable
-internal fun AskUserCard(request: AskRequest, onSubmit: (JSONObject) -> Unit, modifier: Modifier = Modifier) {
+internal fun AskUserCard(
+  request: AskRequest,
+  failed: Boolean,
+  onSubmit: (JSONObject) -> Unit,
+  modifier: Modifier = Modifier,
+) {
   val session = remember(request.id) { AskSession(request, onSubmit) }
   // Pi's own timeout aborts its wait; tell it the card is gone when that deadline passes too.
   val expiresAt = remember(request.id) { request.timeout?.let { System.currentTimeMillis() + it } }
   LaunchedEffect(expiresAt) {
     if (expiresAt == null) return@LaunchedEffect
     delay((expiresAt - System.currentTimeMillis()).coerceAtLeast(0))
-    onSubmit(JSONObject().put("id", request.id).put("answers", JSONArray()).put("cancelled", true))
+    session.cancel()
   }
-  val question = request.questions[session.index]
+  var folded by remember(request.id) { mutableStateOf(false) }
   val colors = fangColors
   val shape = RoundedCornerShape(FangTokens.Radius.lg)
   Box(modifier = modifier.fillMaxWidth().padding(horizontal = FangTokens.Spacing.s16), Alignment.TopCenter) {
@@ -76,15 +93,117 @@ internal fun AskUserCard(request: AskRequest, onSubmit: (JSONObject) -> Unit, mo
         .fillMaxWidth()
         .clip(shape)
         .background(colors.surface1)
-        .border(1.dp, colors.border, shape)
-        .padding(FangTokens.Spacing.s12)
-        .verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
+        .border(1.dp, if (folded) colors.border else colors.borderAccent, shape)
+        .pointerInput(Unit) {
+          detectVerticalDragGestures(onVerticalDrag = { _, drag -> if (drag > 0) folded = true })
+        },
     ) {
-      AskHeader(request.heading, session.index, request.questions.size)
-      QuestionSection(question, request.allowComment, session.answers[session.index])
-      AskActions(session)
+      AskBar(request, folded, failed, onToggle = { folded = !folded }, onRetry = session::retry)
+      AnimatedVisibility(
+        visible = !folded,
+        enter = expandVertically(animationSpec = spring()) + fadeIn(),
+        exit = shrinkVertically(animationSpec = spring()) + fadeOut(),
+      ) {
+        Column(
+          modifier = Modifier
+            .padding(FangTokens.Spacing.s12)
+            .verticalScroll(rememberScrollState()),
+          verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
+        ) {
+          AskHeader(request.heading, session.index, request.questions.size)
+          QuestionSection(request.questions[session.index], request.allowComment, session.answers[session.index])
+          if (failed) AskFailure(session)
+          AskActions(session)
+        }
+      }
     }
+  }
+}
+
+/**
+ * The strip along the composer's top edge: a short label, the question count and a chevron; Retry when a send failed.
+ */
+@Composable
+private fun AskBar(
+  request: AskRequest,
+  folded: Boolean,
+  failed: Boolean,
+  onToggle: () -> Unit,
+  onRetry: () -> Unit,
+) {
+  val colors = fangColors
+  val shape = RoundedCornerShape(topStart = FangTokens.Radius.lg, topEnd = FangTokens.Radius.lg)
+  val action = stringResource(if (folded) R.string.chat_ask_expand else R.string.chat_ask_fold)
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .heightIn(min = 40.dp)
+      .clip(shape)
+      .background(if (folded) colors.surface1 else colors.surface2)
+      .border(1.dp, if (folded) colors.border else colors.borderAccent, shape)
+      .clickable(onClickLabel = action, onClick = onToggle)
+      .padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
+  ) {
+    LucideIcon(
+      icon = R.drawable.ic_lucide_list_checks,
+      contentDescription = null,
+      size = FangTokens.IconSize.sm,
+      tint = if (folded) colors.foregroundMuted else colors.accent,
+    )
+    Text(
+      text = request.heading ?: stringResource(R.string.chat_ask_title),
+      modifier = Modifier.weight(1f),
+      color = colors.foreground,
+      fontSize = FangTokens.FontSize.base,
+      maxLines = 1,
+      overflow = TextOverflow.Ellipsis,
+    )
+    Text(
+      text = stringResource(R.string.chat_ask_counter, 1, request.questions.size),
+      color = colors.foregroundMuted,
+      fontSize = FangTokens.FontSize.sm,
+    )
+    if (failed) {
+      Text(
+        text = stringResource(R.string.chat_retry),
+        modifier = Modifier.clickable(onClick = onRetry),
+        color = colors.accent,
+        fontSize = FangTokens.FontSize.sm,
+      )
+    }
+    LucideIcon(
+      icon = if (folded) R.drawable.ic_lucide_chevron_up else R.drawable.ic_lucide_chevron_down,
+      contentDescription = null,
+      size = FangTokens.IconSize.xs,
+      tint = colors.foregroundMuted,
+    )
+  }
+}
+
+/** The failure row inside the expanded card, with the same Retry the folded bar offers. */
+@Composable
+private fun AskFailure(session: AskSession) {
+  val colors = fangColors
+  val shape = RoundedCornerShape(FangTokens.Radius.md)
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(shape)
+      .background(colors.surface2)
+      .border(1.dp, colors.border, shape)
+      .padding(FangTokens.Spacing.s12),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
+  ) {
+    Text(
+      text = stringResource(R.string.chat_ask_failed),
+      modifier = Modifier.weight(1f),
+      color = colors.foregroundMuted,
+      fontSize = FangTokens.FontSize.sm,
+    )
+    AskButton(stringResource(R.string.chat_retry), onClick = session::retry)
   }
 }
 
@@ -161,7 +280,7 @@ private fun OptionRow(option: AskOption, multiple: Boolean, state: AnswerState) 
 
 /** A filled checkbox with a tick, or a radio with an accent dot, in the option's colour when it is picked. */
 @Composable
-private fun SelectionMark(picked: Boolean, multiple: Boolean) {
+internal fun SelectionMark(picked: Boolean, multiple: Boolean) {
   val colors = fangColors
   val border = if (picked) colors.accent else colors.foregroundExtraMuted
   if (multiple) {
@@ -260,6 +379,9 @@ private class AskSession(private val request: AskRequest, private val onSubmit: 
   var index by mutableIntStateOf(0)
     private set
 
+  /** The last submitted payload, so a failed send can be retried without changing any answer. */
+  private var submitted: JSONObject? = null
+
   val isLast: Boolean get() = index == request.questions.lastIndex
 
   fun canContinue(): Boolean = with(answers[index]) {
@@ -283,6 +405,18 @@ private class AskSession(private val request: AskRequest, private val onSubmit: 
 
   fun dismiss() = submit(cancelled = true)
 
+  /** Pi's deadline passed: cancel with empty answers, exactly as the timeout did before folding existed. */
+  fun cancel() {
+    val data = JSONObject().put("id", request.id).put("answers", JSONArray()).put("cancelled", true)
+    submitted = data
+    onSubmit(data)
+  }
+
+  /** Resends the last answer unchanged; only the failure path offers this. */
+  fun retry() {
+    submitted?.let(onSubmit)
+  }
+
   private fun advance() {
     if (isLast) submit(cancelled = false) else index++
   }
@@ -292,6 +426,7 @@ private class AskSession(private val request: AskRequest, private val onSubmit: 
     answers.forEach { all.put(answer(it)) }
     val data = JSONObject().put("id", request.id).put("answers", all)
     if (cancelled) data.put("cancelled", true)
+    submitted = data
     onSubmit(data)
   }
 
@@ -308,3 +443,4 @@ private class AskSession(private val request: AskRequest, private val onSubmit: 
 }
 
 private const val DISABLED_ALPHA = 0.5f
+private const val SKIPPED = "skipped"

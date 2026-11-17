@@ -1,0 +1,59 @@
+// Fang's reconstruction of the `cells` child shader required by shader_03 (the Wisp Orb).
+// The original source was not present in the extracted artifact. This follows shader_03's
+// lookup contract exactly and is NOT byte-exact with the upstream shader.
+//
+// shader_03 samples this shader as a two-record-per-cell lookup (coords are cell indices,
+// not pixels):
+//   cellGeo(i, j)   = cells.eval(float2(2.0*i + 0.5, j + 0.5))
+//                     -> float4(dot radius pt, dot alpha 0..0.96, halo alpha, 1)
+//   cellColour(i,j) = cells.eval(float2(2.0*i + 1.5, j + 0.5)).rgb -> dot colour
+// Even integer part of x = geometry record; odd = colour record.
+//
+// Uniforms (all settable from Kotlin OrbShader.State + Layout):
+//   grid   = (columns of the square dot grid, dot radius in pt)
+//   state  = (time seconds, pulse 0..1, gaze x -1..1, gaze y -1..1)
+//   levels = (your level, agent level, halo gain, intensity 0..1)
+//   you    = your tint rgb
+//   agent  = agent tint rgb
+// Breath uses the documented 3.8 s period so Kotlin only has to feed time.
+
+uniform float2 grid;
+uniform float4 state;
+uniform float4 levels;
+uniform float4 you;
+uniform float4 agent;
+
+const float TAU = 6.2831853;
+
+half4 main(float2 position) {
+  float cols = max(grid.x, 1.0);
+  float record = floor(position.x);
+  float i = floor(record * 0.5);
+  float j = floor(position.y);
+  if (i < 0.0 || i >= cols || j < 0.0 || j >= cols) return half4(0.0);
+
+  float t = state.x;
+  float pulse = clamp(state.y, 0.0, 1.0);
+  float2 gaze = clamp(state.zw, float2(-1.0, -1.0), float2(1.0, 1.0));
+  float yourLevel = clamp(levels.x, 0.0, 1.0);
+  float agentLevel = clamp(levels.y, 0.0, 1.0);
+  float haloGain = clamp(levels.z, 0.0, 1.0);
+  float intensity = clamp(levels.w, 0.0, 1.0);
+
+  float2 centre = (float2(i, j) + 0.5) / cols - 0.5;
+  float breath = 0.5 + 0.5 * sin(TAU * t / 3.8);
+  float wave = 0.5 + 0.5 * sin(TAU * t * 0.35 - length(centre - gaze * 0.35) * 9.0);
+  float energy = clamp(intensity * (0.45 + 0.35 * breath + 0.20 * wave) * (0.6 + 0.4 * pulse), 0.0, 1.0);
+
+  if (mod(record, 2.0) < 0.5) {
+    float radius = grid.y * (0.70 + 0.30 * energy);
+    float dotAlpha = clamp(0.30 + 0.66 * energy, 0.0, 0.96);
+    float haloAlpha = energy > 0.05 ? clamp(haloGain * energy * 0.35, 0.0, 1.0) : 0.0;
+    return half4(float4(radius, dotAlpha, haloAlpha, 1.0));
+  }
+
+  float3 tint = mix(you.rgb, agent.rgb, clamp(0.5 - centre.x + gaze.x * 0.15, 0.0, 1.0));
+  float loud = max(yourLevel, agentLevel);
+  float3 rgb = clamp(tint * (0.55 + 0.45 * loud), 0.0, 1.0);
+  return half4(float4(rgb, 1.0));
+}

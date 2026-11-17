@@ -31,8 +31,9 @@ import io.leloush.fang.agent.AgentProcessState
 import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.ui.components.CodeBox
 import io.leloush.fang.ui.components.CodeText
+import io.leloush.fang.ui.components.FangOrb
 import io.leloush.fang.ui.components.LucideIcon
-import io.leloush.fang.ui.components.SimmeringPot
+import io.leloush.fang.ui.components.OrbMood
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 
@@ -51,7 +52,7 @@ internal fun StatusBanner(
     AgentProcessState.Starting -> BannerLine(
       text = stringResource(R.string.chat_starting),
       modifier = modifier,
-      potSize = FangTokens.IconSize.lg,
+      orbSize = FangTokens.IconSize.lg,
       fontSize = FangTokens.FontSize.lg,
     )
 
@@ -77,12 +78,12 @@ internal fun StatusBanner(
   }
 }
 
-/** A pot beside [text]; Starting is the chat's only content while a session opens, so it uses larger sizes. */
+/** A working orb beside [text]; Starting is the chat's only content while a session opens, so it uses larger sizes. */
 @Composable
 private fun BannerLine(
   text: String,
   modifier: Modifier = Modifier,
-  potSize: Dp = FangTokens.IconSize.sm,
+  orbSize: Dp = FangTokens.IconSize.sm,
   fontSize: TextUnit = FangTokens.FontSize.meta,
 ) {
   Row(
@@ -90,7 +91,7 @@ private fun BannerLine(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8, Alignment.CenterHorizontally),
   ) {
-    SimmeringPot(size = potSize)
+    FangOrb(size = orbSize, mood = OrbMood.WORKING)
     Text(text = text, color = fangColors.foregroundMuted, fontSize = fontSize)
   }
 }

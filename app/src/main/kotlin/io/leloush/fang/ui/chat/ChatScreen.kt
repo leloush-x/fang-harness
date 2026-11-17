@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcess
 import io.leloush.fang.agent.AgentProcessState
+import io.leloush.fang.agent.AskAnswered
 import io.leloush.fang.agent.AskRequest
 import io.leloush.fang.agent.TimelineState
 import io.leloush.fang.appGraph
@@ -157,6 +158,8 @@ private fun ChatContent(
   val process = controller.process
   val working by process.working.collectAsStateWithLifecycle()
   val askRequest by process.ask.request.collectAsStateWithLifecycle()
+  val askFailed by process.ask.failed.collectAsStateWithLifecycle()
+  val answered by process.ask.answered.collectAsStateWithLifecycle()
   val keyboard = LocalSoftwareKeyboardController.current
   val focus = LocalFocusManager.current
   val dismissKeyboard = remember(keyboard, focus) {
@@ -176,13 +179,13 @@ private fun ChatContent(
     )
     // The keyboard and a dialog both take the room the steering box and widget panels would use, so then the steering
     // box keeps to one line and a panel to a few.
-    val tight = WindowInsets.isImeVisible || timeline.pendingUi != null || askRequest != null
+    val tight = WindowInsets.isImeVisible || timeline.pendingUi != null || askRequest != null || answered != null
     ChatStack(
       modifier = Modifier.weight(1f),
       stream = {
         StreamArea(controller, timeline, snackbar, onOpenProviders, onOpenOnboarding, onSheet, dismissKeyboard)
       },
-      dialog = { PendingDialogCard(controller, timeline, askRequest) },
+      dialog = { PendingDialogCard(controller, timeline, askRequest, askFailed, answered) },
       steering = { PendingSteeringBox(controller, timeline, compact = tight) },
       composer = {
         Composer(
@@ -253,9 +256,15 @@ private fun StreamArea(
   }
 }
 
-/** The first extension dialog Pi waits on, or the active `ask` card, between the stream and the composer. */
+/** The first extension dialog Pi waits on, the active `ask` card, or its answered summary, above the composer. */
 @Composable
-internal fun PendingDialogCard(controller: ChatController, timeline: TimelineState, askRequest: AskRequest?) {
+internal fun PendingDialogCard(
+  controller: ChatController,
+  timeline: TimelineState,
+  askRequest: AskRequest?,
+  askFailed: Boolean,
+  answered: AskAnswered?,
+) {
   val request = timeline.pendingUi
   if (request != null) {
     ExtensionUiCard(
@@ -270,9 +279,13 @@ internal fun PendingDialogCard(controller: ChatController, timeline: TimelineSta
   if (askRequest != null) {
     AskUserCard(
       request = askRequest,
+      failed = askFailed,
       onSubmit = { controller.sendAskAnswer(it) },
-      modifier = Modifier.padding(bottom = FangTokens.Spacing.s8),
     )
+    return
+  }
+  if (answered != null) {
+    AskAnsweredSummary(record = answered, onDismiss = { controller.process.ask.dismissAnswered() })
   }
 }
 

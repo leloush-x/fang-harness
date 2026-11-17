@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_orb_size">Orb size</string>
+    <string name="settings_orb_size_small">Small</string>
+    <string name="settings_orb_size_medium">Medium</string>
+    <string name="settings_orb_size_large">Large</string>
+    <string name="settings_orb_floats">Float the orb over chats</string>
+</resources>

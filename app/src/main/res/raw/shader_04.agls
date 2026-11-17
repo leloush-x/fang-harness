@@ -1,0 +1,63 @@
+uniform shader field;
+uniform float4 grid;
+uniform float4 origin;
+uniform float4 state;
+uniform float4 window;
+uniform float4 mainTint;
+uniform float4 mainCore;
+uniform float4 alertTint;
+uniform float4 alertCore;
+
+float connectionWindow(float x, float W, float4 w) {
+  float t = clamp(min(x - w.x, (W - x) - w.z) / max(w.y, 1.0), 0.0, 1.0);
+  return t * t * (3.0 - 2.0 * t);
+}
+
+half4 main(float2 position) {
+  float pitch = grid.x;
+  float cols = grid.y;
+  float rows = grid.z;
+  float sc = grid.w;
+  float2 o = origin.xy;
+  float2 S = origin.zw;
+  bool dark = state.x > 0.5;
+
+  float2 g = (position - o) / pitch;
+  float2 cell = floor(g);
+  if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= cols || cell.y >= rows) return half4(0.0);
+  float2 ctr = o + (cell + 0.5) * pitch;
+  float d = length(position - ctr);
+  float4 f = float4(field.eval(cell + 0.5));
+  f.xy = f.xy * state.z;
+
+  // Fade out toward the box's rounded rim, so the box stays the only edge.
+  float2 pt = ctr / sc;
+  float rr = min(window.w, min(S.x, S.y) * 0.5);
+  float2 q = abs(pt - S * 0.5) - (S * 0.5 - float2(rr));
+  float cap = rr - length(max(q, float2(0.0))) - min(max(q.x, q.y), 0.0);
+  float mask = smoothstep(2.0, 6.5, cap);
+  float win = connectionWindow(pt.x, S.x, window);
+  float yn = abs(pt.y - S.y * 0.5) / (S.y * 0.5);
+
+  float ia = f.x;
+  float im = f.y;
+  float tot = ia + im;
+  float P = clamp(1.0 - (1.0 - min(ia, 1.0)) * (1.0 - min(im, 1.0)), 0.0, 1.0);
+  float fresh = f.z;
+
+  // Unlit LEDs: a faint grid, fading toward the top and bottom.
+  float a0 = (dark ? 0.06 : 0.075) * (1.0 - 0.7 * smoothstep(0.35, 0.95, yn)) * state.y;
+  float top = dark ? 0.96 : 1.0;
+  float alpha = a0 + (top - a0) * pow(max(P, 1e-5), (dark ? 0.9 : 0.75) * mix(1.4, 1.0, fresh));
+  float rad = (0.25 + 0.17 * pow(max(P, 1e-5), 0.6)) * mix(1.0, mix(0.82, 1.0, fresh), smoothstep(0.03, 0.2, P)) * pitch;
+  float cov = clamp(rad - d + 0.5, 0.0, 1.0);
+  float halo = 0.22 * P * P * exp(-max(d - rad, 0.0) / (0.12 * pitch)) * (1.0 - cov);
+  alpha = (alpha * cov + halo) * mask * win;
+
+  float core = clamp(P * P * 1.1, 0.0, 0.9) * mix(0.3, 1.0, fresh);
+  float3 cm = mix(mainTint.rgb, mainCore.rgb, core);
+  float3 ca = mix(alertTint.rgb, alertCore.rgb, core);
+  float own = tot > 0.02 ? ia / tot : 0.0;
+  float3 col = mix(cm, ca, own);
+  return half4(half3(col * alpha), half(alpha));
+}

@@ -47,6 +47,10 @@ internal class Preferences(context: Context) {
   }
   private val disabledExtensionsState = MutableStateFlow(readStringSet(DISABLED_EXTENSIONS))
   private val inAppNotificationsState = MutableStateFlow(prefs.getBoolean(IN_APP_NOTIFICATIONS, true))
+  private val orbSizeState = MutableStateFlow(
+    prefs.getString(ORB_SIZE, null).let { name -> OrbSize.entries.firstOrNull { it.name == name } ?: OrbSize.Medium },
+  )
+  private val orbFloatsState = MutableStateFlow(prefs.getBoolean(ORB_FLOATS, false))
 
   /** Onboarding finished. */
   val setupComplete: StateFlow<Boolean> = setupCompleteState.asStateFlow()
@@ -98,6 +102,12 @@ internal class Preferences(context: Context) {
   /** How long a chat that is neither working nor shown keeps its Pi. */
   val idleStop: StateFlow<IdleStop> = idleStopState.asStateFlow()
 
+  /** How large the working orb draws; it stays docked in the composer when not floating. */
+  val orbSize: StateFlow<OrbSize> = orbSizeState.asStateFlow()
+
+  /** Whether the working orb floats over the chat instead of sitting above the composer. */
+  val orbFloats: StateFlow<Boolean> = orbFloatsState.asStateFlow()
+
   /** The extensions Fang Harness bundles that the user turned off, by [BundledExtension.id]; a chat's next Pi leaves them out. */
   val disabledExtensions: StateFlow<Set<String>> = disabledExtensionsState.asStateFlow()
 
@@ -116,6 +126,16 @@ internal class Preferences(context: Context) {
   fun setTheme(theme: ThemeMode) {
     prefs.edit { putString(THEME, theme.name) }
     themeState.value = theme
+  }
+
+  fun setOrbSize(size: OrbSize) {
+    prefs.edit { putString(ORB_SIZE, size.name) }
+    orbSizeState.value = size
+  }
+
+  fun setOrbFloats(floats: Boolean) {
+    prefs.edit { putBoolean(ORB_FLOATS, floats) }
+    orbFloatsState.value = floats
   }
 
   fun setLastProjectCwd(cwd: String?) {
@@ -311,5 +331,7 @@ internal class Preferences(context: Context) {
     const val ADOPTED_HOME = "adoptedHome"
     const val DISABLED_EXTENSIONS = "disabledExtensions"
     const val IN_APP_NOTIFICATIONS = "inAppNotifications"
+    const val ORB_SIZE = "orbSize"
+    const val ORB_FLOATS = "orbFloats"
   }
 }

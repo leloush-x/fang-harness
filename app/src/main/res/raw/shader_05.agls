@@ -1,0 +1,140 @@
+uniform shader field;
+uniform float4 grid;     // pitch (px), columns, rows, scale (px per pt)
+uniform float4 origin;   // first cell (px), bar size (pt)
+uniform float4 state;    // live, dark, unlit grid (0…1), presence (0…1): the scanner's arrival and exit
+uniform float4 window;   // inset from each end and fade length (pt): the scope's room between the buttons
+uniform float4 glow;     // your glow, the agent's, the quiet breath (0…1), live
+uniform float4 you;
+uniform float4 youCore;
+uniform float4 agent;
+uniform float4 agentCore;
+uniform float4 bar;      // visible bar offset (pt), visible bar width (pt), left fade override (pt), leading edge curve (0…1)
+uniform float4 shape;    // current glass corner radius (pt)
+
+const float glowStrength = 0.55;
+const float glowCentre = 28.0;                // pt from the bar's end: behind the button
+const float glowReachIn = 34.0;
+const float glowReachLoud = 36.0;
+const float glowReachOut = 26.0;
+const float glowHeight = 0.42;                // vertical spread, in half bar heights
+const float glowSaturation = 1.5;
+const float glowRest = 0.05;
+
+float3 saturate3(float3 c, float k) {
+  float l = dot(c, float3(0.299, 0.587, 0.114));
+  return clamp(float3(l) + (c - float3(l)) * k, 0.0, 1.0);
+}
+
+// Distance past the capsule's rounded end; none where the scope runs edge to
+// edge to square ends (window.w), as in the floating call's panel.
+float capEnd(float x, float W, float r) {
+  return window.w > 0.5 ? 0.0 : max(abs(x - W * 0.5) - (W * 0.5 - r), 0.0);
+}
+
+// The leading edge follows the capsule's rounded end by `curve` (0…1): each
+// row's fade starts as far in as the rim is at that height, so the dots stop
+// on the curve rather than a straight line.
+float scopeWindow(float x, float y, float r, float H, float W, float leftFadeOverride, float curve) {
+  float dy = max(abs(y - H * 0.5) - (H * 0.5 - r), 0.0);
+  float rim = r - sqrt(max(r * r - dy * dy, 0.0));
+  float leftInset = window.x + curve * rim;
+  float rightInset = window.z > 0.0 ? window.z : window.x;
+  float rightFade = max(window.y, 1.0);
+  float leftFade = leftFadeOverride > 0.0 ? leftFadeOverride : rightFade;
+  float tL = clamp((x - leftInset) / leftFade, 0.0, 1.0);
+  float tR = clamp(((W - x) - rightInset) / rightFade, 0.0, 1.0);
+  float t = min(tL, tR);
+  return t * t * (3.0 - 2.0 * t);
+}
+
+// One voice's glow at p (pt): a soft ellipse centred behind its button,
+// reaching further toward the middle as it swells. Yours is on the left.
+float glowLobe(float2 p, float W, float r, float g, bool left) {
+  float x = left ? p.x : W - p.x;
+  float dx = x - glowCentre;
+  float s = dx > 0.0 ? glowReachIn + glowReachLoud * g : glowReachOut;
+  float yn = (p.y - r) / r;
+  float sy = glowHeight * (0.85 + 0.15 * g);
+  return g * exp(-dx * dx / (2.0 * s * s)) * exp(-yn * yn / (2.0 * sy * sy));
+}
+
+float4 glowAt(float2 p, float2 frag, bool dark) {
+  float W = bar.y > 0.0 ? bar.y : origin.z;
+  float r = origin.w * 0.5;
+  float rest = glowRest * (0.6 + 0.4 * glow.z) * glow.w;
+  float peak = (dark ? 0.3 : 0.19) * glowStrength;
+  float au = min(1.0, glowLobe(p, W, r, glow.x + rest, true)) * peak;
+  float aa = min(1.0, glowLobe(p, W, r, glow.y + rest, false)) * peak;
+  float cap = r - length(float2(capEnd(p.x, W, r), p.y - r));
+  float noise = fract(sin(dot(frag, float2(12.9898, 78.233))) * 43758.5453) - 0.5;   // dither against banding
+  float a = clamp((1.0 - (1.0 - au) * (1.0 - aa)) * scopeWindow(p.x, p.y, shape.x, origin.w, W, bar.z, bar.w) * smoothstep(0.5, 4.0, cap) + noise / 255.0, 0.0, 1.0);
+  float3 cy;
+  float3 ca;
+  if (dark) {
+    cy = saturate3(mix(you.rgb, youCore.rgb, 0.5), glowSaturation);
+    ca = saturate3(mix(agent.rgb, agentCore.rgb, 0.5), glowSaturation);
+  } else {                                        // a pale, cleaner tint of the ink
+    cy = mix(saturate3(you.rgb, glowSaturation * 1.3), float3(1.0), 0.15);
+    ca = mix(saturate3(agent.rgb, glowSaturation * 1.3), float3(1.0), 0.15);
+  }
+  float3 col = mix(ca, cy, au / max(au + aa, 1e-4));
+  return float4(col * a, a);
+}
+
+half4 main(float2 position) {
+  float pitch = grid.x;
+  float cols = grid.y;
+  float rows = grid.z;
+  float sc = grid.w;
+  float2 o = origin.xy;
+  float W = bar.y > 0.0 ? bar.y : origin.z;
+  float H = origin.w;
+  float r = H * 0.5;
+  float live = state.x;
+  bool dark = state.y > 0.5;
+  float2 shift = float2(bar.x, 0.0);
+
+  float presence = state.w;
+  float4 glowColor = glowAt(position / sc - shift, position, dark) * presence;
+  float2 g = (position - o) / pitch;
+  float2 cell = floor(g);
+  if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= cols || cell.y >= rows) return half4(glowColor);
+  float2 ctr = o + (cell + 0.5) * pitch;
+  float d = length(position - ctr);
+  float4 f = float4(field.eval(cell + 0.5));
+
+  // Fade out toward the capsule's rim, so the glass stays the only edge.
+  float2 pt = ctr / sc - shift;
+  float cap = r - length(float2(capEnd(pt.x, W, r), pt.y - r));
+  float mask = smoothstep(2.0, 6.5, cap);
+  // Window between the leading end and the trailing controls: dots fade out
+  // toward the buttons and soften as they go, like a progressive blur into the glass.
+  float win = scopeWindow(pt.x, pt.y, shape.x, H, W, bar.z, bar.w);
+  float blur = 1.0 - win;
+  float yn = abs(pt.y - r) / r;
+
+  float iu = f.x;
+  float ia = f.y;
+  float tot = iu + ia;
+  float P = clamp(1.0 - (1.0 - min(iu, 1.0)) * (1.0 - min(ia, 1.0)), 0.0, 1.0);
+  float ratio = iu / max(tot, 1e-4);
+  float fresh = f.z;                              // 1 on the beam, toward 0 in its afterglow
+
+  // Unlit LEDs: a faint grid, fading toward the top and bottom.
+  float a0 = (dark ? 0.06 : 0.075) * (1.0 - 0.7 * smoothstep(0.35, 0.95, yn)) * (0.5 + 0.5 * live) * state.z;
+  float top = dark ? 0.96 : 1.0;
+  float alpha = a0 + (top - a0) * pow(max(P, 1e-5), (dark ? 0.9 : 0.75) * mix(1.4, 1.0, fresh));   // afterglow fades softer
+  float rad = (0.25 + 0.17 * pow(max(P, 1e-5), 0.6)) * mix(1.0, mix(0.82, 1.0, fresh), smoothstep(0.03, 0.2, P)) * pitch * (1.0 + 0.35 * blur);
+  float soft = 1.0 + 2.6 * blur * sc;                                   // edge softness (px) grows as dots fade
+  float cov = clamp((rad - d) / soft + 0.5, 0.0, 1.0);
+  float halo = 0.22 * P * P * exp(-max(d - rad, 0.0) / ((0.12 + 0.2 * blur) * pitch)) * (1.0 - cov);   // LED bloom
+  alpha = (alpha * cov + halo) * mask * win * presence;
+
+  float core = clamp(P * P * 1.1, 0.0, 0.9) * mix(0.3, 1.0, fresh);
+  float3 cy = mix(you.rgb, youCore.rgb, core);
+  float3 ca = mix(agent.rgb, agentCore.rgb, core);
+  float side = 1.0 - smoothstep(0.42, 0.58, pt.x / W);   // unlit dots lean to their side's colour
+  float own = mix(side, ratio, smoothstep(0.02, 0.12, tot));
+  float3 col = clamp(mix(ca, cy, own) + (cy - ca) * (own - 0.5) * 0.4, 0.0, 1.0);
+  return half4(float4(col * alpha, alpha) + glowColor * (1.0 - alpha));   // crisp dots over the glow
+}

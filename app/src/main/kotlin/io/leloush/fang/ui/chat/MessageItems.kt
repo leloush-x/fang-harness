@@ -40,9 +40,10 @@ import io.leloush.fang.R
 import io.leloush.fang.agent.ImagePart
 import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.ui.components.FangMarkdown
+import io.leloush.fang.ui.components.FangOrb
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.MarkdownCache
-import io.leloush.fang.ui.components.SimmeringPot
+import io.leloush.fang.ui.components.OrbMood
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import java.util.Date
@@ -200,7 +201,7 @@ internal fun ToolRow(presentation: ToolPresentation, onClick: () -> Unit, modifi
   ) {
     Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
       if (presentation.running) {
-        SimmeringPot(size = FangTokens.IconSize.sm)
+        FangOrb(size = FangTokens.IconSize.sm, mood = OrbMood.WORKING)
       } else {
         LucideIcon(
           icon = presentation.icon,
@@ -258,8 +259,8 @@ internal fun NoticeRow(text: String, modifier: Modifier = Modifier) {
 }
 
 /**
- * Live `m:ss` while the run works, then how long it took. While the chat waits on [backgroundTasks], the simmering
- * pot stays, saying how many.
+ * Live `m:ss` while the run works, then how long it took. While the chat waits on [backgroundTasks], the working
+ * orb stays, saying how many.
  */
 @Composable
 internal fun TurnFooterRow(item: TimelineItem.TurnFooter, backgroundTasks: Int, modifier: Modifier = Modifier) {
@@ -271,9 +272,9 @@ internal fun TurnFooterRow(item: TimelineItem.TurnFooter, backgroundTasks: Int, 
     val duration = item.durationMillis
     if (duration != null) {
       Text(text = durationText(duration), color = fangColors.foregroundMuted, fontSize = FangTokens.FontSize.meta)
-      if (backgroundTasks > 0) SimmeringPot(size = FangTokens.IconSize.sm)
+      if (backgroundTasks > 0) FangOrb(size = FangTokens.IconSize.sm, mood = OrbMood.WORKING)
     } else {
-      SimmeringPot(size = FangTokens.IconSize.sm)
+      FangOrb(size = FangTokens.IconSize.sm, mood = OrbMood.WORKING)
       RunningElapsed(item.startedAt)
     }
     if (backgroundTasks == 0) return@Row

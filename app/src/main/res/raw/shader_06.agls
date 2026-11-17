@@ -1,0 +1,79 @@
+uniform float4 grid;    // pitch (px), columns, rows, scale (px per pt)
+uniform float4 origin;  // first cell (px), view height (px), dark (0 or 1)
+uniform float4 look;    // time (s), level (0…1), swell (0…1), finish time (s, -1 before)
+uniform float4 centre;  // stage centre (pt.x, pt.y), title half-size (pt.w, pt.h)
+uniform float4 you;
+uniform float4 youCore;
+uniform float4 agent;
+uniform float4 agentCore;
+
+float driftHash(float2 p) {
+  return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+}
+
+float driftNoise(float2 p) {
+  float2 i = floor(p);
+  float2 f = fract(p);
+  float2 u = f * f * (3.0 - 2.0 * f);
+  float a = driftHash(i);
+  float b = driftHash(i + float2(1.0, 0.0));
+  float c = driftHash(i + float2(0.0, 1.0));
+  float d = driftHash(i + float2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+float driftFbm(float2 p) {
+  return 0.62 * driftNoise(p) + 0.38 * driftNoise(p * 2.03 + 7.1);
+}
+
+half4 main(float2 position) {
+  float pitch = grid.x;
+  float cols = grid.y;
+  float rows = grid.z;
+  float sc = grid.w;
+  float2 g = (position - origin.xy) / pitch;
+  float2 cell = floor(g);
+  if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= cols || cell.y >= rows) return half4(0.0);
+  float2 ctr = origin.xy + (cell + 0.5) * pitch;
+  float d = length(position - ctr);
+  if (d > (look.w < 0.0 ? 0.36 : 0.52) * pitch + 0.5) return half4(0.0);
+  bool dark = origin.w > 0.5;
+
+  float2 pt = ctr / sc - centre.xy;
+  float dist = length(pt);
+  float t = look.x;
+  float level = look.y;
+  float swell = look.z;
+  float tf = look.w;
+  float breath = 0.5 + 0.5 * sin(6.2831853 * t / 3.8);
+
+  // Offset from (0, 0) so the stage centre never sits in sin(0) = 0's trough.
+  float2 q = pt / 105.0 + float2(3.7, 1.9);
+  float2 w = float2(driftFbm(q + float2(0.0, t * 0.04)), driftFbm(q + float2(5.2, -t * 0.035)));
+  float n = driftFbm(q + 1.4 * w + float2(t * 0.045, -t * 0.025));
+  float I = 0.05 + 0.28 * pow(max(n, 0.0), 2.0) * (0.85 + 0.15 * breath);
+
+  // A calm, gently pulsating radial aura on the All Caught Up screen.
+  float pulse = swell * (0.55 + 0.45 * breath) * exp(-dist * dist / (2.0 * 195.0 * 195.0));
+  I += 0.24 * pulse;
+
+  float clearStrength = tf < 0.0 ? 0.0 : clamp(tf / 0.3, 0.0, 1.0);
+  float e = length(pt / (centre.zw + float2(32.0, 24.0)));
+  float clearing = mix(1.0, mix(0.55, 1.0, smoothstep(0.45, 1.15, e)), clearStrength);
+  float P = clamp(I * level * clearing, 0.0, 1.0);
+  float ratio = clamp(mix(w.x, 0.68, clamp(pulse * 0.8, 0.0, 0.55)), 0.0, 1.0);
+
+  float a0 = dark ? 0.022 : 0.032;
+  float top = dark ? 0.36 : 0.40;
+  float alpha = a0 + (top - a0) * pow(max(P, 1e-5), dark ? 1.05 : 0.95);
+  float rad = (0.24 + 0.13 * pow(max(P, 1e-5), 0.65)) * pitch;
+  float cov = clamp((rad - d) + 0.5, 0.0, 1.0);
+  float halo = 0.10 * P * P * exp(-max(d - rad, 0.0) / (0.12 * pitch)) * (1.0 - cov);
+  alpha = alpha * cov + halo;
+
+  float core = clamp(P * P * 1.1, 0.0, 0.9) * 0.5;
+  float3 cy = mix(you.rgb, youCore.rgb, core);
+  float3 ca = mix(agent.rgb, agentCore.rgb, core);
+  float3 col = clamp(mix(ca, cy, ratio), 0.0, 1.0);
+  return half4(half3(col * alpha), half(alpha));
+}
