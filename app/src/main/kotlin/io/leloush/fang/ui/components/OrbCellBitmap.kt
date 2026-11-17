@@ -5,7 +5,6 @@ import android.graphics.BitmapShader
 import android.graphics.ColorSpace
 import android.graphics.Shader
 import android.os.Build
-import android.util.Half
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.Color
 import java.nio.ByteBuffer
@@ -75,9 +74,34 @@ internal class OrbCellBitmap(columns: Int) {
   }
 
   private fun put(r: Float, g: Float, b: Float, a: Float) {
-    bytes.putShort(Half.toHalf(r))
-    bytes.putShort(Half.toHalf(g))
-    bytes.putShort(Half.toHalf(b))
-    bytes.putShort(Half.toHalf(a))
+    bytes.putShort(floatToHalfBits(r))
+    bytes.putShort(floatToHalfBits(g))
+    bytes.putShort(floatToHalfBits(b))
+    bytes.putShort(floatToHalfBits(a))
   }
+}
+
+/** IEEE-754 binary16 bits for a float, written directly so the RGBA_F16 buffer needs no conversion API. */
+private fun floatToHalfBits(value: Float): Short {
+  val bits = java.lang.Float.floatToIntBits(value)
+  val sign = (bits ushr 16) and 0x8000
+  val exp = (bits ushr 23) and 0xff
+  val mant = bits and 0x7fffff
+  if (exp == 0xff) return (sign or 0x7c00 or (mant ushr 13)).toShort()
+  val hExp = exp - 112
+  if (hExp >= 31) return (sign or 0x7c00).toShort()
+  if (hExp > 0) {
+    var e = hExp
+    var m = (mant ushr 13) + ((mant ushr 12) and 1)
+    if (m == 0x400) { m = 0; e++ }
+    if (e >= 31) return (sign or 0x7c00).toShort()
+    return (sign or (e shl 10) or m).toShort()
+  }
+  if (hExp > -10) {
+    val m = mant or 0x800000
+    val shift = 14 - hExp
+    val rounded = (m + (1 shl (shift - 1))) ushr shift
+    return (sign or rounded).toShort()
+  }
+  return sign.toShort()
 }
