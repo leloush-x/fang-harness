@@ -14,8 +14,6 @@ name: Release
 #   secrets    RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD
 #   variables  RELEASE_KEY_ALIAS, RELEASE_CERT_SHA256
 #
-# Google Play fits beside these as its own jobs on the same version: the build job also runs :app:bundleRelease, a
-# job in a `play` environment signs the bundle with the Play upload key, and another uploads it.
 
 on:
   push:

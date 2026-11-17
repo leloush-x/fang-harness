@@ -15,6 +15,19 @@ async function isDirectory(path: string): Promise<boolean> {
   }
 }
 
+/** Runs [map] with at most [limit] calls at once: hundreds of chats must not open hundreds of file descriptors. */
+async function mapLimited<T, R>(items: readonly T[], limit: number, map: (item: T) => Promise<R>): Promise<R[]> {
+  const result = Array.from({ length: items.length }, () => undefined as R);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      result[index] = await map(items[index] as T);
+    }
+  }));
+  return result;
+}
+
 /** Transcript counts per subagent folder, so one recursive readdir serves every session in that folder. */
 function countsIn(folder: string, cache: Map<string, Promise<Map<string, number>>>): Promise<Map<string, number>> {
   let pending = cache.get(folder);
@@ -47,7 +60,7 @@ export async function sessions(ctx: ModeContext): Promise<JsonObject> {
   });
   all.sort((a, b) => b.modified.getTime() - a.modified.getTime());
   const cwds = [...new Set(all.map((session) => session.cwd))];
-  const exists = await Promise.all(cwds.map(isDirectory));
+  const exists = await mapLimited(cwds, 16, isDirectory);
   // Per call: a long-lived utility host must see subagent transcripts added since the previous refresh.
   const counts = new Map<string, Promise<Map<string, number>>>();
   for (const session of all) {
@@ -57,11 +70,11 @@ export async function sessions(ctx: ModeContext): Promise<JsonObject> {
       if (!counts.has(parent)) counts.set(parent, countsIn(parent, counts));
     }
   }
-  const subagents = await Promise.all(all.map(async (session) => {
+  const subagents = await mapLimited(all, 16, async (session) => {
     const folder = subagentFolder(session.path, session.id);
     if (!folder) return 0;
     return (await counts.get(dirname(folder)) ?? new Map<string, number>()).get(session.id) ?? 0;
-  }));
+  });
   const existing = new Set(cwds.filter((_, index) => exists[index]));
   return {
     sessions: all.map((session, index) => ({

@@ -22,27 +22,48 @@ export function configBusy(): HostError {
   });
 }
 
+/** Requests within one host share a pid, so the symlink alone cannot queue them; this promise chain does. */
+const localQueues = new Map<string, Promise<void>>();
+
+async function inLocalQueue<T>(path: string, run: () => Promise<T>): Promise<T> {
+  const previous = localQueues.get(path) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  localQueues.set(path, current);
+  await previous;
+  try {
+    return await run();
+  } finally {
+    release();
+    if (localQueues.get(path) === current) localQueues.delete(path);
+  }
+}
+
 /**
  * Runs `run` holding the config lock: one backup, restore, delete or extension update at a time, across host
  * processes. A lock left by a host that died is taken over; one a live host holds fails with `busy`.
  */
 export async function withConfigLock<T>(env: HostEnv, run: () => Promise<T>): Promise<T> {
   const path = join(env.root, LOCK_FILE);
-  for (let attempt = 0; ; attempt++) {
+  return inLocalQueue(path, async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await symlink(String(process.pid), path);
+        break;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      }
+      if ((await livePid(path, HOLDERS)) !== null || attempt === 2) {
+        throw new HostError("busy", "Another backup, restore or extension update is running.", { key: "config_lock_busy" });
+      }
+      await clearStaleLock(path, HOLDERS);
+    }
     try {
-      await symlink(String(process.pid), path);
-      break;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      return await run();
+    } finally {
+      await unlink(path).catch(() => undefined);
     }
-    if ((await livePid(path, HOLDERS)) !== null || attempt === 2) {
-      throw new HostError("busy", "Another backup, restore or extension update is running.", { key: "config_lock_busy" });
-    }
-    await clearStaleLock(path, HOLDERS);
-  }
-  try {
-    return await run();
-  } finally {
-    await unlink(path).catch(() => undefined);
-  }
+  });
 }

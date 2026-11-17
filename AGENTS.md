@@ -175,8 +175,9 @@ Verify through CI, not locally. Specifically:
 ## Checks
 
 A task isn't done until `./gradlew check` passes. Fix any failure it reports, including ones in code
-you didn't change. Fix the code instead of silencing a check: no `@Suppress`, no lint or detekt
-baselines, no ignore comments, no configuration that turns a rule off. Note that detekt's
+you didn't change. Fix the code instead of silencing a check: no new `@Suppress`, no lint or detekt
+baselines, no ignore comments, no configuration that turns a rule off. The existing class-level
+`@Suppress("TooManyFunctions")` annotations predate this rule and are not a model for new code. Note that detekt's
 `MaxLineLength` is off and ktlint's `max-line-length` is not enforced under the `android_studio`
 code style, so long lines are not what fails the build.
 

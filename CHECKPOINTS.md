@@ -84,7 +84,7 @@ Porting pipkin features/structure into fang (host core, subagents, differing mer
 - [x] UI parity: merged non-remote strings, themes, site assets, icons/fonts (fang/Wolfi preserved). Full icon/launcher parity deferred to future iteration.
 
 ### Upgrade 9 — Build config, scripts, docs, plans
-- [x] Ported `scripts/sign-play-bundle.sh`, `scripts/upload-play-bundle.sh` (skipped ssh-test-host). AGP/Kotlin bump reverted due CI JDK/lint toolchain mismatch; fang build config preserved.
+- [x] AGP/Kotlin bump reverted due CI JDK/lint toolchain mismatch; fang build config preserved. Unused Play-publishing scripts removed.
 - [x] Build config: fang-specific build behavior preserved; AGP/Kotlin bump reverted due toolchain mismatch. Non-critical merges deferred.
 - [x] Docs/privacy/workflows: fang-specific docs preserved; non-remote updates merged where applicable.
 - Verify, commit, tick, log.

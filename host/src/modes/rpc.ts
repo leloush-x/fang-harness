@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { readFile, rename, stat, writeFile } from "node:fs/promises";
 import type { Socket } from "node:net";
 import { join } from "node:path";
 import type { Readable } from "node:stream";
@@ -107,7 +107,9 @@ async function defaultWebToolsToEager(configDir: string): Promise<void> {
     config = {};
   }
   if (!isObject(config) || "toolActivation" in config) return;
-  await writeFile(path, `${JSON.stringify({ ...config, toolActivation: "eager" }, null, 2)}\n`);
+  const temporary = `${path}.${process.pid}.tmp`;
+  await writeFile(temporary, `${JSON.stringify({ ...config, toolActivation: "eager" }, null, 2)}\n`);
+  await rename(temporary, path);
 }
 
 /**

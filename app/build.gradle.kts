@@ -64,7 +64,9 @@ val hostCheck = tasks.register<Exec>("hostCheck") {
     hostDir.file("vitest.config.ts"),
     hostDir.file("build.ts"),
   )
-  outputs.upToDateWhen { false }
+  val stamp = layout.buildDirectory.file("host-check.stamp")
+  outputs.file(stamp)
+  doLast { stamp.get().asFile.writeText("checked\n") }
   commandLine("pnpm", "run", "check")
 }
 
