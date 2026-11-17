@@ -1,5 +1,7 @@
 package io.leloush.fang.ui.components
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -37,10 +39,24 @@ internal fun FangOrb(
   agentLevel: Float = 0f,
 ) {
   val handle = OrbShader.rememberOrbShaders()
-  if (handle == null) {
+  if (handle == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
     SimmeringPot(modifier = modifier, size = size, tint = tint)
     return
   }
+  ShaderFangOrb(handle, modifier, size, mood, userLevel, agentLevel)
+}
+
+/** The shader path; every call here needs API 33, which the caller guards with a positive SDK check. */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@Composable
+private fun ShaderFangOrb(
+  handle: OrbShader.Handle,
+  modifier: Modifier,
+  size: Dp,
+  mood: OrbMood,
+  userLevel: Float,
+  agentLevel: Float,
+) {
   val frame = remember { mutableLongStateOf(0L) }
   LaunchedEffect(Unit) {
     while (isActive) {

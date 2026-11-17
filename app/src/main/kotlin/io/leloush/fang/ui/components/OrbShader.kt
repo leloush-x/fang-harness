@@ -46,6 +46,7 @@ object OrbShader {
     val pixelsPerPoint: Float,
   )
 
+  @RequiresApi(Build.VERSION_CODES.TIRAMISU)
   class Handle internal constructor(val orb: RuntimeShader, val cells: RuntimeShader) {
     fun setState(state: State, layout: Layout) {
       val ppp = maxOf(layout.pixelsPerPoint, 0.001f)
