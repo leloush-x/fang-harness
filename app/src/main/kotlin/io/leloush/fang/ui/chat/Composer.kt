@@ -59,8 +59,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -104,12 +102,7 @@ internal fun Composer(
   trailingControls: @Composable RowScope.() -> Unit = {},
 ) {
   val colors = fangColors
-  val keyboard = LocalSoftwareKeyboardController.current
-  val focus = LocalFocusManager.current
-  val hideKeyboard = {
-    keyboard?.hide()
-    focus.clearFocus()
-  }
+  val hideKeyboard = rememberHideKeyboard()
   val shape = RoundedCornerShape(FangTokens.Radius.xxl)
   val edges = rememberComposerEdges(controller)
   val tabs = controller.view.widgetTabs

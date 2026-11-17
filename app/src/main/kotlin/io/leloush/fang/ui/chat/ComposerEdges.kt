@@ -5,6 +5,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.json.JSONObject
 
@@ -29,6 +31,19 @@ internal fun rememberComposerEdges(controller: ChatController): ComposerEdges {
     widgetEdge(widgets, tabs, belowEditor = true)
   }
   return ComposerEdges(above, below, askFailed)
+}
+
+/** Hides the keyboard and clears focus, so the composer can call it without owning the focus/keyboard state. */
+@Composable
+internal fun rememberHideKeyboard(): () -> Unit {
+  val keyboard = LocalSoftwareKeyboardController.current
+  val focus = LocalFocusManager.current
+  return remember(keyboard, focus) {
+    {
+      keyboard?.hide()
+      focus.clearFocus()
+    }
+  }
 }
 
 /** The upper panel slot, split out to keep [Composer] within detekt's method limit. */
