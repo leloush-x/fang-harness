@@ -9,9 +9,7 @@ import org.json.JSONObject
  * The one `ask` request a bundled extension waits on. Held beside [AgentProcess] rather than in it: the process is
  * already at detekt's class-size limit, and the request is independent of Pi's RPC calls.
  */
-internal class AskState(
-  private val send: suspend (String, JSONObject) -> Unit,
-) {
+internal class AskState(private val send: suspend (String, JSONObject) -> Unit) {
   private val requestState = MutableStateFlow<AskRequest?>(null)
 
   /** The request the chat shows, or null when no extension waits on the user's answers. */

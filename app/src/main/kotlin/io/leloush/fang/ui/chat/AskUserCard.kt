@@ -57,11 +57,7 @@ import org.json.JSONObject
  * question's Continue becomes Submit, which sends every answer, skipped ones included, through [onSubmit].
  */
 @Composable
-internal fun AskUserCard(
-  request: AskRequest,
-  onSubmit: (JSONObject) -> Unit,
-  modifier: Modifier = Modifier,
-) {
+internal fun AskUserCard(request: AskRequest, onSubmit: (JSONObject) -> Unit, modifier: Modifier = Modifier) {
   val session = remember(request.id) { AskSession(request, onSubmit) }
   // Pi's own timeout aborts its wait; tell it the card is gone when that deadline passes too.
   val expiresAt = remember(request.id) { request.timeout?.let { System.currentTimeMillis() + it } }
@@ -225,12 +221,7 @@ private fun AskActions(session: AskSession) {
 
 /** A full-width card button: muted on the card, or accent-filled for the answer action. */
 @Composable
-private fun RowScope.AskButton(
-  label: String,
-  filled: Boolean = false,
-  enabled: Boolean = true,
-  onClick: () -> Unit,
-) {
+private fun RowScope.AskButton(label: String, filled: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
   val colors = fangColors
   val shape = RoundedCornerShape(FangTokens.Radius.md)
   val content = if (filled) colors.accentForeground else colors.foregroundMuted
@@ -264,10 +255,7 @@ private class AnswerState {
 }
 
 /** Navigation and the answer JSON for one [AskRequest], held across recompositions for its card. */
-private class AskSession(
-  private val request: AskRequest,
-  private val onSubmit: (JSONObject) -> Unit,
-) {
+private class AskSession(private val request: AskRequest, private val onSubmit: (JSONObject) -> Unit) {
   val answers = List(request.questions.size) { AnswerState() }
   var index by mutableIntStateOf(0)
     private set
