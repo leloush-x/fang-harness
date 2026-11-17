@@ -40,10 +40,8 @@ import io.leloush.fang.R
 import io.leloush.fang.agent.ImagePart
 import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.ui.components.FangMarkdown
-import io.leloush.fang.ui.components.FangOrb
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.MarkdownCache
-import io.leloush.fang.ui.components.OrbMood
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import java.util.Date
@@ -204,14 +202,26 @@ internal fun ToolRow(presentation: ToolPresentation, onClick: () -> Unit, modifi
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
   ) {
     Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-      if (presentation.running) {
-        FangOrb(size = FangTokens.IconSize.sm, mood = OrbMood.WORKING)
-      } else {
+      if (presentation.isError) {
         LucideIcon(
           icon = presentation.icon,
           contentDescription = null,
           size = FangTokens.IconSize.sm,
-          tint = if (presentation.isError) colors.destructive else colors.foregroundMuted,
+          tint = colors.destructive,
+        )
+      } else {
+        // A finished tool hands its result to a copy button; without output it settles back to the tool's own icon.
+        val copyText = presentation.output
+        val glyphLabel = stringResource(
+          if (copyText == null) R.string.morph_complete else R.string.morph_copy_output,
+        )
+        val settledIcon = if (copyText == null) presentation.icon else null
+        WorkingToCopyGlyph(
+          working = presentation.running,
+          copyText = copyText,
+          size = FangTokens.IconSize.sm,
+          contentDescription = glyphLabel,
+          doneIcon = settledIcon,
         )
       }
     }
@@ -274,11 +284,15 @@ internal fun TurnFooterRow(item: TimelineItem.TurnFooter, backgroundTasks: Int, 
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
   ) {
     val duration = item.durationMillis
+    WorkingToCopyGlyph(
+      working = duration == null || backgroundTasks > 0,
+      copyText = null,
+      size = FangTokens.IconSize.sm,
+      contentDescription = stringResource(R.string.morph_complete),
+    )
     if (duration != null) {
       Text(text = durationText(duration), color = fangColors.foregroundMuted, fontSize = FangTokens.FontSize.meta)
-      if (backgroundTasks > 0) FangOrb(size = FangTokens.IconSize.sm, mood = OrbMood.WORKING)
     } else {
-      FangOrb(size = FangTokens.IconSize.sm, mood = OrbMood.WORKING)
       RunningElapsed(item.startedAt)
     }
     if (backgroundTasks == 0) return@Row

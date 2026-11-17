@@ -21,6 +21,8 @@ internal data class ToolPresentation(
   val isError: Boolean,
   val code: Boolean = true,
   val figure: StepFigure? = null,
+  /** The tool's result text, given to the completion glyph so it can hand off to a copy button. */
+  val output: String? = null,
 )
 
 @Composable
@@ -63,7 +65,7 @@ internal fun toolPresentation(item: TimelineItem.ToolCall): ToolPresentation {
 
     else -> ToolPresentation(R.drawable.ic_lucide_wrench, item.toolName, path, running, item.isError)
   }
-  return presentation.copy(figure = item.figure)
+  return presentation.copy(figure = item.figure, output = item.output)
 }
 
 @Composable

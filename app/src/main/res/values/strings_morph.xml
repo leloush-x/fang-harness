@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spoken for the check a finished step's working orb settles into when its result has no text to copy. -->
+    <string name="morph_complete">Done</string>
+    <!-- Spoken for the copy button a finished tool's working orb hands off to. -->
+    <string name="morph_copy_output">Copy tool output</string>
+</resources>

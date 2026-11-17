@@ -31,9 +31,7 @@ import io.leloush.fang.agent.AgentProcessState
 import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.ui.components.CodeBox
 import io.leloush.fang.ui.components.CodeText
-import io.leloush.fang.ui.components.FangOrb
 import io.leloush.fang.ui.components.LucideIcon
-import io.leloush.fang.ui.components.OrbMood
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 
@@ -91,7 +89,13 @@ private fun BannerLine(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8, Alignment.CenterHorizontally),
   ) {
-    FangOrb(size = orbSize, mood = OrbMood.WORKING)
+    // This banner only lives while the agent starts, so its orb stays at WORKING until the row is removed.
+    WorkingToCopyGlyph(
+      working = true,
+      copyText = null,
+      size = orbSize,
+      contentDescription = stringResource(R.string.morph_complete),
+    )
     Text(text = text, color = fangColors.foregroundMuted, fontSize = fontSize)
   }
 }
