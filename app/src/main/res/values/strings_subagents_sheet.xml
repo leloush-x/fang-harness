@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Title of the detail sheet opened by tapping a subagent capsule in the chat. -->
+    <string name="subagents_sheet_title">Subagent details</string>
+    <!-- Labels for the fields of the subagent detail sheet. -->
+    <string name="subagents_sheet_agent">Agent</string>
+    <string name="subagents_sheet_status">Status</string>
+    <!-- Label for the token count the subagent used, already shortened, such as 21K. -->
+    <string name="subagents_sheet_tokens">Tokens</string>
+    <!-- Label for the number of the turn the subagent was on, already formatted. -->
+    <string name="subagents_sheet_turn">Turn</string>
+    <!-- Label for the subagent's last activity, as the extension sent it. -->
+    <string name="subagents_sheet_last_activity">Last activity</string>
+    <string name="subagents_sheet_close">Close</string>
+</resources>

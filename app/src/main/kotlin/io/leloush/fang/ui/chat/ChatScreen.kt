@@ -44,6 +44,8 @@ import io.leloush.fang.ui.components.SnackbarStack
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.files.ExplorerToggle
 import io.leloush.fang.ui.sidebar.tildePath
+import io.leloush.fang.ui.subagents.SubagentsSheet
+import io.leloush.fang.ui.subagents.rememberChatSubagentFacts
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import io.leloush.fang.ui.workspace.CloseSplitButton
@@ -157,6 +159,13 @@ private fun ChatContent(
 ) {
   val process = controller.process
   val working by process.working.collectAsStateWithLifecycle()
+  val facts = rememberChatSubagentFacts(process, timeline, working)
+  // Keep the id, not a snapshot: a live run's detail updates while the sheet is open and closes when the run leaves.
+  var selectedId by remember { mutableStateOf<String?>(null) }
+  val openFact = selectedId?.let { id -> facts.firstOrNull { it.toolCallId == id } }
+  LaunchedEffect(selectedId, facts) {
+    if (selectedId != null && openFact == null) selectedId = null
+  }
   val askRequest by process.ask.request.collectAsStateWithLifecycle()
   val askFailed by process.ask.failed.collectAsStateWithLifecycle()
   val answered by process.ask.answered.collectAsStateWithLifecycle()
@@ -185,7 +194,18 @@ private fun ChatContent(
       stream = {
         StreamArea(controller, timeline, snackbar, onOpenProviders, onOpenOnboarding, onSheet, dismissKeyboard)
       },
-      dialog = { PendingDialogCard(controller, timeline, askRequest, askFailed, answered) },
+      dialog = {
+        Column {
+          if (facts.isNotEmpty()) {
+            StreamSubagents(
+              facts,
+              onOpen = { selectedId = it.toolCallId },
+              modifier = Modifier.padding(bottom = FangTokens.Spacing.s8),
+            )
+          }
+          PendingDialogCard(controller, timeline, askRequest, askFailed, answered)
+        }
+      },
       steering = { PendingSteeringBox(controller, timeline, compact = tight) },
       composer = {
         Composer(
@@ -199,6 +219,7 @@ private fun ChatContent(
       },
     )
   }
+  openFact?.let { SubagentsSheet(it, onDismiss = { selectedId = null }) }
 }
 
 /** The stream, with the snackbars and the slash menu over its bottom. */
