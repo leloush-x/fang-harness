@@ -196,7 +196,7 @@ private fun ChatContent(
 
 /** The stream, with the snackbars and the slash menu over its bottom. */
 @Composable
-private fun StreamArea(
+internal fun StreamArea(
   controller: ChatController,
   timeline: TimelineState,
   snackbar: SnackbarStackState,
@@ -318,7 +318,7 @@ private fun SlashMenuHost(controller: ChatController, ready: Boolean, modifier: 
  * button, and the file explorer's toggle ends the row, before the second pane's button that closes split screen.
  */
 @Composable
-private fun ChatHeader(process: AgentProcess, controls: PaneControls, onActions: () -> Unit, modifier: Modifier) {
+internal fun ChatHeader(process: AgentProcess, controls: PaneControls, onActions: () -> Unit, modifier: Modifier) {
   val graph = LocalContext.current.appGraph
   val sessionName by process.sessionName.collectAsStateWithLifecycle()
   val extensionTitle by process.extensionTitle.collectAsStateWithLifecycle()
