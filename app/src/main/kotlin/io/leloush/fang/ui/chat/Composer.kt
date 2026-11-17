@@ -45,7 +45,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,18 +111,10 @@ internal fun Composer(
     focus.clearFocus()
   }
   val shape = RoundedCornerShape(FangTokens.Radius.xxl)
+  val edges = rememberComposerEdges(controller)
   val tabs = controller.view.widgetTabs
-  val widgets by controller.process.extensionWidgets.collectAsStateWithLifecycle()
-  val askRequest by controller.process.ask.request.collectAsStateWithLifecycle()
-  val askFailed by controller.process.ask.failed.collectAsStateWithLifecycle()
-  LaunchedEffect(widgets) { tabs.track(widgets) }
-  // A new request starts folded, and the tab goes away with the one it answered.
-  LaunchedEffect(askRequest?.id) { tabs.closeAsk() }
-  // The open tab is part of the key: without it, tapping a tab never invalidates the remembered panel.
-  val above = remember(widgets, askRequest, tabs, tabs.open(belowEditor = false)) {
-    widgetEdge(widgets, tabs, belowEditor = false, ask = askRequest)
-  }
-  val below = remember(widgets, tabs, tabs.open(belowEditor = true)) { widgetEdge(widgets, tabs, belowEditor = true) }
+  val above = edges.above
+  val below = edges.below
   val openWidget = { key: String -> onSheet(ChatSheet.Widget(key)) }
   Box(
     modifier =
@@ -157,7 +148,7 @@ internal fun Composer(
           tight,
           openWidget,
           if (above.shown != null) panelWeight else Modifier,
-          askFailed,
+          edges.askFailed,
           controller::sendAskAnswer,
         )
         if (controller.attachments.isNotEmpty()) {

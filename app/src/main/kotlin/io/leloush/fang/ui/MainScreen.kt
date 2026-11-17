@@ -175,7 +175,7 @@ internal fun MainScreen(
   val sidePanelOpen = shownPanes.any { panels[it].targetValue != Panel.Chat }
   LaunchedEffect(sidePanelOpen) { onSidePanelOpen(sidePanelOpen) }
 
-  ProvideOrbSettings(preferences = LocalContext.current.appGraph.preferences, frozen = sidePanelOpen) {
+  ProvideOrbSettings(frozen = sidePanelOpen) {
     Box(modifier = Modifier.fillMaxSize()) {
       WorkspacePanes(
         actions = actions,

@@ -300,7 +300,7 @@ private fun RowScope.AskButton(label: String, filled: Boolean = false, enabled: 
 }
 
 /** One question's picks and text fields, kept while the user moves between questions. */
-private class AnswerState {
+internal class AnswerState {
   val selected = mutableStateListOf<String>()
   val freeform = TextFieldState()
   val comment = TextFieldState()
