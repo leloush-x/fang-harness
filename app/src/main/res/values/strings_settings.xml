@@ -75,7 +75,7 @@
     <string name="settings_extension_background_summary">Commands that keep running while the agent waits, such as servers and long builds</string>
     <string name="settings_extension_web_access">Fang Harness web access</string>
     <string name="settings_extension_web_access_summary">Web search and page fetching</string>
-    <string name="settings_extensions_caption">Idle chats reload to pick up a change. A working chat picks it up the next time its agent starts.</string>
+    <string name="settings_extensions_caption">The extensions above ship with Fang Harness and can be switched off here. Install other packages with the row above or with pi install in a terminal. Put your own skills in the pi/skills folder of Fang Harness's config. Idle chats reload to pick up a change; a working chat picks it up next time its agent starts.</string>
 
     <string name="settings_advanced">Advanced</string>
     <string name="settings_running_chats">Running chats</string>
