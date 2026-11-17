@@ -1,4 +1,15 @@
 package io.leloush.fang.ui.chat
 
-// Placeholder for ported subagent UI, to be implemented during Upgrade 3 wiring.
-internal object StreamSubagents
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import io.leloush.fang.ui.subagents.SubagentFacts
+
+/** The subagent strip the chat places above its composer; [onOpen] opens the tapped capsule's subagent. */
+@Composable
+internal fun StreamSubagents(
+  facts: List<SubagentFacts>,
+  onOpen: (SubagentFacts) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  SubagentCapsules(facts = facts, onOpen = onOpen, modifier = modifier)
+}
