@@ -47,13 +47,6 @@ import io.leloush.fang.ui.theme.fangColors
 import java.util.Date
 import kotlinx.coroutines.delay
 
-private val UserBubbleShape =
-  RoundedCornerShape(
-    topStart = FangTokens.Radius.xxl,
-    topEnd = FangTokens.Radius.sm,
-    bottomEnd = FangTokens.Radius.xxl,
-    bottomStart = FangTokens.Radius.xxl,
-  )
 private val ImageMaxEdge = 160.dp
 
 @Composable
@@ -61,12 +54,20 @@ internal fun UserMessage(
   item: TimelineItem.User,
   onAction: (UserMessageAction) -> Unit = {},
   modifier: Modifier = Modifier,
+  entrance: Boolean = false,
+  corners: BubbleCorners = BubbleCorners(),
+  onEntranceConsumed: (String) -> Unit = {},
 ) {
   val colors = fangColors
   var menuOpen by remember { mutableStateOf(false) }
-  Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
+  Column(
+    modifier = modifier
+      .fillMaxWidth()
+      .bubbleEntrance(item.key, entrance, onEntranceConsumed),
+    horizontalAlignment = Alignment.End,
+  ) {
     Column(
-      modifier = Modifier.background(colors.surface3, UserBubbleShape).padding(FangTokens.Spacing.s16),
+      modifier = Modifier.background(colors.surface3, bubbleShape(corners)).padding(FangTokens.Spacing.s16),
       horizontalAlignment = Alignment.End,
       verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
     ) {

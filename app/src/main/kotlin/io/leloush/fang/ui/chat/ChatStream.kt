@@ -107,6 +107,9 @@ internal fun ChatStream(
   val count = timeline.items.size + if (banner != null) 1 else 0
   val scroll = view.scroll
   val listState = remember { restoredListState(scroll, timeline.items, banner != null) }
+  val entrances = remember(view) { BubbleEntrances() }
+  // History can arrive after the first composition; the first non-empty list is still restored history, not new sends.
+  entrances.restore(timeline.items)
   val items by rememberUpdatedState(timeline.items)
   DisposableEffect(listState) {
     onDispose {
@@ -133,6 +136,7 @@ internal fun ChatStream(
       onOpenOnboarding,
       onOpenTool,
       onUserMessageAction,
+      entrances,
     )
     if (timeline.items.isEmpty() && processState == AgentProcessState.Ready) {
       EmptyState(noModel = timeline.model == null, onOpenProviders, Modifier.align(Alignment.Center))
@@ -205,6 +209,7 @@ private fun StreamList(
   onOpenOnboarding: () -> Unit,
   onOpenTool: (key: String) -> Unit,
   onUserMessageAction: (TimelineItem.User, UserMessageAction) -> Unit = { _, _ -> },
+  entrances: BubbleEntrances,
 ) {
   val recomposer = LocalView.current.findViewTreeCompositionContext() as Recomposer
   val anchor = remember(listState, follow, recomposer) { BottomAnchor(listState, follow, recomposer) }
@@ -245,6 +250,7 @@ private fun StreamList(
       }
     }
     itemsIndexed(items, key = { _, item -> item.key }, contentType = { _, item -> item::class }) { index, item ->
+      val previous = items.getOrNull(index - 1)
       StreamItem(
         item = item,
         markdownCache = markdownCache,
@@ -252,7 +258,13 @@ private fun StreamList(
         onOpenTool = onOpenTool,
         onRestart = onRestart,
         onUserMessageAction = onUserMessageAction,
-        modifier = Modifier.contentWidth().padding(top = gapBefore(items.getOrNull(index - 1), item)),
+        modifier = Modifier.contentWidth().padding(top = gapBefore(previous, item)),
+        entrance = entrances.shouldRise(item.key),
+        corners = BubbleCorners(
+          joinedAbove = previous is TimelineItem.User,
+          joinedBelow = items.getOrNull(index + 1) is TimelineItem.User,
+        ),
+        onEntranceConsumed = entrances::settle,
       )
     }
   }
@@ -348,9 +360,19 @@ private fun StreamItem(
   onRestart: () -> Unit,
   onUserMessageAction: (TimelineItem.User, UserMessageAction) -> Unit = { _, _ -> },
   modifier: Modifier,
+  entrance: Boolean = false,
+  corners: BubbleCorners = BubbleCorners(),
+  onEntranceConsumed: (String) -> Unit = {},
 ) {
   when (item) {
-    is TimelineItem.User -> UserMessage(item, onAction = { action -> onUserMessageAction(item, action) }, modifier)
+    is TimelineItem.User -> UserMessage(
+      item,
+      onAction = { action -> onUserMessageAction(item, action) },
+      modifier,
+      entrance,
+      corners,
+      onEntranceConsumed,
+    )
 
     is TimelineItem.AssistantText -> AssistantMessage(item, markdownCache, modifier)
 
