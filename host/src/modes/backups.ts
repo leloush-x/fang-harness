@@ -142,41 +142,21 @@ async function openIfPresent(path: string): Promise<FileHandle | null> {
   }
 }
 
-/** How many session files (chats) live under `configDir/sessions/`. */
-async function countSessions(configDir: string): Promise<number> {
-  let count = 0;
-  async function walk(dir: string): Promise<void> {
-    let names: string[];
-    try {
-      names = await readdir(dir);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
-      throw error;
-    }
-    for (const name of names) {
-      const full = join(dir, name);
-      let stats;
-      try {
-        stats = await lstat(full);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
-        throw error;
-      }
-      if (stats.isDirectory()) await walk(full);
-      else if (stats.isFile()) count++;
-    }
-  }
-  await walk(join(configDir, "sessions"));
-  return count;
+/** A config-folder entry found by the listing walk, kept for the tar-entry generator to use. */
+interface ListedEntry {
+  path: string;
+  relativePath: string;
+  stats: Stats;
 }
 
 /**
- * The config folder as tar entries under `config/`, folders before their contents. A file that disappears while the
- * backup runs is left out; one that changes size is cut or zero-padded to the size it had when listed.
+ * One walk of the config folder: lists every entry and counts the session files (chats) under `sessions/`. Both come
+ * from this single pass, so the manifest can carry the count while staying the first entry of the archive.
  */
-async function* configEntries(configDir: string, counted: (count: number) => void): AsyncGenerator<TarEntry> {
-  let count = 0;
-  async function* walk(dir: string, relativeDir: string): AsyncGenerator<TarEntry> {
+async function listConfig(configDir: string): Promise<{ entries: ListedEntry[]; sessions: number }> {
+  const entries: ListedEntry[] = [];
+  let sessions = 0;
+  async function walk(dir: string, relativeDir: string): Promise<void> {
     let names: string[];
     try {
       names = (await readdir(dir)).toSorted();
@@ -195,25 +175,40 @@ async function* configEntries(configDir: string, counted: (count: number) => voi
         if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
         throw error;
       }
-      const entryPath = `${CONFIG}/${relativePath}`;
-      const mtime = Math.floor(stats.mtimeMs / 1000);
-      if (stats.isDirectory()) {
-        yield { type: "directory", path: entryPath, mode: stats.mode, mtime };
-        counted(++count);
-        yield* walk(path, relativePath);
-      } else if (stats.isFile()) {
-        // Opened before its header is written, so a file deleted since it was listed is skipped, not a failed backup.
-        const handle = await openIfPresent(path);
-        if (handle === null) continue;
-        yield { type: "file", path: entryPath, mode: stats.mode, mtime, size: stats.size, content: fileContent(handle, stats.size) };
-        counted(++count);
-      } else if (stats.isSymbolicLink()) {
-        yield { type: "symlink", path: entryPath, target: await readlink(path), mtime };
-        counted(++count);
-      }
+      if (!stats.isDirectory() && !stats.isFile() && !stats.isSymbolicLink()) continue;
+      entries.push({ path, relativePath, stats });
+      if (stats.isDirectory()) await walk(path, relativePath);
+      if (stats.isFile() && relativePath.startsWith("sessions/")) sessions++;
     }
   }
-  yield* walk(configDir, "");
+  await walk(configDir, "");
+  return { entries, sessions };
+}
+
+/**
+ * The listed config entries as tar entries under `config/`, in the order they were found (folders before their
+ * contents). A file that disappears while the backup runs is left out; one that changes size is cut or zero-padded to
+ * the size it had when listed.
+ */
+async function* configEntries(entries: ListedEntry[], counted: (count: number) => void): AsyncGenerator<TarEntry> {
+  let count = 0;
+  for (const { path, relativePath, stats } of entries) {
+    const entryPath = `${CONFIG}/${relativePath}`;
+    const mtime = Math.floor(stats.mtimeMs / 1000);
+    if (stats.isDirectory()) {
+      yield { type: "directory", path: entryPath, mode: stats.mode, mtime };
+      counted(++count);
+    } else if (stats.isFile()) {
+      // Opened before its header is written, so a file deleted since it was listed is skipped, not a failed backup.
+      const handle = await openIfPresent(path);
+      if (handle === null) continue;
+      yield { type: "file", path: entryPath, mode: stats.mode, mtime, size: stats.size, content: fileContent(handle, stats.size) };
+      counted(++count);
+    } else if (stats.isSymbolicLink()) {
+      yield { type: "symlink", path: entryPath, target: await readlink(path), mtime };
+      counted(++count);
+    }
+  }
 }
 
 /** A fresh name, `fang-config-20261015T143000Z.tar.gz`, with a counter when one already has that second. */
@@ -313,22 +308,22 @@ export async function createBackup(ctx: ModeContext): Promise<JsonObject> {
     await removePartialBackups(dir);
     const name = await newBackupName(dir);
     const partial = join(dir, `.${name}.partial-${process.pid}`);
-    const sessionCount = await countSessions(ctx.env.configDir);
+    const { entries, sessions } = await listConfig(ctx.env.configDir);
     const manifest = JSON.stringify({
       format: FORMAT,
       version: VERSION,
       createdAt: new Date().toISOString(),
       piVersion: await installedPiVersion(ctx.env.root),
-      sessions: sessionCount,
+      sessions,
     } satisfies Manifest);
     const counted = progress(ctx, "Backed up", "backup_progress_backed_up");
-    async function* entries(): AsyncGenerator<TarEntry> {
+    async function* archiveEntries(): AsyncGenerator<TarEntry> {
       const bytes = Buffer.from(manifest);
       yield { type: "file", path: MANIFEST, mode: 0o644, mtime: Math.floor(Date.now() / 1000), size: bytes.length, content: Readable.from([bytes]) };
-      yield* configEntries(ctx.env.configDir, counted);
+      yield* configEntries(entries, counted);
     }
     try {
-      await pipeline(Readable.from(tarStream(entries())), createGzip(), createWriteStream(partial, { flush: true }), { signal: ctx.signal });
+      await pipeline(Readable.from(tarStream(archiveEntries())), createGzip(), createWriteStream(partial, { flush: true }), { signal: ctx.signal });
       await rename(partial, join(dir, name));
     } catch (error) {
       await rm(partial, { force: true });

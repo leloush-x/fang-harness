@@ -92,7 +92,15 @@ describe("subscription_models", () => {
     await connect("key-123");
     const result = await runOp("subscription_models", dirs, { providerId: "openrouter" });
     expect(requests).toEqual(["Bearer key-123 /openrouter/models/user"]);
-    expect(result).toMatchObject({ ok: true, data: { models: [expect.objectContaining({ id: "acme/model-x", name: "Acme: Model X" })] } });
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        models: [
+          expect.objectContaining({ id: "acme/model-x", name: "Acme: Model X" }),
+          expect.objectContaining({ id: "openrouter/auto" }),
+        ],
+      },
+    });
   });
 
   it("reports a key the provider refuses", async () => {

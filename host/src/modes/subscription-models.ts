@@ -27,6 +27,10 @@ export async function subscriptionModels(ctx: ModeContext): Promise<JsonObject> 
     throw new HostError("no_key", `No API key is saved for ${providerId}`, { key: "subscription_no_key" });
   }
   const listed = await fetchModelList(ctx, baseUrl, `${baseUrl.replace(/\/+$/, "")}${path}`, apiKey);
+  // OpenRouter's per-key list omits its router model even though the chat API accepts it. Offer it explicitly.
+  if (providerId === "openrouter" && !listed.has("openrouter/auto")) {
+    listed.set("openrouter/auto", { id: "openrouter/auto", name: "OpenRouter Auto" });
+  }
   const known = new Map(runtime.getModels(providerId).map((model) => [model.id, parseModelDef(model.id, model as unknown as JsonObject)]));
   const catalogue = await loadCatalogue(ctx, "openai-completions");
   return {

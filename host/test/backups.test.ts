@@ -1,13 +1,13 @@
-import { createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import { access, chmod, lstat, mkdir, readdir, readFile, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { setTimeout as sleep } from "node:timers/promises";
-import { createGzip } from "node:zlib";
+import { createGzip, createGunzip } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { isObject } from "../src/framing.js";
-import { tarStream, type TarEntry } from "../src/tar.js";
+import { readTar, tarStream, type TarEntry } from "../src/tar.js";
 import { type Dirs, holdConfigLock, makeDirs, removeDirs, runMode } from "./harness.js";
 
 /** Every entry under `dir`: file contents, symlink targets, folders, with permission bits. */
@@ -82,6 +82,63 @@ describe("configuration backups", () => {
     await mkdir(backups, { recursive: true });
     await pipeline(Readable.from(tarStream(list(entries))), createGzip(), createWriteStream(path.join(backups, name)));
   }
+
+  /** Reads a finished backup: the manifest (first entry) plus every entry path, in order. */
+  async function readArchive(name: string): Promise<{ manifest: Record<string, unknown>; paths: string[] }> {
+    const source = createReadStream(path.join(backups, name));
+    const gunzip = createGunzip();
+    const done = pipeline(source, gunzip).catch(() => undefined);
+    const paths: string[] = [];
+    let manifest: Record<string, unknown> = {};
+    try {
+      let first = true;
+      for await (const entry of readTar(gunzip as AsyncIterable<Buffer>)) {
+        paths.push(entry.path);
+        if (!first) continue;
+        first = false;
+        expect(entry.path).toBe("manifest.json");
+        expect(entry.type).toBe("file");
+        if (entry.type === "file") {
+          const chunks: Buffer[] = [];
+          for await (const chunk of entry.content) chunks.push(chunk);
+          manifest = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+        }
+      }
+    } finally {
+      source.destroy();
+      gunzip.destroy();
+      await done;
+    }
+    return { manifest, paths };
+  }
+
+  it("reports the session count in the manifest and backs up the same entries", async () => {
+    const name = await backUp();
+    const { manifest, paths } = await readArchive(name);
+    expect(manifest.sessions).toBe(1);
+    const skill = `skills/${"long-skill-name-".repeat(8)}`;
+    expect(paths).toEqual([
+      "manifest.json",
+      "config/AGENTS.md",
+      "config/auth.json",
+      "config/extensions",
+      "config/extensions/empty",
+      "config/npm",
+      "config/npm/node_modules",
+      "config/npm/node_modules/.bin",
+      "config/npm/node_modules/.bin/tool",
+      "config/npm/node_modules/tool",
+      "config/npm/node_modules/tool/bin",
+      "config/npm/node_modules/tool/bin/tool.js",
+      "config/sessions",
+      "config/sessions/--home--",
+      "config/sessions/--home--/a.jsonl",
+      "config/settings.json",
+      "config/skills",
+      `config/${skill}`,
+      `config/${skill}/SKILL.md`,
+    ]);
+  });
 
   it("restores the configuration as it was backed up, merging the chats back", async () => {
     const backedUp = await snapshot(dirs.configDir);

@@ -1,5 +1,6 @@
-import { readFile, stat } from "node:fs/promises";
-import { isObject, type JsonObject } from "../framing.js";
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { isObject, LineSplitter, type JsonObject } from "../framing.js";
 import type { ModeContext } from "../mode.js";
 import { stringParam } from "../params.js";
 import { sessionFile } from "../session-file.js";
@@ -9,31 +10,43 @@ import { containedFolder, sessionId, subagentFolder, transcriptFiles } from "../
 const ENTRY_TYPE = "fang-subagent";
 
 /** What one transcript says about its run, or undefined when it isn't a subagent's. */
-async function describe(path: string): Promise<JsonObject | undefined> {
-  let content: string;
-  try {
-    content = await readFile(path, "utf8");
-  } catch {
-    return undefined;
-  }
+export async function describe(path: string): Promise<JsonObject | undefined> {
   let header: JsonObject | undefined;
   let link: JsonObject | undefined;
   let messageCount = 0;
-  for (const line of content.split("\n")) {
+  let invalid = false;
+
+  // Stream the transcript with a bounded splitter: no whole-file buffer, but every message is still counted.
+  const lines = new LineSplitter((line) => {
     let entry: unknown;
     try {
       entry = JSON.parse(line);
     } catch {
-      continue;
+      return;
     }
-    if (!isObject(entry)) continue;
+    if (!isObject(entry)) return;
     if (!header) {
-      if (entry.type !== "session") return undefined;
+      if (entry.type !== "session") {
+        invalid = true;
+        lines.stop();
+        return;
+      }
       header = entry;
     } else if (entry.type === "message") messageCount++;
     else if (entry.type === "custom" && entry.customType === ENTRY_TYPE && isObject(entry.data)) link ??= entry.data;
+  });
+
+  try {
+    for await (const chunk of createReadStream(path)) {
+      lines.push(chunk as Buffer);
+      if (invalid) break;
+    }
+    // A final line without a newline is still an entry, as it was with split("\n").
+    if (!invalid && lines.leftover.length > 0) lines.push(Buffer.from([0x0a]));
+  } catch {
+    return undefined;
   }
-  if (!header || !link) return undefined;
+  if (invalid || !header || !link) return undefined;
   const created = typeof header.timestamp === "string" ? Date.parse(header.timestamp) : Number.NaN;
   return {
     path,

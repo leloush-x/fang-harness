@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,6 +59,7 @@ internal fun OnboardingScreen(onFinished: () -> Unit, onAddProvider: () -> Unit,
   val history = rememberSaveable(saver = HistorySaver) { mutableStateListOf(firstPage(state)) }
   val page = history.last()
   val step = stepOf(page)
+  val signedIn = state.authStatus?.anyConfigured == true
 
   fun goTo(next: String) {
     if (next != history.last()) history.add(next)
@@ -96,22 +98,35 @@ internal fun OnboardingScreen(onFinished: () -> Unit, onAddProvider: () -> Unit,
     )
     // Pages change instantly: no slide or fade animation.
     Box(modifier = Modifier.weight(1f)) {
-      val shownStep = stepOf(page)
-      when {
-        page == WELCOME -> WelcomePage(onStart = { pass(WELCOME) })
-
-        shownStep == null -> DonePage(signedIn = state.authStatus?.anyConfigured == true, onFinish = ::finish)
-
-        else -> StepPage(
-          spec = stepSpec(shownStep, state, onAction),
-          onContinue = { advance() },
-          onSkip = { pass(shownStep.name) },
-        )
-      }
+      CurrentPage(page, signedIn, state, onAction, ::pass, ::finish, onAddProvider, ::advance)
     }
   }
 
   loginProvider?.let { LoginSheet(providerId = it, onDismiss = { loginProvider = null }) }
+}
+
+/** The page for the current step: welcome, a step, or the closing page. */
+@Composable
+private fun CurrentPage(
+  page: String,
+  signedIn: Boolean,
+  state: OnboardingState,
+  onAction: (SetupAction) -> Unit,
+  onPass: (String) -> Unit,
+  onFinish: () -> Unit,
+  onAddProvider: () -> Unit,
+  onAdvance: () -> Unit,
+) {
+  val shownStep = stepOf(page)
+  when {
+    page == WELCOME -> WelcomePage(onStart = { onPass(WELCOME) })
+    shownStep == null -> DonePage(signedIn, onFinish, onAddProvider)
+    else -> StepPage(
+      spec = stepSpec(shownStep, state, onAction),
+      onContinue = onAdvance,
+      onSkip = { onPass(shownStep.name) },
+    )
+  }
 }
 
 /**
@@ -154,12 +169,22 @@ private fun WelcomePage(onStart: () -> Unit) {
 }
 
 @Composable
-private fun DonePage(signedIn: Boolean, onFinish: () -> Unit) {
+private fun DonePage(signedIn: Boolean, onFinish: () -> Unit, onAddProvider: () -> Unit) {
   WizardPage(
     illustration = { SimmeringPot(size = POT_SIZE, tint = fangColors.foreground) },
     title = stringResource(R.string.onboarding_done_title),
     body = stringResource(if (signedIn) R.string.onboarding_done_body else R.string.onboarding_done_body_no_model),
-    buttons = { WizardPrimary(stringResource(R.string.onboarding_start), onFinish) },
+    buttons = {
+      WizardPrimary(stringResource(R.string.onboarding_start), onFinish)
+      if (!signedIn) {
+        TextButton(
+          onClick = onAddProvider,
+          modifier = Modifier.fillMaxWidth(),
+        ) {
+          Text(stringResource(R.string.onboarding_connect_provider))
+        }
+      }
+    },
   )
 }
 
@@ -191,6 +216,12 @@ private fun StepPage(spec: StepSpec, onContinue: () -> Unit, onSkip: () -> Unit)
           textAlign = TextAlign.Center,
         )
       }
+      Text(
+        text = stringResource(R.string.onboarding_auto_advance),
+        color = fangColors.foregroundMuted,
+        fontSize = FangTokens.FontSize.meta,
+        textAlign = TextAlign.Center,
+      )
     },
     buttons = { StepButtons(spec, onContinue, onSkip) },
   )

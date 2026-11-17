@@ -75,10 +75,21 @@ function pricing(entry: JsonObject, key: string): number | undefined {
   return Number((perToken * PER_MILLION).toPrecision(12));
 }
 
-function cost(entry: JsonObject): ModelCost | undefined {
+function cost(entry: JsonObject, id: string): ModelCost | undefined {
   const input = pricing(entry, "prompt");
   const output = pricing(entry, "completion");
-  if (input === undefined || output === undefined) return undefined;
+  if (input === undefined || output === undefined) {
+    // Some lists mark a model free without pricing it. That is still an explicit answer, unlike no price at all.
+    const free = anyOf([
+      flag(entry, "is_free"),
+      flag(entry, "free"),
+      flag(entry, "metadata.is_free"),
+      flag(entry, "pricing.free"),
+      id.endsWith(":free") ? true : undefined,
+    ]);
+    if (free === true) return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+    return undefined;
+  }
   return { input, output, cacheRead: pricing(entry, "input_cache_read") ?? 0, cacheWrite: pricing(entry, "input_cache_write") ?? 0 };
 }
 
@@ -129,7 +140,7 @@ export function detectModel(id: string, entry: JsonObject): ModelDef {
   ]);
   if (maxTokens !== undefined) def.maxTokens = maxTokens;
 
-  const rates = cost(entry);
+  const rates = cost(entry, id);
   if (rates !== undefined) def.cost = rates;
   return def;
 }
