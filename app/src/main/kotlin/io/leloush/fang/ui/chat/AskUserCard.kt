@@ -124,13 +124,7 @@ internal fun AskUserCard(
  * The strip along the composer's top edge: a short label, the question count and a chevron; Retry when a send failed.
  */
 @Composable
-private fun AskBar(
-  request: AskRequest,
-  folded: Boolean,
-  failed: Boolean,
-  onToggle: () -> Unit,
-  onRetry: () -> Unit,
-) {
+private fun AskBar(request: AskRequest, folded: Boolean, failed: Boolean, onToggle: () -> Unit, onRetry: () -> Unit) {
   val colors = fangColors
   val shape = RoundedCornerShape(topStart = FangTokens.Radius.lg, topEnd = FangTokens.Radius.lg)
   val action = stringResource(if (folded) R.string.chat_ask_expand else R.string.chat_ask_fold)

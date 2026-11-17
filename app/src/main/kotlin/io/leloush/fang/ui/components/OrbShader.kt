@@ -46,10 +46,7 @@ object OrbShader {
     val pixelsPerPoint: Float,
   )
 
-  class Handle internal constructor(
-    val orb: RuntimeShader,
-    val cells: RuntimeShader,
-  ) {
+  class Handle internal constructor(val orb: RuntimeShader, val cells: RuntimeShader) {
     fun setState(state: State, layout: Layout) {
       val ppp = maxOf(layout.pixelsPerPoint, 0.001f)
       orb.setFloatUniform("grid", floatArrayOf(layout.columns, layout.pitch, layout.radius, 0f))

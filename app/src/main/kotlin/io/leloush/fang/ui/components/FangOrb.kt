@@ -80,13 +80,7 @@ private fun driveFor(mood: OrbMood): MoodDrive = when (mood) {
   OrbMood.DONE -> MoodDrive(mixB = 0f, pulse = 0.30f, intensity = 0.85f, glow = 0.60f, halo = 0.20f)
 }
 
-private data class MoodDrive(
-  val mixB: Float,
-  val pulse: Float,
-  val intensity: Float,
-  val glow: Float,
-  val halo: Float,
-)
+private data class MoodDrive(val mixB: Float, val pulse: Float, val intensity: Float, val glow: Float, val halo: Float)
 
 /** The documented cyan/green tints drive the shader; the kit tint is for the pot fallback. */
 private fun stateFor(mood: OrbMood, timeMs: Long, userLevel: Float, agentLevel: Float): OrbShader.State {

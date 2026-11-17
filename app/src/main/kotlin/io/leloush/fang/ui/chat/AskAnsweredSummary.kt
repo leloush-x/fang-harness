@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -80,12 +81,7 @@ internal fun AskAnsweredSummary(record: AskAnswered, onDismiss: () -> Unit, modi
 
 /** One answered question's prompt, options with the picked ones marked, and any freeform text. */
 @Composable
-private fun AnsweredQuestion(
-  question: AskQuestion,
-  status: String,
-  picked: Set<String>,
-  text: String?,
-) {
+private fun AnsweredQuestion(question: AskQuestion, status: String, picked: Set<String>, text: String?) {
   val colors = fangColors
   Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s4)) {
     Text(text = question.question, color = colors.foreground, fontSize = FangTokens.FontSize.sm)
@@ -114,4 +110,3 @@ private fun AnsweredQuestion(
     }
   }
 }
-
