@@ -89,12 +89,15 @@ private suspend fun PointerInputScope.foldOnFling(onFling: () -> Unit) {
     val tracker = VelocityTracker()
     tracker.addPointerInputChange(down)
     var consumed = down.isConsumed
-    while (true) {
+    var pressed = true
+    while (pressed) {
       // Final pass: see whether the parent LazyColumn consumed the drag before deciding to fold.
-      val change = awaitPointerEvent(PointerEventPass.Final).changes.firstOrNull { it.id == down.id } ?: continue
-      tracker.addPointerInputChange(change)
-      if (change.isConsumed) consumed = true
-      if (!change.pressed) break
+      val change = awaitPointerEvent(PointerEventPass.Final).changes.firstOrNull { it.id == down.id }
+      if (change != null) {
+        tracker.addPointerInputChange(change)
+        if (change.isConsumed) consumed = true
+        pressed = change.pressed
+      }
     }
     val velocity = tracker.calculateVelocity()
     if (!consumed && hypot(velocity.x, velocity.y) >= FOLD_FLING.toPx()) onFling()
