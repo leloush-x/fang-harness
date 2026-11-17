@@ -141,10 +141,9 @@ internal fun Composer(
         // An open panel is weighted like the field, so it shrinks to the room left once the toolbar is measured. A
         // closed one isn't: a column doesn't pass on a weighted child's unused share, so it would cap the draft.
         val panelWeight = Modifier.weight(1f, fill = false)
-        WidgetPanelSlot(
-          above.shown,
+        UpperPanelSlot(
+          above,
           tabs,
-          false,
           tight,
           openWidget,
           if (above.shown != null) panelWeight else Modifier,

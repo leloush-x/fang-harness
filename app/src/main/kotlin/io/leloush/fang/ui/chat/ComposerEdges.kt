@@ -4,7 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.json.JSONObject
 
 /** The composer's widget tabs and the pending ask state, collected together to keep [Composer] short. */
 internal class ComposerEdges(val above: WidgetEdge, val below: WidgetEdge, val askFailed: Boolean)
@@ -27,4 +29,18 @@ internal fun rememberComposerEdges(controller: ChatController): ComposerEdges {
     widgetEdge(widgets, tabs, belowEditor = true)
   }
   return ComposerEdges(above, below, askFailed)
+}
+
+/** The upper panel slot, split out to keep [Composer] within detekt's method limit. */
+@Composable
+internal fun UpperPanelSlot(
+  shown: WidgetEdge,
+  tabs: WidgetTabs,
+  tight: Boolean,
+  onExpand: (String) -> Unit,
+  panelModifier: Modifier,
+  askFailed: Boolean,
+  onAnswer: (JSONObject) -> Unit,
+) {
+  WidgetPanelSlot(shown.shown, tabs, false, tight, onExpand, panelModifier, askFailed, onAnswer)
 }
