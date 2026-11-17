@@ -93,7 +93,10 @@ private fun floatToHalfBits(value: Float): Short {
   if (hExp > 0) {
     var e = hExp
     var m = (mant ushr 13) + ((mant ushr 12) and 1)
-    if (m == 0x400) { m = 0; e++ }
+    if (m == 0x400) {
+      m = 0
+      e++
+    }
     if (e >= 31) return (sign or 0x7c00).toShort()
     return (sign or (e shl 10) or m).toShort()
   }
