@@ -27,6 +27,7 @@ import java.io.IOException
 import java.lang.ref.Reference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 /** What the header's ellipsis sheet can do. [onCopyPath] and [onArchive] are null until Pi reported a session file. */
 internal class ChatActions(
@@ -258,6 +259,11 @@ internal class ChatController(
 
   fun respondUi(id: String, answer: UiAnswer) {
     scope.launch { process.respondUi(id, answer) }
+  }
+
+  /** Sends the answers to the active `ask` card back to its extension. */
+  fun sendAskAnswer(data: JSONObject) {
+    scope.launch { process.sendAskAnswer(data) }
   }
 
   /** Runs [block] against Pi; null (with a snackbar) when Pi rejected it or is not running. */

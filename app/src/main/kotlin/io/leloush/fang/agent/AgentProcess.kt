@@ -141,6 +141,9 @@ internal class AgentProcess(
    */
   private val subagentsStandingAsideState = MutableStateFlow(false)
 
+  /** The one `ask` request a bundled extension waits on, or null while none is waiting. Not saved: it ends with Pi. */
+  private val askRequestState = MutableStateFlow<AskRequest?>(null)
+
   /** Pi's setTitle requests and renames so far, so a cancelled [moveSession] knows whether the title changed since. */
   @Volatile
   private var extensionTitleChanges = 0
@@ -231,6 +234,9 @@ internal class AgentProcess(
 
   /** Whether the chat's `subagent` tool is another extension's, whose calls are ordinary tool calls to Fang Harness. */
   val subagentsStandingAside: StateFlow<Boolean> = subagentsStandingAsideState.asStateFlow()
+
+  /** The `ask` request the chat shows, or null when no extension waits on the user's answers. */
+  val askRequest: StateFlow<AskRequest?> = askRequestState.asStateFlow()
 
   /** The runs subagent screens follow, with their transcripts as they run. */
   val liveSubagents = LiveSubagents(processScope, ::sendSubagents)
@@ -362,6 +368,12 @@ internal class AgentProcess(
 
   private suspend fun sendSubagents(data: JSONObject) = sendChannel(SUBAGENTS_TOPIC, data)
 
+  /** Sends the answers to the active `ask` to its extension, and drops the request from the chat. */
+  suspend fun sendAskAnswer(data: JSONObject) {
+    askRequestState.value = null
+    sendChannel(ASK_TOPIC, data)
+  }
+
   /** Sends [data] on [topic] to the extension listening there; nothing when no Pi runs. */
   private suspend fun sendChannel(topic: String, data: JSONObject) {
     val channel = connection?.channel ?: return
@@ -380,6 +392,7 @@ internal class AgentProcess(
   private fun forgetChannel() {
     clearSubagents()
     liveSubagents.clear()
+    askRequestState.value = null
   }
 
   private fun clearSubagents() {
@@ -689,6 +702,8 @@ internal class AgentProcess(
           liveSubagents.onMessage(data)
         }
       }
+
+      ASK_TOPIC -> AskRequest.from(data)?.let { askRequestState.value = it }
     }
   }
 
@@ -866,6 +881,9 @@ internal class AgentProcess(
 
   private companion object {
     const val TAG = "FangAgent"
+
+    /** The `fang-ask-user` extension's topic on Fang Harness's channel. */
+    const val ASK_TOPIC = "ask"
 
     /** The `fang-background` extension's topic on Fang Harness's channel. */
     const val BACKGROUND_TOPIC = "background"

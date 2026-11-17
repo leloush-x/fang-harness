@@ -208,4 +208,14 @@
   <string name="chat_command_source_skill">Skill</string>
   <string name="chat_dialog_from_subagents">From a subagent</string>
   <string name="chat_dialog_from_subagent">Asked by subagent %1$s</string>
+
+  <!-- Ask user card: %1$d is the current question, %2$d the total in the batch. -->
+  <string name="chat_ask_title">Question</string>
+  <string name="chat_ask_counter">%1$d / %2$d</string>
+  <string name="chat_ask_freeform">Type your own answer</string>
+  <string name="chat_ask_freeform_hint">Your answer</string>
+  <string name="chat_ask_comment_hint">Add a comment (optional)</string>
+  <string name="chat_ask_skip">Skip</string>
+  <string name="chat_ask_back">Back</string>
+  <string name="chat_ask_continue">Continue</string>
 </resources>

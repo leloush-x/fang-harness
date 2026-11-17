@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcess
 import io.leloush.fang.agent.AgentProcessState
+import io.leloush.fang.agent.AskRequest
 import io.leloush.fang.agent.TimelineState
 import io.leloush.fang.appGraph
 import io.leloush.fang.ui.ShellActions
@@ -155,6 +156,7 @@ private fun ChatContent(
 ) {
   val process = controller.process
   val working by process.working.collectAsStateWithLifecycle()
+  val askRequest by process.askRequest.collectAsStateWithLifecycle()
   val keyboard = LocalSoftwareKeyboardController.current
   val focus = LocalFocusManager.current
   val dismissKeyboard = remember(keyboard, focus) {
@@ -174,13 +176,13 @@ private fun ChatContent(
     )
     // The keyboard and a dialog both take the room the steering box and widget panels would use, so then the steering
     // box keeps to one line and a panel to a few.
-    val tight = WindowInsets.isImeVisible || timeline.pendingUi != null
+    val tight = WindowInsets.isImeVisible || timeline.pendingUi != null || askRequest != null
     ChatStack(
       modifier = Modifier.weight(1f),
       stream = {
         StreamArea(controller, timeline, snackbar, onOpenProviders, onOpenOnboarding, onSheet, dismissKeyboard)
       },
-      dialog = { PendingDialogCard(controller, timeline) },
+      dialog = { PendingDialogCard(controller, timeline, askRequest) },
       steering = { PendingSteeringBox(controller, timeline, compact = tight) },
       composer = {
         Composer(
@@ -251,17 +253,27 @@ private fun StreamArea(
   }
 }
 
-/** The first extension dialog Pi waits on, between the stream and the composer. */
+/** The first extension dialog Pi waits on, or the active `ask` card, between the stream and the composer. */
 @Composable
-internal fun PendingDialogCard(controller: ChatController, timeline: TimelineState) {
-  val request = timeline.pendingUi ?: return
-  ExtensionUiCard(
-    request = request,
-    number = timeline.pendingUiNumber,
-    count = timeline.pendingUiCount,
-    onAnswer = { controller.respondUi(request.id, it) },
-    modifier = Modifier.padding(bottom = FangTokens.Spacing.s8),
-  )
+internal fun PendingDialogCard(controller: ChatController, timeline: TimelineState, askRequest: AskRequest?) {
+  val request = timeline.pendingUi
+  if (request != null) {
+    ExtensionUiCard(
+      request = request,
+      number = timeline.pendingUiNumber,
+      count = timeline.pendingUiCount,
+      onAnswer = { controller.respondUi(request.id, it) },
+      modifier = Modifier.padding(bottom = FangTokens.Spacing.s8),
+    )
+    return
+  }
+  if (askRequest != null) {
+    AskUserCard(
+      request = askRequest,
+      onSubmit = { controller.sendAskAnswer(it) },
+      modifier = Modifier.padding(bottom = FangTokens.Spacing.s8),
+    )
+  }
 }
 
 /** The slash menu while the draft starts with `/`, 12dp above the composer and as wide as it. */

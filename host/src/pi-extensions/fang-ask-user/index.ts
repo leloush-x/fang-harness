@@ -60,6 +60,9 @@ import {
    textSheet,
 } from "./tern";
 import { loadAskUserSettings } from "./settings";
+// Fang Harness: in RPC mode there is no terminal UI, so ask the app's rich card over the shared channel when present.
+import { fangChannelAvailable } from "../fang-channel.js";
+import { askViaChannel, type ChannelAnswer, type ChannelOption, type ChannelQuestion } from "./fang-ask-channel.js";
 
 // Fang Harness bundles this file into one extension asset, where no package.json sits beside it; the version it names in
 // its own terminal UI is the upstream release the copy came from (see UPSTREAM.md).
@@ -2626,6 +2629,86 @@ async function askBatchViaDialogs(
    return answers;
 }
 
+// Fang's ask card carries option descriptions, multi-select, freeform and the comment in one request, which the
+// select()/input() dialogs above lose in RPC mode. Used only when the host gave this Pi a Fang channel.
+function channelOptions(options: QuestionOption[]): ChannelOption[] {
+    return options.map((option) =>
+       option.description ? { title: option.title, description: option.description } : { title: option.title });
+}
+
+function channelQuestion(entry: BatchQuestion): ChannelQuestion {
+    return {
+       question: entry.question,
+       ...(entry.context ? { context: entry.context } : {}),
+       options: channelOptions(entry.options),
+       allowMultiple: entry.allowMultiple,
+       allowFreeform: entry.allowFreeform,
+    };
+}
+
+function channelResponse(answer: ChannelAnswer): AskResponse | null {
+    if (answer.status === "skipped") return null;
+    const response = answer.response;
+    return response.kind === "freeform"
+       ? createFreeformResponse(response.text)
+       : createSelectionResponse(response.selections, response.comment);
+}
+
+async function askSingleViaChannel(
+    question: string,
+    context: string | undefined,
+    options: QuestionOption[],
+    allowMultiple: boolean,
+    allowFreeform: boolean,
+    allowComment: boolean,
+    signal: AbortSignal | undefined,
+    timeout: number | undefined,
+): Promise<AskUIResult | null> {
+    const answers = await askViaChannel(
+       {
+          questions: [{
+             question,
+             ...(context ? { context } : {}),
+             options: channelOptions(options),
+             allowMultiple,
+             allowFreeform,
+          }],
+          allowComment,
+          ...(timeout && timeout > 0 ? { timeout } : {}),
+       },
+       signal,
+       timeout && timeout > 0 ? Date.now() + timeout : undefined,
+    );
+    const first = answers?.[0];
+    return first ? channelResponse(first) : null;
+}
+
+async function askBatchViaChannel(
+    questions: BatchQuestion[],
+    allowComment: boolean,
+    signal: AbortSignal | undefined,
+    deadline: number | undefined,
+    timeout: number | undefined,
+    heading?: string,
+): Promise<BatchAnswer[] | null> {
+    const answers = await askViaChannel(
+       {
+          ...(heading ? { heading } : {}),
+          questions: questions.map(channelQuestion),
+          allowComment,
+          ...(timeout && timeout > 0 ? { timeout } : {}),
+       },
+       signal,
+       deadline,
+    );
+    if (answers === null) return null;
+    return answers.map((answer): BatchAnswer => {
+       if (answer.status === "skipped") return { status: "skipped" };
+       const response = channelResponse(answer);
+       return response ? { status: "answered", response } : { status: "skipped" };
+    });
+}
+
 interface PromptSettings {
    displayMode: AskDisplayMode;
    singleSelectLayout: AskSingleSelectLayout;
@@ -2957,7 +3040,9 @@ async function executeBatch(
          overlayToggle: settings.shortcuts.overlayToggle,
          createComponent: (tui, theme, keybindings, complete) =>
             new BatchAskComponent(questions, settings, tui, theme, keybindings, complete, heading),
-         fallback: () => askBatchViaDialogs(ctx.ui, questions, settings.allowComment, batch.signal, deadline, heading),
+         fallback: () => fangChannelAvailable()
+             ? askBatchViaChannel(questions, settings.allowComment, batch.signal, deadline, params.timeout, heading)
+             : askBatchViaDialogs(ctx.ui, questions, settings.allowComment, batch.signal, deadline, heading),
       }));
    } finally {
       if (deadlineTimer !== undefined) clearTimeout(deadlineTimer);
@@ -3199,7 +3284,11 @@ export default function(pi: ExtensionAPI) {
 
          if (options.length === 0) {
             const prompt = normalizedContext ? `${question}\n\nContext:\n${normalizedContext}` : question;
-            const answer = await whileBlocked(pi, () => ctx.ui.input(prompt, "Type your answer...", dialogOpts));
+            const answer = fangChannelAvailable()
+               ? await whileBlocked(pi, () => askSingleViaChannel(
+                  question, normalizedContext, [], false, allowFreeform, false, signal, timeout,
+               ).then((result) => (result?.kind === "freeform" ? result.text : undefined)))
+               : await whileBlocked(pi, () => ctx.ui.input(prompt, "Type your answer...", dialogOpts));
             const response = signal?.aborted ? null : createFreeformResponse(answer);
 
             if (!response) {
@@ -3243,16 +3332,27 @@ export default function(pi: ExtensionAPI) {
                settings.shortcuts,
                complete,
             ),
-            fallback: () => askViaDialogs(
-               ctx.ui,
-               question,
-               normalizedContext,
-               options,
-               allowMultiple,
-               allowFreeform,
-               allowComment,
-               dialogOpts,
-            ),
+            fallback: () => fangChannelAvailable()
+               ? askSingleViaChannel(
+                  question,
+                  normalizedContext,
+                  options,
+                  allowMultiple,
+                  allowFreeform,
+                  allowComment,
+                  signal,
+                  timeout,
+               )
+               : askViaDialogs(
+                  ctx.ui,
+                  question,
+                  normalizedContext,
+                  options,
+                  allowMultiple,
+                  allowFreeform,
+                  allowComment,
+                  dialogOpts,
+               ),
          }));
 
          if (signal?.aborted || result === null) {
