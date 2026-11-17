@@ -250,10 +250,10 @@ class WolfiRuntime(context: Context) {
       #!/bin/sh
       export PI_CODING_AGENT_DIR='${configDir.absolutePath}'
       PI='${pi.absolutePath}'
-      if [ -f "\$PI/dist/bundle/cli.js" ]; then
-        exec /usr/bin/node "\$PI/dist/bundle/cli.js" "\$@"
+      if [ -f "${'$'}PI/dist/bundle/cli.js" ]; then
+        exec /usr/bin/node "${'$'}PI/dist/bundle/cli.js" "${'$'}@"
       fi
-      exec /usr/bin/node "\$PI/dist/cli.js" "\$@"
+      exec /usr/bin/node "${'$'}PI/dist/cli.js" "${'$'}@"
     """.trimIndent() + "\n"
     if (script.exists() && runCatching { script.readText() }.getOrNull() == content) return
     runCatching {
