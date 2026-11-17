@@ -261,11 +261,6 @@ internal class ChatController(
     scope.launch { process.respondUi(id, answer) }
   }
 
-  /** Sends the answers to the active `ask` card back to its extension. */
-  fun sendAskAnswer(data: JSONObject) {
-    scope.launch { process.sendAskAnswer(data) }
-  }
-
   /** Runs [block] against Pi; null (with a snackbar) when Pi rejected it or is not running. */
   suspend fun <T> query(block: suspend AgentProcess.() -> T): T? = try {
     process.block()
@@ -369,6 +364,11 @@ internal fun ChatController.abandonEdit(scope: CoroutineScope) {
   val fork = process.sessionFile.value ?: return
   if (fork == old || sending) return
   scope.launch { runCatching { process.removeSessionFile(fork) } }
+}
+
+/** Sends the answers to the active `ask` card back to its extension. */
+internal fun ChatController.sendAskAnswer(data: JSONObject) {
+  scope.launch { process.ask.sendAnswer(data) }
 }
 
 private const val ATTACHED_FILES = "Attached files:"

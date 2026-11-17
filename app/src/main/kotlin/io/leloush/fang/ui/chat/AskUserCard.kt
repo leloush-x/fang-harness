@@ -86,7 +86,7 @@ internal fun AskUserCard(
       verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
     ) {
       AskHeader(request.heading, session.index, request.questions.size)
-      QuestionSection(question, session.answers[session.index])
+      QuestionSection(question, request.allowComment, session.answers[session.index])
       AskActions(session)
     }
   }
@@ -112,7 +112,7 @@ private fun AskHeader(heading: String?, index: Int, count: Int) {
 
 /** One question's text, its optional context, its options and its optional freeform and comment fields. */
 @Composable
-private fun QuestionSection(question: AskQuestion, state: AnswerState) {
+private fun QuestionSection(question: AskQuestion, allowComment: Boolean, state: AnswerState) {
   Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8)) {
     Text(text = question.question, color = fangColors.foreground, fontSize = FangTokens.FontSize.base)
     question.context?.let {
@@ -128,7 +128,7 @@ private fun QuestionSection(question: AskQuestion, state: AnswerState) {
       )
       InlineField(state.freeform, stringResource(R.string.chat_ask_freeform_hint))
     }
-    if (question.allowComment) InlineField(state.comment, stringResource(R.string.chat_ask_comment_hint))
+    if (allowComment) InlineField(state.comment, stringResource(R.string.chat_ask_comment_hint))
   }
 }
 

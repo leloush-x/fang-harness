@@ -156,7 +156,7 @@ private fun ChatContent(
 ) {
   val process = controller.process
   val working by process.working.collectAsStateWithLifecycle()
-  val askRequest by process.askRequest.collectAsStateWithLifecycle()
+  val askRequest by process.ask.request.collectAsStateWithLifecycle()
   val keyboard = LocalSoftwareKeyboardController.current
   val focus = LocalFocusManager.current
   val dismissKeyboard = remember(keyboard, focus) {
