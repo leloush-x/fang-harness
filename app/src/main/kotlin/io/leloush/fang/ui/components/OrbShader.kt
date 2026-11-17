@@ -15,18 +15,33 @@ object OrbShader {
   /** The orb's breath period, from the extracted shader math. */
   const val BREATH_SECONDS: Float = 3.8f
 
+  /** The kit's fixed palette, from shader_03; the app themes user/agent tints before passing them in. */
+  val USER_BASE = Color(0.60f, 0.90f, 0.98f)
+  val AGENT_BASE = Color(0.44f, 0.91f, 0.68f)
+  val MUTED_PLATE = Color(26f / 255f, 14f / 255f, 16f / 255f)
+  val MUTED_RIM = Color(248f / 255f, 113f / 255f, 113f / 255f)
+
   /**
-   * State-driven uniforms. [mixB] feeds both `mixB.x` (mute plate) and `mixB.y` (muted rim).
-   * [gazeX]/[gazeY] and [pulse]/[intensity]/[halo] drive the child cells shader.
+   * State-driven uniforms. [mixBX] fades the plate toward muted, [mixBY] mutes the rim;
+   * [rimX]/[rimY] are the two sides' levels and [glowX] the core glow. [burst] is the Done flash.
+   * A null [tintBase]/[tintCore] keeps the old behaviour of tracking [userTint]/[agentTint].
    */
   data class State(
     val time: Float = 0f,
-    val userTint: Color = Color(0.60f, 0.90f, 0.98f, 1f),
-    val agentTint: Color = Color(0.44f, 0.91f, 0.68f, 1f),
+    val userTint: Color = USER_BASE,
+    val agentTint: Color = AGENT_BASE,
+    val mutedPlate: Color = MUTED_PLATE,
+    val mutedRim: Color = MUTED_RIM,
+    val tintBase: Color? = null,
+    val tintCore: Color? = null,
     val userLevel: Float = 0f,
     val agentLevel: Float = 0f,
-    val mixB: Float = 0f,
-    val glow: Float = 0.55f,
+    val mixBX: Float = 0f,
+    val mixBY: Float = 0f,
+    val rimX: Float = 0f,
+    val rimY: Float = 0f,
+    val glowX: Float = 0.55f,
+    val burst: Float = 0f,
     val pulse: Float = 0f,
     val gazeX: Float = 0f,
     val gazeY: Float = 0f,
@@ -51,12 +66,12 @@ object OrbShader {
     fun setState(state: State, layout: Layout) {
       val ppp = maxOf(layout.pixelsPerPoint, 0.001f)
       orb.setFloatUniform("grid", floatArrayOf(layout.columns, layout.pitch, layout.radius, 0f))
-      orb.setFloatUniform("mixB", floatArrayOf(state.mixB, state.mixB, 0f, 0f))
-      orb.setFloatUniform("tintBase", state.userTint.asFloatArray())
-      orb.setFloatUniform("tintCore", state.agentTint.asFloatArray())
-      orb.setFloatUniform("rim", floatArrayOf(state.userLevel, state.agentLevel, 0f, 0f))
+      orb.setFloatUniform("mixB", floatArrayOf(state.mixBX, state.mixBY, 0f, 0f))
+      orb.setFloatUniform("tintBase", (state.tintBase ?: state.userTint).asFloatArray())
+      orb.setFloatUniform("tintCore", (state.tintCore ?: state.agentTint).asFloatArray())
+      orb.setFloatUniform("rim", floatArrayOf(state.rimX, state.rimY, 0f, 0f))
       orb.setFloatUniform("view", floatArrayOf(layout.centreX, layout.centreY, ppp, 1f / ppp))
-      orb.setFloatUniform("glow", floatArrayOf(state.glow, layout.radius, 3f, 0f))
+      orb.setFloatUniform("glow", floatArrayOf(state.glowX, layout.radius, 3f, 0f))
       orb.setFloatUniform("clipRect", floatArrayOf(0f, 0f, layout.width, layout.height))
       orb.setFloatUniform("clipShape", floatArrayOf(-1f, 0f, layout.height, 1f))
 
@@ -64,7 +79,12 @@ object OrbShader {
       cells.setFloatUniform("state", floatArrayOf(state.time, state.pulse, state.gazeX, state.gazeY))
       cells.setFloatUniform(
         "levels",
-        floatArrayOf(state.userLevel, state.agentLevel, state.halo, state.intensity),
+        floatArrayOf(
+          state.userLevel,
+          state.agentLevel,
+          (state.halo + state.burst).coerceAtMost(1f),
+          state.intensity,
+        ),
       )
       cells.setFloatUniform("you", state.userTint.asFloatArray())
       cells.setFloatUniform("agent", state.agentTint.asFloatArray())

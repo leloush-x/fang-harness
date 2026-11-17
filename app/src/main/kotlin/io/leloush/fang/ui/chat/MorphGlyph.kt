@@ -68,7 +68,7 @@ internal fun WorkingToCopyGlyph(
   )
   Box(modifier, contentAlignment = Alignment.Center) {
     if (phase != GlyphPhase.Done) {
-      val mood = if (phase == GlyphPhase.Working) OrbMood.WORKING else OrbMood.DONE
+      val mood = if (phase == GlyphPhase.Working) OrbMood.SPEAKING else OrbMood.DONE
       FangOrb(modifier = Modifier.alpha(1f - handoff), size = size, mood = mood)
     }
     if (phase == GlyphPhase.Handoff || phase == GlyphPhase.Done) {

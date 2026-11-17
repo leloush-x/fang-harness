@@ -333,10 +333,12 @@ internal class AgentProcess(
     }
   }
 
-  /** Sends [text] to the running subagent [runId], which reads it after its current tool call, like a steer. */
-  suspend fun steerSubagent(runId: String, text: String) {
-    sendSubagents(JSONObject().put("action", "steer").put("id", runId).put("text", text))
-  }
+  /**
+   * Sends [text] to the running subagent [runId], which reads it after its current tool call, like a steer. Returns
+   * false when the line never reached the extension, so the subagent chat can tell the user their steer was lost.
+   */
+  suspend fun steerSubagent(runId: String, text: String): Boolean =
+    sendChannel(SUBAGENTS_TOPIC, JSONObject().put("action", "steer").put("id", runId).put("text", text))
 
   /** Stops subagent [runId]; its `subagent` tool call returns, saying the user stopped it, and the parent carries on. */
   suspend fun stopSubagent(runId: String) {

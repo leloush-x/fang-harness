@@ -1,6 +1,7 @@
 package io.leloush.fang.ui.chat
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -48,25 +49,27 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.leloush.fang.R
-import io.leloush.fang.agent.AskAnswered
 import io.leloush.fang.agent.AskOption
 import io.leloush.fang.agent.AskQuestion
 import io.leloush.fang.agent.AskRequest
 import io.leloush.fang.ui.components.LucideIcon
+import io.leloush.fang.ui.theme.FangColors
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** How tall the scrollable question body grows before it scrolls, so a long question leaves room for the composer. */
+private val ASK_PANEL_MAX_HEIGHT = 280.dp
+
 /**
- * An extension's `ask` request as a card growing out of the composer, like [ExtensionUiCard]: the chat stays usable
- * while it waits. Questions show one at a time; Skip leaves one unanswered and Dismiss cancels the whole request. Only
- * the last question's Continue becomes Submit, which sends every answer through [onSubmit]. Drag the card down or tap
- * its chevron to fold it into a bar; tap the bar to bring it back. A failed send keeps the card with Retry.
+ * An extension's `ask` request as a small square bulge at the composer's top edge, like a widget tab: tap it to grow the
+ * question card out of the composer, drag the card down or tap its chevron to fold it back. Questions show one at a time;
+ * Skip leaves one unanswered and Dismiss cancels the whole request. Only the last question's Continue becomes Submit,
+ * which sends every answer through [onSubmit]. A failed send keeps the card with Retry.
  */
 @Composable
 internal fun AskUserCard(
@@ -85,98 +88,73 @@ internal fun AskUserCard(
   }
   var folded by remember(request.id) { mutableStateOf(false) }
   val colors = fangColors
-  val shape = RoundedCornerShape(FangTokens.Radius.lg)
-  Box(modifier = modifier.fillMaxWidth().padding(horizontal = FangTokens.Spacing.s16), Alignment.TopCenter) {
-    Column(
-      modifier = Modifier
-        .widthIn(max = FangTokens.contentMaxWidth)
-        .fillMaxWidth()
-        .clip(shape)
-        .background(colors.surface1)
-        .border(1.dp, if (folded) colors.border else colors.borderAccent, shape)
-        .pointerInput(Unit) {
-          detectVerticalDragGestures(onVerticalDrag = { _, drag -> if (drag > 0) folded = true })
-        },
-    ) {
-      AskBar(request, folded, failed, onToggle = { folded = !folded }, onRetry = session::retry)
+  val counter = stringResource(R.string.chat_ask_counter, session.index + 1, request.questions.size)
+  Box(modifier = modifier.fillMaxWidth().padding(horizontal = FangTokens.Spacing.s16), Alignment.TopStart) {
+    Column(modifier = Modifier.widthIn(max = FangTokens.contentMaxWidth).fillMaxWidth()) {
+      AskBulge(counter, request.questions.size, expanded = !folded, failed, onToggle = { folded = !folded })
       AnimatedVisibility(
         visible = !folded,
-        enter = expandVertically(animationSpec = spring()) + fadeIn(),
-        exit = shrinkVertically(animationSpec = spring()) + fadeOut(),
+        enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMedium)) + fadeIn(),
+        exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMedium)) + fadeOut(),
       ) {
-        Column(
-          modifier = Modifier
-            .padding(FangTokens.Spacing.s12)
-            .verticalScroll(rememberScrollState()),
-          verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
-        ) {
-          AskHeader(request.heading, session.index, request.questions.size)
-          QuestionSection(request.questions[session.index], request.allowComment, session.answers[session.index])
-          if (failed) AskFailure(session)
-          AskActions(session)
-        }
+        AskPanel(request, session, failed, colors) { folded = true }
       }
     }
   }
 }
 
-/**
- * The strip along the composer's top edge: a short label, the question count and a chevron; Retry when a send failed.
- */
+/** The card grown out of the bulge: a fixed heading with a fold chevron, and a capped, scrollable question body. */
 @Composable
-private fun AskBar(request: AskRequest, folded: Boolean, failed: Boolean, onToggle: () -> Unit, onRetry: () -> Unit) {
-  val colors = fangColors
-  val shape = RoundedCornerShape(topStart = FangTokens.Radius.lg, topEnd = FangTokens.Radius.lg)
-  val action = stringResource(if (folded) R.string.chat_ask_expand else R.string.chat_ask_fold)
-  Row(
+private fun AskPanel(
+  request: AskRequest,
+  session: AskSession,
+  failed: Boolean,
+  colors: FangColors,
+  onFold: () -> Unit,
+) {
+  val shape = RoundedCornerShape(FangTokens.Radius.lg)
+  Column(
     modifier = Modifier
-      .fillMaxWidth()
-      .heightIn(min = 40.dp)
       .clip(shape)
-      .background(if (folded) colors.surface1 else colors.surface2)
-      .border(1.dp, if (folded) colors.border else colors.borderAccent, shape)
-      .clickable(onClickLabel = action, onClick = onToggle)
-      .padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
+      .background(colors.surface1)
+      .border(1.dp, colors.borderAccent, shape)
+      .pointerInput(Unit) {
+        detectVerticalDragGestures(onVerticalDrag = { _, drag -> if (drag > 0) onFold() })
+      },
   ) {
-    LucideIcon(
-      icon = R.drawable.ic_lucide_list_checks,
-      contentDescription = null,
-      size = FangTokens.IconSize.sm,
-      tint = if (folded) colors.foregroundMuted else colors.accent,
-    )
-    Text(
-      text = request.heading ?: stringResource(R.string.chat_ask_title),
-      modifier = Modifier.weight(1f),
-      color = colors.foreground,
-      fontSize = FangTokens.FontSize.base,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
-    Text(
-      text = stringResource(R.string.chat_ask_counter, 1, request.questions.size),
-      color = colors.foregroundMuted,
-      fontSize = FangTokens.FontSize.sm,
-    )
-    if (failed) {
-      Text(
-        text = stringResource(R.string.chat_retry),
-        modifier = Modifier.clickable(onClick = onRetry),
-        color = colors.accent,
-        fontSize = FangTokens.FontSize.sm,
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(
+        start = FangTokens.Spacing.s12,
+        end = FangTokens.Spacing.s12,
+        top = FangTokens.Spacing.s8,
+      ),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
+    ) {
+      AskHeader(request.heading, session.index, request.questions.size)
+      LucideIcon(
+        icon = R.drawable.ic_lucide_chevron_up,
+        contentDescription = stringResource(R.string.chat_ask_bulge_fold),
+        modifier = Modifier.clickable(onClick = onFold),
+        size = FangTokens.IconSize.sm,
+        tint = colors.foregroundMuted,
       )
     }
-    LucideIcon(
-      icon = if (folded) R.drawable.ic_lucide_chevron_up else R.drawable.ic_lucide_chevron_down,
-      contentDescription = null,
-      size = FangTokens.IconSize.xs,
-      tint = colors.foregroundMuted,
-    )
+    Column(
+      modifier = Modifier
+        .padding(FangTokens.Spacing.s12)
+        .heightIn(max = ASK_PANEL_MAX_HEIGHT)
+        .verticalScroll(rememberScrollState()),
+      verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
+    ) {
+      QuestionSection(request.questions[session.index], request.allowComment, session.answers[session.index])
+      if (failed) AskFailure(session)
+      AskActions(session)
+    }
   }
 }
 
-/** The failure row inside the expanded card, with the same Retry the folded bar offers. */
+/** The failure row inside the expanded card, with the same Retry the folded bulge hides away. */
 @Composable
 private fun AskFailure(session: AskSession) {
   val colors = fangColors
@@ -203,8 +181,8 @@ private fun AskFailure(session: AskSession) {
 
 /** The request's heading, or a default, with the current question's place beside it. */
 @Composable
-private fun AskHeader(heading: String?, index: Int, count: Int) {
-  Row(horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
+private fun RowScope.AskHeader(heading: String?, index: Int, count: Int) {
+  Row(horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6), modifier = Modifier.weight(1f)) {
     Text(
       text = heading ?: stringResource(R.string.chat_ask_title),
       modifier = Modifier.weight(1f),

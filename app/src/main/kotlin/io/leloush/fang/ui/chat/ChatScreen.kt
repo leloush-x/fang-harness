@@ -44,7 +44,7 @@ import io.leloush.fang.ui.components.SnackbarStack
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.files.ExplorerToggle
 import io.leloush.fang.ui.sidebar.tildePath
-import io.leloush.fang.ui.subagents.SubagentsSheet
+import io.leloush.fang.ui.subagents.SubagentChatScreen
 import io.leloush.fang.ui.subagents.rememberChatSubagentFacts
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
@@ -160,7 +160,7 @@ private fun ChatContent(
   val process = controller.process
   val working by process.working.collectAsStateWithLifecycle()
   val facts = rememberChatSubagentFacts(process, timeline, working)
-  // Keep the id, not a snapshot: a live run's detail updates while the sheet is open and closes when the run leaves.
+  // Keep the id, not a snapshot: a live run's detail updates while its chat is open and closes when the run leaves.
   var selectedId by remember { mutableStateOf<String?>(null) }
   val openFact = selectedId?.let { id -> facts.firstOrNull { it.toolCallId == id } }
   LaunchedEffect(selectedId, facts) { if (selectedId != null && openFact == null) selectedId = null }
@@ -175,49 +175,23 @@ private fun ChatContent(
       focus.clearFocus()
     }
   }
-  Column(
-    modifier = modifier.fillMaxSize().background(fangColors.surface0).closeContextDetailsOnPress(controller),
-  ) {
-    ChatHeader(
-      process,
-      controls,
-      onActions = { onSheet(ChatSheet.Actions) },
-      Modifier.onUnhandledTap(dismissKeyboard),
-    )
-    // The keyboard and a dialog both take the room the steering box and widget panels would use, so then the steering
-    // box keeps to one line and a panel to a few.
-    val tight = WindowInsets.isImeVisible || timeline.pendingUi != null || askRequest != null || answered != null
-    ChatStack(
-      modifier = Modifier.weight(1f),
-      stream = {
-        StreamArea(controller, timeline, snackbar, onOpenProviders, onOpenOnboarding, onSheet, dismissKeyboard)
-      },
-      dialog = {
-        Column {
-          if (facts.isNotEmpty()) {
-            StreamSubagents(
-              facts,
-              onOpen = { selectedId = it.toolCallId },
-              modifier = Modifier.padding(bottom = FangTokens.Spacing.s8),
-            )
-          }
-          PendingDialogCard(controller, timeline, askRequest, askFailed, answered)
-        }
-      },
-      steering = { PendingSteeringBox(controller, timeline, compact = tight) },
-      composer = {
-        Composer(
-          controller = controller,
-          model = timeline.model,
-          thinkingLevel = timeline.thinkingLevel,
-          working = working,
-          tight = tight,
-          onSheet = onSheet,
-        )
-      },
-    )
+  // The keyboard and a dialog both take the room the steering box and widget panels would use, so then the steering
+  // box keeps to one line and a panel to a few.
+  val tight = WindowInsets.isImeVisible || timeline.pendingUi != null || askRequest != null || answered != null
+  val bodyState = ChatMainState(
+    working,
+    tight,
+    askRequest,
+    askFailed,
+    answered,
+    facts,
+    { selectedId = it },
+    dismissKeyboard,
+  )
+  Box(modifier = modifier.fillMaxSize()) {
+    ChatMainBody(controller, snackbar, controls, timeline, bodyState, onOpenProviders, onOpenOnboarding, onSheet)
+    openFact?.let { SubagentChatScreen(process, it, { selectedId = null }, controller::show) }
   }
-  openFact?.let { SubagentsSheet(it, onDismiss = { selectedId = null }) }
 }
 
 /** The stream, with the snackbars and the slash menu over its bottom. */

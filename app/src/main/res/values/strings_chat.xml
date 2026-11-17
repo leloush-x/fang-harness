@@ -225,6 +225,15 @@
   <string name="chat_ask_failed">Couldn\'t send your answer</string>
   <string name="chat_ask_answered">Answered</string>
   <string name="chat_ask_skipped">Skipped</string>
+  <!-- Accessibility: number of pending questions on the folded square bulge. %1$d is the question count. -->
+  <plurals name="chat_ask_bulge_count">
+    <item quantity="one">%1$d question</item>
+    <item quantity="other">%1$d questions</item>
+  </plurals>
+  <!-- Accessibility label on the folded questions bulge: tap to expand the question card. -->
+  <string name="chat_ask_bulge_show">Show questions</string>
+  <!-- Accessibility label on the expanded questions card's chevron: fold it back into the bulge. -->
+  <string name="chat_ask_bulge_fold">Fold questions</string>
 
   <!-- Pasted Text attachment card and its full-text dialog. None of these take placeholders. -->
   <!-- Title of the card and of the dialog that shows a long paste in full. -->

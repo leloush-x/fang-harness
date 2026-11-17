@@ -29,6 +29,7 @@ import io.leloush.fang.R
 import io.leloush.fang.ui.components.FangOrb
 import io.leloush.fang.ui.components.OrbMood
 import io.leloush.fang.ui.subagents.SubagentFacts
+import io.leloush.fang.ui.subagents.SubagentPhase
 import io.leloush.fang.ui.subagents.SubagentText
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
@@ -61,7 +62,11 @@ private fun CapsulePill(fact: SubagentFacts, onOpen: (SubagentFacts) -> Unit, mo
   var folded by remember(fact.toolCallId) { mutableStateOf(false) }
   val name = fact.agent.ifBlank { stringResource(R.string.capsule_unnamed) }
   val action = stringResource(if (folded) R.string.capsule_restore else R.string.capsule_open, name)
-  val mood = if (fact.phase.active) OrbMood.WORKING else OrbMood.DONE
+  val mood = when {
+    fact.phase.active -> OrbMood.SPEAKING
+    fact.phase == SubagentPhase.Failed -> OrbMood.FAILED
+    else -> OrbMood.DONE
+  }
   Row(
     modifier = modifier
       // subagent-capsule-press: clip to the pill so the press ripple keeps both ends rounded

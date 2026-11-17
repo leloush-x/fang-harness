@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The status shown in the subagent chat header while its run is still active. -->
+    <string name="subagent_chat_running">Running</string>
+    <!-- Shown when a subagent run ends while its chat is open; the transcript stays on screen and Back still closes it. -->
+    <string name="subagent_chat_finished">This subagent has finished.</string>
+    <!-- Snackbar when a steering message could not be sent to a running subagent. -->
+    <string name="subagent_chat_steer_failed">Couldn\'t send the message to the subagent.</string>
+</resources>

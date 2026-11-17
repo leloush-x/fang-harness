@@ -16,6 +16,6 @@ internal fun BoxScope.FloatingWorkBadge(visible: Boolean) {
   FangOrb(
     modifier = Modifier.align(Alignment.TopEnd).padding(FangTokens.Spacing.s12),
     size = FangTokens.IconSize.lg,
-    mood = OrbMood.WORKING,
+    mood = OrbMood.SPEAKING,
   )
 }
