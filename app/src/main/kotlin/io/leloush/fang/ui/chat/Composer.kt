@@ -222,6 +222,7 @@ private fun primaryAction(controller: ChatController, working: Boolean, starting
 /** One horizontally scrolling row, so any number of attachments never pushes the toolbar off screen. */
 @Composable
 private fun AttachmentTray(attachments: List<Attachment>, onRemove: (Attachment) -> Unit) {
+  var openedText by remember { mutableStateOf<Attachment.Text?>(null) }
   Row(
     modifier =
       Modifier
@@ -237,9 +238,15 @@ private fun AttachmentTray(attachments: List<Attachment>, onRemove: (Attachment)
       when (attachment) {
         is Attachment.Image -> AttachmentThumbnail(attachment, onRemove = { onRemove(attachment) })
         is Attachment.File -> FileChip(attachment, onRemove = { onRemove(attachment) })
+        is Attachment.Text -> PastedTextChip(
+          attachment,
+          onOpen = { openedText = attachment },
+          onRemove = { onRemove(attachment) },
+        )
       }
     }
   }
+  openedText?.let { PastedTextDialog(it.text, onDismiss = { openedText = null }) }
 }
 
 @Composable
@@ -297,7 +304,7 @@ private fun FileChip(file: Attachment.File, onRemove: () -> Unit) {
 }
 
 @Composable
-private fun BoxScope.RemoveBadge(onRemove: () -> Unit) {
+internal fun BoxScope.RemoveBadge(onRemove: () -> Unit) {
   val colors = fangColors
   Box(
     modifier =
@@ -339,7 +346,7 @@ private fun ComposerField(controller: ChatController, acceptsImages: Boolean, on
       .heightIn(min = 30.dp)
       .onFocusChanged { controller.composerFocused = it.isFocused }
       .onPreviewKeyEvent { controller.slash.onKey(it, onRan) }
-      .contentReceiver { content -> receiveImages(controller, content, acceptsImages) },
+      .contentReceiver { content -> receiveContent(controller, content, acceptsImages) },
     inputTransformation = enterPicks,
     textStyle = style,
     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -356,28 +363,49 @@ private fun ComposerField(controller: ChatController, acceptsImages: Boolean, on
 }
 
 /**
- * Takes the images in [content] into the attachments and leaves the rest, such as text, to the field. A model that
+ * Takes the images in [content] into the attachments and leaves the rest to the field. A paste at or above
+ * [PASTED_TEXT_MIN_LENGTH] instead becomes an [Attachment.Text] card; shorter text stays for the field. A model that
  * reads only text gets no images, which a snackbar explains.
  */
 @OptIn(ExperimentalFoundationApi::class)
-private fun receiveImages(
+private fun receiveContent(
   controller: ChatController,
   content: TransferableContent,
   acceptsImages: Boolean,
 ): TransferableContent? {
-  if (!content.hasMediaType(MediaType.Image)) return content
-  val uris = ArrayList<Uri>()
-  val rest = content.consume { item ->
-    val uri = item.uri ?: return@consume false
-    uris += uri
-    true
+  val afterImages = if (content.hasMediaType(MediaType.Image)) {
+    val uris = ArrayList<Uri>()
+    val rest = content.consume { item ->
+      val uri = item.uri ?: return@consume false
+      uris += uri
+      true
+    }
+    when {
+      uris.isEmpty() -> Unit
+      acceptsImages -> controller.addImages(uris, grant = content)
+      else -> controller.show(R.string.chat_paste_images_text_only)
+    }
+    rest ?: return null
+  } else content
+  val clip = afterImages.clipEntry.clipData
+  val hasText = (0 until clip.itemCount).any { !clip.getItemAt(it).text.isNullOrEmpty() }
+  if (!hasText) {
+    controller.show(R.string.chat_paste_empty)
+    return afterImages
   }
-  when {
-    uris.isEmpty() -> Unit
-    acceptsImages -> controller.addImages(uris, grant = content)
-    else -> controller.show(R.string.chat_paste_images_text_only)
+  return runCatching {
+    afterImages.consume { item ->
+      item.text?.toString()?.let { text ->
+        if (text.length >= PASTED_TEXT_MIN_LENGTH) {
+          controller.attachments += Attachment.Text(text)
+          true
+        } else false
+      } ?: false
+    }
+  }.getOrElse {
+    controller.show(R.string.chat_paste_error)
+    afterImages
   }
-  return rest
 }
 
 /** Opens the attach sheet: photos (only when the model accepts images) or any files. */

@@ -10,6 +10,13 @@ import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * A paste at or above this many characters becomes a Pasted Text card; shorter text stays in the field. The exact
+ * upstream threshold was not recoverable, so this is a sensible one: short snippets read better inline, while a log
+ * or code block is easier to inspect as a card and read in full there.
+ */
+internal const val PASTED_TEXT_MIN_LENGTH = 300
+
 /** Something picked for the next prompt. */
 internal sealed interface Attachment {
   /** Sent inside Pi's `prompt`: the JPEG and its composer-tray thumbnail. */
@@ -17,6 +24,9 @@ internal sealed interface Attachment {
 
   /** Copied into Wolfi OS on send; the prompt lists its path for Pi's tools. */
   class File(val name: String, val bytes: ByteArray) : Attachment
+
+  /** A long paste, shown as a card; the whole text is sent to Pi with the prompt. */
+  class Text(val text: String) : Attachment
 }
 
 /** The picked file would push the message past [ChatFiles.MAX_TOTAL_BYTES]. */

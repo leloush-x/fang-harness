@@ -49,6 +49,7 @@ import io.leloush.fang.agent.ChatLocation
 import io.leloush.fang.appGraph
 import io.leloush.fang.terminal.TerminalSession
 import io.leloush.fang.ui.chat.ChatScreen
+import io.leloush.fang.ui.components.ProvideOrbSettings
 import io.leloush.fang.ui.components.SnackbarStack
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.files.ExplorerPanel
@@ -174,34 +175,36 @@ internal fun MainScreen(
   val sidePanelOpen = shownPanes.any { panels[it].targetValue != Panel.Chat }
   LaunchedEffect(sidePanelOpen) { onSidePanelOpen(sidePanelOpen) }
 
-  Box(modifier = Modifier.fillMaxSize()) {
-    WorkspacePanes(
-      actions = actions,
-      splitAvailable = splitAvailable,
-      panels = panels,
-      snackbar = snackbar,
-      onOpenSettings = onOpenSettings,
-      onOpenProviders = onOpenProviders,
-      onOpenOnboarding = onOpenOnboarding,
-      sidebar = { pane, onShownInSplit ->
-        Sidebar(
-          pane = pane,
-          actions = actions,
-          onShownInSplit = onShownInSplit,
-          onClose = { panels.show(pane, Panel.Chat) },
-          onOpenSettings = onOpenSettings,
-          onOpenArchive = onOpenArchive,
-          onOpenOnboarding = onOpenOnboarding,
-        )
-      },
-    )
-    SnackbarStack(
-      state = snackbar,
-      modifier = Modifier
-        .align(Alignment.BottomCenter)
-        .windowInsetsPadding(WindowInsets.safeDrawing)
-        .padding(FangTokens.Spacing.s16),
-    )
+  ProvideOrbSettings(preferences = LocalContext.current.appGraph.preferences, frozen = sidePanelOpen) {
+    Box(modifier = Modifier.fillMaxSize()) {
+      WorkspacePanes(
+        actions = actions,
+        splitAvailable = splitAvailable,
+        panels = panels,
+        snackbar = snackbar,
+        onOpenSettings = onOpenSettings,
+        onOpenProviders = onOpenProviders,
+        onOpenOnboarding = onOpenOnboarding,
+        sidebar = { pane, onShownInSplit ->
+          Sidebar(
+            pane = pane,
+            actions = actions,
+            onShownInSplit = onShownInSplit,
+            onClose = { panels.show(pane, Panel.Chat) },
+            onOpenSettings = onOpenSettings,
+            onOpenArchive = onOpenArchive,
+            onOpenOnboarding = onOpenOnboarding,
+          )
+        },
+      )
+      SnackbarStack(
+        state = snackbar,
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .windowInsetsPadding(WindowInsets.safeDrawing)
+          .padding(FangTokens.Spacing.s16),
+      )
+    }
   }
 }
 

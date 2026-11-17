@@ -98,14 +98,18 @@ internal fun UserMessage(
           iconSize = FangTokens.IconSize.sm,
         )
       }
-      UserMessageMenu(menuOpen = menuOpen, onOpen = {
-        menuOpen = true
-      }, onDismiss = { menuOpen = false }, onAction = onAction)
+      UserMessageMenu(
+        text = item.text,
+        menuOpen = menuOpen,
+        onOpen = { menuOpen = true },
+        onDismiss = { menuOpen = false },
+        onAction = onAction,
+      )
     }
   }
 }
 
-internal enum class UserMessageAction { Edit, Delete, Resend }
+internal enum class UserMessageAction { Edit, Delete, Resend, Copy, Quote }
 
 @Composable
 private fun UserImages(images: List<ImagePart>) {

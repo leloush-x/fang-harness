@@ -38,8 +38,10 @@ import io.leloush.fang.agent.AskRequest
 import io.leloush.fang.agent.TimelineState
 import io.leloush.fang.appGraph
 import io.leloush.fang.ui.ShellActions
+import io.leloush.fang.ui.components.FangOrb
 import io.leloush.fang.ui.components.HeaderBar
 import io.leloush.fang.ui.components.IconButton28
+import io.leloush.fang.ui.components.OrbMood
 import io.leloush.fang.ui.components.SnackbarStack
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.files.ExplorerToggle
@@ -215,6 +217,9 @@ private fun StreamArea(
   val process = controller.process
   val processState by process.state.collectAsStateWithLifecycle()
   val backgroundTasks by process.backgroundTasks.collectAsStateWithLifecycle()
+  val copyText = rememberCopyText()
+  val floatedOrb by LocalContext.current.appGraph.preferences.orbFloats.collectAsStateWithLifecycle()
+  val busy by process.busy.collectAsStateWithLifecycle()
   Box(modifier = Modifier.fillMaxSize().onUnhandledTap(dismissKeyboard)) {
     ChatStream(
       timeline = timeline,
@@ -229,10 +234,20 @@ private fun StreamArea(
           UserMessageAction.Edit -> controller.messageActions.edit(item)
           UserMessageAction.Delete -> controller.messageActions.requestDelete(item)
           UserMessageAction.Resend -> controller.messageActions.resend(item)
+          UserMessageAction.Copy -> copyText(item.text)
+          UserMessageAction.Quote -> controller.setDraftText(quoteMessage(item.text))
         }
       },
       backgroundTasks = backgroundTasks,
     )
+    // Drawn after the stream so the opt-in floating work badge sits above the chat, not behind it.
+    if (floatedOrb && busy) {
+      FangOrb(
+        modifier = Modifier.align(Alignment.TopEnd).padding(FangTokens.Spacing.s12),
+        size = FangTokens.IconSize.lg,
+        mood = OrbMood.WORKING,
+      )
+    }
     SnackbarStack(snackbar, Modifier.align(Alignment.BottomCenter).padding(FangTokens.Spacing.s16))
     SlashMenuHost(controller, ready = processState == AgentProcessState.Ready, Modifier.align(Alignment.BottomCenter))
     val pendingDelete = controller.messageActions.pendingDelete
@@ -255,6 +270,9 @@ private fun StreamArea(
     }
   }
 }
+
+/** Prefixes each line with the Markdown blockquote marker, so a fenced code block stays fenced when quoted. */
+private fun quoteMessage(text: String): String = text.lines().joinToString("\n") { "> $it" }
 
 /** The first extension dialog Pi waits on, the active `ask` card, or its answered summary, above the composer. */
 @Composable

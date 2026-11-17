@@ -39,11 +39,12 @@ internal fun FangOrb(
   agentLevel: Float = 0f,
 ) {
   val handle = OrbShader.rememberOrbShaders()
+  val scaled = size * orbSizeScale()
   if (handle == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-    SimmeringPot(modifier = modifier, size = size, tint = tint)
+    SimmeringPot(modifier = modifier, size = scaled, tint = tint)
     return
   }
-  ShaderFangOrb(handle, modifier, size, mood, userLevel, agentLevel)
+  ShaderFangOrb(handle, modifier, scaled, mood, userLevel, agentLevel)
 }
 
 /** The shader path; every call here needs API 33, which the caller guards with a positive SDK check. */
@@ -58,15 +59,22 @@ private fun ShaderFangOrb(
   agentLevel: Float,
 ) {
   val frame = remember { mutableLongStateOf(0L) }
-  LaunchedEffect(Unit) {
+  val frozen = LocalOrbsFrozen.current
+  LaunchedEffect(frozen) {
+    if (frozen) return@LaunchedEffect
     while (isActive) {
       withFrameMillis { millis -> frame.longValue = millis }
     }
   }
   val brush = remember(handle) { ShaderBrush(handle.orb) }
+  val colors = fangColors
+  // Blend a little of the active theme into the kit's cyan/green so the orb recolours with light/dark/AMOLED.
+  val userTint = themeTint(USER_BASE, colors.accent, 0.18f)
+  val agentTint = themeTint(AGENT_BASE, colors.dotSuccess, 0.24f)
   Canvas(modifier.size(size)) {
     val layout = orbLayout(widthPx = this.size.width, heightPx = this.size.height)
-    handle.setState(stateFor(mood, frame.longValue, userLevel, agentLevel), layout)
+    val time = if (frozen) 0L else frame.longValue
+    handle.setState(stateFor(mood, time, userLevel, agentLevel, userTint, agentTint), layout)
     drawRect(brush = brush)
   }
 }
@@ -98,16 +106,33 @@ private fun driveFor(mood: OrbMood): MoodDrive = when (mood) {
 
 private data class MoodDrive(val mixB: Float, val pulse: Float, val intensity: Float, val glow: Float, val halo: Float)
 
-/** The documented cyan/green tints drive the shader; the kit tint is for the pot fallback. */
-private fun stateFor(mood: OrbMood, timeMs: Long, userLevel: Float, agentLevel: Float): OrbShader.State {
+/** A gentle blending of the kit hue with the theme accent; the kit tint stays the fallback. */
+private fun themeTint(base: Color, theme: Color, amount: Float): Color = Color(
+  red = base.red + (theme.red - base.red) * amount,
+  green = base.green + (theme.green - base.green) * amount,
+  blue = base.blue + (theme.blue - base.blue) * amount,
+  alpha = base.alpha,
+)
+
+/** The theme-aware tints and a slow gaze drift drive the shader; the kit tint is for the pot fallback. */
+private fun stateFor(
+  mood: OrbMood,
+  timeMs: Long,
+  userLevel: Float,
+  agentLevel: Float,
+  userTint: Color,
+  agentTint: Color,
+): OrbShader.State {
   val seconds = timeMs / 1000f
   val breath = 0.5f + 0.5f * sin(TAU * seconds / OrbShader.BREATH_SECONDS)
   val drive = driveFor(mood)
-  val userTint = if (mood == OrbMood.DONE) AGENT_BASE else USER_BASE
+  // A slow, small gaze keeps the orb alive without bouncing while text streams.
+  val gazeX = 0.14f * sin(TAU * seconds / 7.3f) * drive.intensity
+  val gazeY = 0.10f * sin(TAU * seconds / 5.7f + 1.1f) * drive.intensity
   return OrbShader.State(
     time = seconds,
-    userTint = userTint,
-    agentTint = AGENT_BASE,
+    userTint = if (mood == OrbMood.DONE) agentTint else userTint,
+    agentTint = agentTint,
     userLevel = userLevel,
     agentLevel = agentLevel,
     mixB = drive.mixB,
@@ -115,5 +140,7 @@ private fun stateFor(mood: OrbMood, timeMs: Long, userLevel: Float, agentLevel: 
     pulse = drive.pulse * (0.7f + 0.3f * breath),
     intensity = drive.intensity,
     halo = drive.halo,
+    gazeX = gazeX,
+    gazeY = gazeY,
   )
 }

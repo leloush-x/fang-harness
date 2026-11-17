@@ -14,6 +14,7 @@ import io.leloush.fang.ui.theme.fangColors
 
 @Composable
 internal fun UserMessageMenu(
+  text: String,
   menuOpen: Boolean,
   onOpen: () -> Unit,
   onDismiss: () -> Unit,
@@ -29,6 +30,31 @@ internal fun UserMessageMenu(
       iconSize = FangTokens.IconSize.sm,
     )
     DropdownMenu(expanded = menuOpen, onDismissRequest = onDismiss) {
+      // An image-only message has no text to copy or quote; quoting it would also clear the user's draft.
+      if (text.isNotEmpty()) {
+        DropdownMenuItem(
+          text = { Text(stringResource(R.string.chat_copy_full_message)) },
+          leadingIcon = {
+            LucideIcon(
+              icon = R.drawable.ic_lucide_copy,
+              contentDescription = null,
+              size = FangTokens.IconSize.sm,
+              tint = colors.foregroundMuted,
+            )
+          },
+          onClick = {
+            onDismiss()
+            onAction(UserMessageAction.Copy)
+          },
+        )
+        DropdownMenuItem(
+          text = { Text(stringResource(R.string.chat_quote_in_reply)) },
+          onClick = {
+            onDismiss()
+            onAction(UserMessageAction.Quote)
+          },
+        )
+      }
       DropdownMenuItem(
         text = { Text(stringResource(R.string.chat_edit_message)) },
         leadingIcon = {

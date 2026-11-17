@@ -55,7 +55,9 @@ fun SimmeringPot(
     animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
     label = "alpha",
   )
-  Canvas(modifier.size(size)) { pot.draw(this, tint.copy(alpha = tint.alpha * alpha)) }
+  // When a panel covers the chat, hold a steady alpha instead of pulsing out of sight behind it.
+  val frozen = LocalOrbsFrozen.current
+  Canvas(modifier.size(size)) { pot.draw(this, tint.copy(alpha = tint.alpha * if (frozen) 0.8f else alpha)) }
 }
 
 /** The launcher icon's parts as paths. */

@@ -161,7 +161,10 @@ internal class ChatController(
     val files = picked.filterIsInstance<Attachment.File>().map { it.name to it.bytes }
     val paths = if (files.isEmpty()) emptyList() else graph.hostClient.saveAttachments(files)
     val typed = text.trim()
-    val message = withFilePaths(typed, paths)
+    // Pasted Text cards carry the whole paste, so send it with the prompt, after the typed text and before file paths.
+    val pasted = picked.filterIsInstance<Attachment.Text>().joinToString("\n\n") { it.text }
+    val body = listOf(typed, pasted).filter { it.isNotEmpty() }.joinToString("\n\n")
+    val message = withFilePaths(body, paths)
     val disposition = process.prompt(message, picked.filterIsInstance<Attachment.Image>().map { it.part })
     clearPendingOldSession()
     if (disposition == "queued") steering.record(message, typed, picked)

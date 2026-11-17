@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- User message overflow menu: copy and quote actions -->
+    <string name="chat_copy_full_message">Copy full message</string>
+    <string name="chat_quote_in_reply">Quote in reply</string>
+</resources>
