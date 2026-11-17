@@ -5,6 +5,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import io.leloush.fang.R
 import io.leloush.fang.ui.components.IconButton28
@@ -32,74 +33,41 @@ internal fun UserMessageMenu(
     DropdownMenu(expanded = menuOpen, onDismissRequest = onDismiss) {
       // An image-only message has no text to copy or quote; quoting it would also clear the user's draft.
       if (text.isNotEmpty()) {
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.chat_copy_full_message)) },
-          leadingIcon = {
-            LucideIcon(
-              icon = R.drawable.ic_lucide_copy,
-              contentDescription = null,
-              size = FangTokens.IconSize.sm,
-              tint = colors.foregroundMuted,
-            )
-          },
-          onClick = {
-            onDismiss()
-            onAction(UserMessageAction.Copy)
-          },
-        )
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.chat_quote_in_reply)) },
-          onClick = {
-            onDismiss()
-            onAction(UserMessageAction.Quote)
-          },
-        )
+        ActionItem(stringResource(R.string.chat_copy_full_message), R.drawable.ic_lucide_copy) {
+          onDismiss()
+          onAction(UserMessageAction.Copy)
+        }
+        ActionItem(stringResource(R.string.chat_quote_in_reply), null) {
+          onDismiss()
+          onAction(UserMessageAction.Quote)
+        }
       }
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_edit_message)) },
-        leadingIcon = {
-          LucideIcon(
-            icon = R.drawable.ic_lucide_pencil,
-            contentDescription = null,
-            size = FangTokens.IconSize.sm,
-            tint = colors.foregroundMuted,
-          )
-        },
-        onClick = {
-          onDismiss()
-          onAction(UserMessageAction.Edit)
-        },
-      )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_resend_message)) },
-        leadingIcon = {
-          LucideIcon(
-            icon = R.drawable.ic_lucide_refresh_cw,
-            contentDescription = null,
-            size = FangTokens.IconSize.sm,
-            tint = colors.foregroundMuted,
-          )
-        },
-        onClick = {
-          onDismiss()
-          onAction(UserMessageAction.Resend)
-        },
-      )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_delete_message)) },
-        leadingIcon = {
-          LucideIcon(
-            icon = R.drawable.ic_lucide_trash_2,
-            contentDescription = null,
-            size = FangTokens.IconSize.sm,
-            tint = colors.destructive,
-          )
-        },
-        onClick = {
-          onDismiss()
-          onAction(UserMessageAction.Delete)
-        },
-      )
+      ActionItem(stringResource(R.string.chat_edit_message), R.drawable.ic_lucide_pencil) {
+        onDismiss()
+        onAction(UserMessageAction.Edit)
+      }
+      ActionItem(stringResource(R.string.chat_resend_message), R.drawable.ic_lucide_refresh_cw) {
+        onDismiss()
+        onAction(UserMessageAction.Resend)
+      }
+      ActionItem(stringResource(R.string.chat_delete_message), R.drawable.ic_lucide_trash_2, colors.destructive) {
+        onDismiss()
+        onAction(UserMessageAction.Delete)
+      }
     }
   }
+}
+
+/** One menu row; a null icon leaves room for text-only actions such as Quote. */
+@Composable
+private fun ActionItem(label: String, icon: Int?, tint: Color = fangColors.foregroundMuted, onClick: () -> Unit) {
+  DropdownMenuItem(
+    text = { Text(label) },
+    leadingIcon = icon?.let {
+      {
+        LucideIcon(icon = it, contentDescription = null, size = FangTokens.IconSize.sm, tint = tint)
+      }
+    },
+    onClick = onClick,
+  )
 }

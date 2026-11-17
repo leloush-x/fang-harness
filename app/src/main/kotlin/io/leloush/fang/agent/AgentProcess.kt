@@ -363,16 +363,20 @@ internal class AgentProcess(
     cancelled.forEach { respondUi(it, UiAnswer.Cancelled) }
   }
 
-  private suspend fun sendSubagents(data: JSONObject) = sendChannel(SUBAGENTS_TOPIC, data)
+  private suspend fun sendSubagents(data: JSONObject) {
+    sendChannel(SUBAGENTS_TOPIC, data)
+  }
 
-  /** Sends [data] on [topic] to the extension listening there; nothing when no Pi runs. */
-  private suspend fun sendChannel(topic: String, data: JSONObject) {
-    val channel = connection?.channel ?: return
+  /** Sends [data] on [topic]; true only when the line reached the extension, so ask answers can retry a failure. */
+  private suspend fun sendChannel(topic: String, data: JSONObject): Boolean {
+    val channel = connection?.channel ?: return false
     val line = JSONObject().put("type", HostProtocol.CHANNEL).put("topic", topic).put("data", data)
-    try {
+    return try {
       channel.sendLine(line.toString())
+      true
     } catch (_: IOException) {
       // Pi is gone, and the extensions with it.
+      false
     }
   }
 

@@ -239,7 +239,6 @@ private fun AttachmentTray(attachments: List<Attachment>, onRemove: (Attachment)
         is Attachment.Image -> AttachmentThumbnail(attachment, onRemove = { onRemove(attachment) })
         is Attachment.File -> FileChip(attachment, onRemove = { onRemove(attachment) })
         is Attachment.Text -> PastedTextChip(
-          attachment,
           onOpen = { openedText = attachment },
           onRemove = { onRemove(attachment) },
         )
@@ -390,7 +389,9 @@ private fun receiveContent(
   val clip = afterImages.clipEntry.clipData
   val hasText = (0 until clip.itemCount).any { !clip.getItemAt(it).text.isNullOrEmpty() }
   if (!hasText) {
-    controller.show(R.string.chat_paste_empty)
+    // A URI-only clip is a file the picker handles elsewhere; only an empty clip deserves the snackbar.
+    val hasUri = (0 until clip.itemCount).any { clip.getItemAt(it).uri != null }
+    if (!hasUri) controller.show(R.string.chat_paste_empty)
     return afterImages
   }
   return runCatching {

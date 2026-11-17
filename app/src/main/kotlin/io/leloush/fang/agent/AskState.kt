@@ -15,10 +15,11 @@ internal data class AskAnswered(val request: AskRequest, val answers: JSONArray)
  * The one `ask` request a bundled extension waits on. Held beside [AgentProcess] rather than in it: the process is
  * already at detekt's class-size limit, and the request is independent of Pi's RPC calls.
  */
-internal class AskState(private val send: suspend (String, JSONObject) -> Unit) {
+internal class AskState(private val send: suspend (String, JSONObject) -> Boolean) {
   private val requestState = MutableStateFlow<AskRequest?>(null)
   private val failedState = MutableStateFlow(false)
   private val answeredState = MutableStateFlow<AskAnswered?>(null)
+  private var inFlight = false
 
   /** The request the chat shows, or null when no extension waits on the user's answers. */
   val request: StateFlow<AskRequest?> = requestState.asStateFlow()
@@ -40,16 +41,21 @@ internal class AskState(private val send: suspend (String, JSONObject) -> Unit) 
   /** Sends the answers, then drops the card; a failed send keeps the card so the user can retry. */
   suspend fun sendAnswer(data: JSONObject) {
     val current = requestState.value ?: return
+    if (inFlight) return
+    inFlight = true
     failedState.value = false
-    try {
+    val sent = try {
       send(TOPIC, data)
     } catch (_: IOException) {
-      // The request stays; the card offers Retry.
-      failedState.value = true
-      return
+      false
     } catch (_: HostRejected) {
-      // The request stays; the card offers Retry.
-      failedState.value = true
+      false
+    } finally {
+      inFlight = false
+    }
+    if (!sent) {
+      // A timeout or Dismiss has nothing to retry, so only a real answer keeps the card for Retry.
+      if (data.optBoolean("cancelled")) requestState.value = null else failedState.value = true
       return
     }
     // A timeout or Dismiss only cancels: like before folding, the card goes away with no answered summary.

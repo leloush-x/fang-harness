@@ -68,7 +68,7 @@ internal fun PastedTextDialog(text: String, onDismiss: () -> Unit) {
 
 /** A 48dp tray card for a long paste: tapping opens its full text, and it has the same remove badge as other chips. */
 @Composable
-internal fun PastedTextChip(text: Attachment.Text, onOpen: () -> Unit, onRemove: () -> Unit) {
+internal fun PastedTextChip(onOpen: () -> Unit, onRemove: () -> Unit) {
   val colors = fangColors
   val shape = RoundedCornerShape(FangTokens.Radius.md)
   Box {
