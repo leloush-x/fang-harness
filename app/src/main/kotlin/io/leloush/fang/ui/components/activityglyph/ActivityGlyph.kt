@@ -52,7 +52,7 @@ fun ActivityGlyph(
   val reduced = rememberUpdatedState(reduceMotion)
   // Bumped per drawn frame; only a Canvas draw reads it, so frames never recompose this row.
   val tick = remember { mutableLongStateOf(0L) }
-  RunGlyphFrames(model, tick, current, deriveState, paused, reduced, dark, isPaused, reduceMotion)
+  RunGlyphFrames(model, tick, current, deriveState, paused, reduced, GlyphKeys(dark, isPaused, reduceMotion))
   val description = contentDescription
   val described = if (description == null) {
     modifier
@@ -66,6 +66,9 @@ fun ActivityGlyph(
   }
 }
 
+/** Effect keys that restart the frame loop: theme darkness, pause and reduce-motion. */
+private data class GlyphKeys(val dark: Boolean, val isPaused: Boolean, val reduceMotion: Boolean)
+
 /** Drives the cell field on the frame clock; state reads stay in the effect so the row never recomposes. */
 @Composable
 private fun RunGlyphFrames(
@@ -75,12 +78,10 @@ private fun RunGlyphFrames(
   derive: State<(() -> AgentActivity)?>,
   paused: State<Boolean>,
   reduced: State<Boolean>,
-  dark: Boolean,
-  isPaused: Boolean,
-  reduceMotion: Boolean,
+  keys: GlyphKeys,
 ) {
   var shown by remember { mutableStateOf(current.value) }
-  LaunchedEffect(dark, isPaused, reduceMotion) {
+  LaunchedEffect(keys) {
     fun target(): AgentActivity = derive.value?.invoke() ?: current.value
     fun draw(now: Double) {
       val state = target()
