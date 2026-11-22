@@ -1,0 +1,15 @@
+OpenCode Android (github.com/anomalyco/opencode-android), small AgentActivity glyph, license not supplied with the repository; Fang Harness adapts its AGSL shader and visual design for the working/subagent glyphs.
+
+Source: github.com/anomalyco/opencode-android,
+feature/session/src/main/kotlin/ai/opencode/feature/session/agentactivity/
+(AgentActivityShaders.kt, AgentActivityOrb.kt, ActivityGyro.kt, GlyphModels.kt).
+
+Files adapted:
+- app/src/main/res/raw/activity_orb.agls — the AGSL fragment shader, byte-identical to
+  AgentActivityShaders.ACTIVITY_ORB_FIELD with only a source header added.
+- ui/components/activityglyph/* — a reimplementation of the glyph's per-state dot-field
+  simulation (10 AgentActivity states and their designs), with the upstream constants.
+
+License status: the repository contains no LICENSE file and no per-file license notice, so the
+copyright holder and terms are unknown. This adaptation is included in Fang Harness on the user's
+explicit instruction; confirm the upstream license before any wider redistribution.

@@ -42,6 +42,7 @@ import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.ui.components.FangMarkdown
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.MarkdownCache
+import io.leloush.fang.ui.components.activityglyph.WorkingActivity
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import java.util.Date
@@ -217,12 +218,14 @@ internal fun ToolRow(presentation: ToolPresentation, onClick: () -> Unit, modifi
           if (copyText == null) R.string.morph_complete else R.string.morph_copy_output,
         )
         val settledIcon = if (copyText == null) presentation.icon else null
+        val working = WorkingActivity(running = presentation.running, finished = !presentation.running)
         WorkingToCopyGlyph(
-          working = presentation.running,
+          activity = working.activity(),
           copyText = copyText,
           size = FangTokens.IconSize.sm,
           contentDescription = glyphLabel,
           doneIcon = settledIcon,
+          derive = { working.activity() },
         )
       }
     }
@@ -285,11 +288,17 @@ internal fun TurnFooterRow(item: TimelineItem.TurnFooter, backgroundTasks: Int, 
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
   ) {
     val duration = item.durationMillis
+    val working = WorkingActivity(
+      running = duration == null || backgroundTasks > 0,
+      startedAtMillis = item.startedAt,
+      finished = duration != null && backgroundTasks == 0,
+    )
     WorkingToCopyGlyph(
-      working = duration == null || backgroundTasks > 0,
+      activity = working.activity(),
       copyText = null,
       size = FangTokens.IconSize.sm,
       contentDescription = stringResource(R.string.morph_complete),
+      derive = { working.activity() },
     )
     if (duration != null) {
       Text(text = durationText(duration), color = fangColors.foregroundMuted, fontSize = FangTokens.FontSize.meta)

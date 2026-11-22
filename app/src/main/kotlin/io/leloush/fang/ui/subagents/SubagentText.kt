@@ -19,3 +19,16 @@ internal fun SubagentText(label: String, modifier: Modifier = Modifier) {
     overflow = TextOverflow.Ellipsis,
   )
 }
+
+/** The small, muted activity word beside a capsule's name: Thinking, Working, Waiting, Done or Failed. */
+@Composable
+internal fun SubagentStatusText(label: String, modifier: Modifier = Modifier) {
+  Text(
+    text = label,
+    modifier = modifier,
+    color = fangColors.foregroundMuted,
+    fontSize = FangTokens.FontSize.sm,
+    maxLines = 1,
+    overflow = TextOverflow.Ellipsis,
+  )
+}

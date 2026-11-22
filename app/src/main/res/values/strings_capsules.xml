@@ -6,4 +6,17 @@
     <string name="capsule_open">Open subagent %1$s</string>
     <!-- TalkBack's action for tapping a folded capsule to bring it back. %1$s is the subagent's name. -->
     <string name="capsule_restore">Restore subagent %1$s</string>
+    <!-- The capsule strip's header: %1$d is the number of subagents shown below. -->
+    <plurals name="capsule_count">
+        <item quantity="one">%1$d subagent</item>
+        <item quantity="other">%1$d subagents</item>
+    </plurals>
+    <!-- Compact activity words beside a capsule's name, matched to the glyph's derived state. -->
+    <string name="capsule_activity_idle">Idle</string>
+    <string name="capsule_activity_starting">Starting</string>
+    <string name="capsule_activity_thinking">Thinking</string>
+    <string name="capsule_activity_working">Working</string>
+    <string name="capsule_activity_waiting">Waiting</string>
+    <string name="capsule_activity_done">Done</string>
+    <string name="capsule_activity_failed">Failed</string>
 </resources>

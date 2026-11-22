@@ -10,6 +10,7 @@ import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.agent.ToolStatus
 import io.leloush.fang.host.objects
 import io.leloush.fang.ui.chat.stringOrNull
+import io.leloush.fang.ui.components.activityglyph.SubagentActivity
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -163,6 +164,18 @@ internal data class SubagentFacts(
   val resultTokens: Long?,
   val source: TranscriptSource,
   val cutOffAt: Long? = null,
+)
+
+/**
+ * The glyph's view of a subagent, from its phase and start time. Fang's runs carry no per-event timestamps, so start
+ * recency is the only timing available; stopped and interrupted runs settle like a done one rather than a failure.
+ */
+internal fun SubagentFacts.subagentActivity(): SubagentActivity = SubagentActivity(
+  running = phase.active,
+  needsInput = phase == SubagentPhase.Asking,
+  startedAtMillis = run?.startedAt,
+  done = phase == SubagentPhase.Done || phase == SubagentPhase.Stopped || phase == SubagentPhase.Interrupted,
+  failed = phase == SubagentPhase.Failed,
 )
 
 /** Where a subagent's transcript is, or why it has none. */

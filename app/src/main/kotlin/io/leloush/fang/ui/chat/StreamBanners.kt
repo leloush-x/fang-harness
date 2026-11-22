@@ -16,6 +16,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,6 +33,7 @@ import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.ui.components.CodeBox
 import io.leloush.fang.ui.components.CodeText
 import io.leloush.fang.ui.components.LucideIcon
+import io.leloush.fang.ui.components.activityglyph.WorkingActivity
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 
@@ -84,17 +86,19 @@ private fun BannerLine(
   orbSize: Dp = FangTokens.IconSize.sm,
   fontSize: TextUnit = FangTokens.FontSize.meta,
 ) {
+  // This banner only lives while the agent starts, so its activity condenses and then settles into thinking.
+  val startedAt = remember { System.currentTimeMillis() }
   Row(
     modifier = modifier.fillMaxWidth().padding(vertical = FangTokens.Spacing.s8),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8, Alignment.CenterHorizontally),
   ) {
-    // This banner only lives while the agent starts, so its orb stays at WORKING until the row is removed.
     WorkingToCopyGlyph(
-      working = true,
+      activity = WorkingActivity(running = true, startedAtMillis = startedAt).activity(),
       copyText = null,
       size = orbSize,
       contentDescription = stringResource(R.string.morph_complete),
+      derive = { WorkingActivity(running = true, startedAtMillis = startedAt).activity() },
     )
     Text(text = text, color = fangColors.foregroundMuted, fontSize = fontSize)
   }

@@ -1,6 +1,8 @@
 package io.leloush.fang.ui.subagents
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +13,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,6 +22,7 @@ import io.leloush.fang.agent.AgentProcess
 import io.leloush.fang.agent.TimelineState
 import io.leloush.fang.agent.askingSubagent
 import io.leloush.fang.ui.components.FangSheet
+import io.leloush.fang.ui.components.activityglyph.ActivityGlyph
 import io.leloush.fang.ui.settings.formatTokens
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
@@ -53,12 +57,21 @@ internal fun SubagentsSheet(fact: SubagentFacts, onDismiss: () -> Unit) {
         .verticalScroll(rememberScrollState())
         .padding(horizontal = FangTokens.Spacing.s16),
     ) {
-      Text(
-        text = stringResource(R.string.subagents_sheet_title),
-        color = fangColors.foreground,
-        fontSize = FangTokens.FontSize.lg,
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
         modifier = Modifier.padding(bottom = FangTokens.Spacing.s12),
-      )
+      ) {
+        ActivityGlyph(
+          activity = fact.subagentActivity().activity(),
+          size = FangTokens.IconSize.sm,
+        )
+        Text(
+          text = stringResource(R.string.subagents_sheet_title),
+          color = fangColors.foreground,
+          fontSize = FangTokens.FontSize.lg,
+        )
+      }
       DetailRow(
         stringResource(R.string.subagents_sheet_agent),
         fact.agent.ifBlank { stringResource(R.string.capsule_unnamed) },
