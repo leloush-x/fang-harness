@@ -45,10 +45,10 @@ fun ActivityGlyph(
   val model = remember { ActivityCellField() }
   val context = LocalContext.current
   val dark = fangColors.isDark
-  val current by rememberUpdatedState(activity)
-  val deriveState by rememberUpdatedState(derive)
-  val paused by rememberUpdatedState(isPaused)
-  val reduced by rememberUpdatedState(reduceMotion)
+  val current = rememberUpdatedState(activity)
+  val deriveState = rememberUpdatedState(derive)
+  val paused = rememberUpdatedState(isPaused)
+  val reduced = rememberUpdatedState(reduceMotion)
   // Bumped per drawn frame; only a Canvas draw reads it, so frames never recompose this row.
   val tick = remember { mutableLongStateOf(0L) }
   RunGlyphFrames(model, tick, current, deriveState, paused, reduced, dark, isPaused, reduceMotion)
@@ -90,20 +90,26 @@ private fun RunGlyphFrames(
     var lastDrawn = Double.NEGATIVE_INFINITY
     while (isActive) {
       val state = target()
-      if (state == shown && state.isFinal && model.isResting) {
-        if (derive.value != null) delay(500) else snapshotFlow { current.value }.first { it != state }
-        continue
+      val settled = state == shown && model.isResting
+      when {
+        settled && state.isFinal -> {
+          if (derive.value != null) delay(500) else snapshotFlow { current.value }.first { it != state }
+        }
+
+        settled && reduced.value -> {
+          delay(500)
+          draw(nowSeconds())
+        }
+
+        else -> {
+          withFrameNanos { }
+          val now = nowSeconds()
+          if (now - lastDrawn >= FRAME_INTERVAL - 0.002) {
+            lastDrawn = now
+            draw(now)
+          }
+        }
       }
-      if (reduced.value && state == shown && model.isResting) {
-        delay(500)
-        draw(nowSeconds())
-        continue
-      }
-      withFrameNanos { }
-      val now = nowSeconds()
-      if (now - lastDrawn < FRAME_INTERVAL - 0.002) continue
-      lastDrawn = now
-      draw(now)
     }
   }
 }
@@ -123,7 +129,7 @@ private fun ShaderActivityGlyph(
 ) {
   Canvas(modifier.size(size)) {
     tick.value
-    with(ActivityOrbRenderer) { drawOrb(model.frame, size.width / density, dark, context) }
+    with(ActivityOrbRenderer) { drawOrb(model.frame, size.value, dark, context) }
   }
 }
 
@@ -132,8 +138,9 @@ private fun ShaderActivityGlyph(
 private fun FallbackActivityGlyph(modifier: Modifier, size: Dp, accent: ActivityAccent?) {
   val color = fallbackColor(accent)
   Canvas(modifier.size(size)) {
-    val pitch = minOf(size.width, size.height) / 9f
-    val centre = Offset(size.width / 2, size.height / 2)
+    val px = this.size
+    val pitch = minOf(px.width, px.height) / 9f
+    val centre = Offset(px.width / 2, px.height / 2)
     for (cell in OrbCells.seven) {
       val at = centre + Offset((cell.column - 3) * pitch, (cell.row - 3) * pitch)
       drawCircle(color, radius = pitch * 0.18f * cell.size.toFloat(), center = at)

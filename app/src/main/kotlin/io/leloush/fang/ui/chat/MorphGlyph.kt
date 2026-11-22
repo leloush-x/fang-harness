@@ -145,7 +145,13 @@ private fun copyLayer(into: Float, reduceMotion: Boolean, blurPx: Float): Modifi
   }
 }
 
-private fun AgentActivity.finale(): AgentActivity = if (this == AgentActivity.FAILED) FAILED else DONE
+private fun AgentActivity.finale(): AgentActivity = if (this ==
+  AgentActivity.FAILED
+) {
+  AgentActivity.FAILED
+} else {
+  AgentActivity.DONE
+}
 
 private fun blur(radius: Float) = if (radius > 0f) BlurEffect(null, radius, radius, TileMode.Clamp) else null
 
