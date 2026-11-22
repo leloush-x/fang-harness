@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -53,7 +54,11 @@ fun ActivityGlyph(
   val tick = remember { mutableLongStateOf(0L) }
   RunGlyphFrames(model, tick, current, deriveState, paused, reduced, dark, isPaused, reduceMotion)
   val description = contentDescription
-  val described = if (description == null) modifier else modifier.semantics { contentDescription = description }
+  val described = if (description == null) {
+    modifier
+  } else {
+    modifier.semantics { this.contentDescription = description }
+  }
   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
     ShaderActivityGlyph(described, size, model, dark, tick, context)
   } else {
