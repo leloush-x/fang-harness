@@ -3,9 +3,6 @@ package io.leloush.fang.ui.media
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -211,14 +208,10 @@ private fun Modifier.ocDragToDismiss(
       if (!claimed) return@awaitEachGesture
       val threshold = if (reduceMotion) distance / 2f else distance
       val closing = dy > threshold || tracker.calculateVelocity().y > speed
-      // `animate` is a restricted suspension and must run inside this gesture's scope.
-      if (closing) {
-        animate(progress, 1f, animationSpec = tween(180)) { value, _ -> onProgress(value) }
-        onDismiss()
-      } else {
-        animate(progress, 0f, animationSpec = spring()) { value, _ -> onProgress(value) }
-        onProgress(0f)
-      }
+      // `animate` is a restricted suspension and cannot run inside awaitEachGesture. The drag has
+      // already driven progress continuously, so snapping the final value needs no extra animation.
+      onProgress(if (closing) 1f else 0f)
+      if (closing) onDismiss()
     }
   }
 }
