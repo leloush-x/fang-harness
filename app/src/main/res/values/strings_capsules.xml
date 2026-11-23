@@ -19,4 +19,8 @@
     <string name="capsule_activity_waiting">Waiting</string>
     <string name="capsule_activity_done">Done</string>
     <string name="capsule_activity_failed">Failed</string>
+    <!-- TalkBack's action for tapping the grouped capsule to list its subagents. -->
+    <string name="capsule_open_panel">Show subagents</string>
+    <!-- TalkBack's action for the chevron that folds the expanded subagent panel back to its capsule. -->
+    <string name="capsule_collapse">Collapse subagents</string>
 </resources>

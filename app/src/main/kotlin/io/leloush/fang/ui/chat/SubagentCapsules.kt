@@ -1,12 +1,16 @@
 package io.leloush.fang.ui.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -30,6 +34,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.leloush.fang.R
+import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.activityglyph.ActivityGlyph
 import io.leloush.fang.ui.components.activityglyph.AgentActivity
 import io.leloush.fang.ui.subagents.SubagentFacts
@@ -40,11 +45,11 @@ import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import kotlin.math.hypot
 
-/** A fling at least this fast folds a capsule; a slow drag leaves it as it is. */
+/** A fling at least this fast folds an expanded panel; a slow drag leaves it as it is. */
 // shortcut: threshold tuned by eye, raise when device testing shows accidental collapses
 private val FOLD_FLING = 600.dp
 
-/** The chat's strip of subagent capsules, folded ones staying small until tapped. */
+/** The chat's strip for its subagents: one grouped capsule that expands into a list of rows. */
 @Composable
 internal fun SubagentCapsules(
   facts: List<SubagentFacts>,
@@ -52,61 +57,123 @@ internal fun SubagentCapsules(
   modifier: Modifier = Modifier,
 ) {
   if (facts.isEmpty()) return
-  Column(modifier = modifier) {
-    SubagentCount(facts.size)
-    FlowRow(
-      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
-      verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s4),
+  var expanded by remember { mutableStateOf(false) }
+  Box(modifier = modifier) {
+    AnimatedVisibility(
+      visible = !expanded,
+      enter = fadeIn(animationSpec = tween(350)),
+      exit = fadeOut(animationSpec = tween(350)),
     ) {
-      for (fact in facts) CapsulePill(fact = fact, onOpen = onOpen)
+      GroupedCapsule(facts = facts, onExpand = { expanded = true })
+    }
+    AnimatedVisibility(
+      visible = expanded,
+      enter = fadeIn(animationSpec = tween(350)),
+      exit = fadeOut(animationSpec = tween(350)),
+    ) {
+      SubagentPanel(
+        facts = facts,
+        onOpen = { fact ->
+          expanded = false
+          onOpen(fact)
+        },
+        onCollapse = { expanded = false },
+      )
     }
   }
 }
 
-/** The strip's header: Fang has no shells, so this only counts the subagents shown below. */
+/** One rounded pill: the group's leading glyph, its count, and a chevron hinting there is a list behind it. */
 @Composable
-private fun SubagentCount(count: Int) {
-  SubagentStatusText(
-    label = pluralStringResource(R.plurals.capsule_count, count, count),
-    modifier = Modifier.padding(bottom = FangTokens.Spacing.s4),
-  )
-}
-
-/** One subagent's pill: its glyph, short name and activity word, folding to just the glyph under a fling. */
-@Composable
-private fun CapsulePill(fact: SubagentFacts, onOpen: (SubagentFacts) -> Unit, modifier: Modifier = Modifier) {
-  var folded by remember(fact.toolCallId) { mutableStateOf(false) }
-  val name = fact.agent.ifBlank { fact.description.ifBlank { stringResource(R.string.capsule_unnamed) } }
-  val action = stringResource(if (folded) R.string.capsule_restore else R.string.capsule_open, name)
-  // The task stays available to TalkBack without widening the pill's one-line label.
-  val details = fact.description.ifBlank { name }
-  val activity = fact.subagentActivity().activity()
-  val derive = { fact.subagentActivity().activity() }
+private fun GroupedCapsule(facts: List<SubagentFacts>, onExpand: () -> Unit) {
+  val activity = leadingActivity(facts, System.currentTimeMillis())
+  val derive = { leadingActivity(facts, System.currentTimeMillis()) }
+  val label = pluralStringResource(R.plurals.capsule_count, facts.size, facts.size)
   Row(
-    modifier = modifier
+    modifier = Modifier
       // subagent-capsule-press: clip to the pill so the press ripple keeps both ends rounded
       .clip(RoundedCornerShape(50))
       .background(fangColors.surface2)
-      .semantics { contentDescription = details }
-      .pointerInput(fact.toolCallId) { foldOnFling { folded = true } }
-      .clickable(onClickLabel = action) { if (folded) folded = false else onOpen(fact) }
+      .semantics { contentDescription = label }
+      .clickable(onClickLabel = stringResource(R.string.capsule_open_panel), onClick = onExpand)
       .widthIn(max = 220.dp)
-      .padding(
-        horizontal = if (folded) FangTokens.Spacing.s8 else FangTokens.Spacing.s12,
-        vertical = if (folded) FangTokens.Spacing.s4 else FangTokens.Spacing.s8,
-      ),
+      .padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
   ) {
     ActivityGlyph(activity = activity, size = FangTokens.IconSize.sm, derive = derive)
-    if (!folded) {
-      SubagentText(label = name)
-      SubagentStatusText(label = stringResource(activity.statusLabel()))
-    }
+    SubagentText(label = label, modifier = Modifier.weight(1f, fill = false))
+    LucideIcon(
+      icon = R.drawable.ic_lucide_chevron_down,
+      contentDescription = null,
+      size = FangTokens.IconSize.sm,
+      tint = fangColors.foregroundMuted,
+    )
   }
 }
 
-/** The compact activity word beside a capsule's name, one per derived glyph state. */
+/** The expanded capsule: a count header with a collapse chevron, then one row per subagent. */
+@Composable
+private fun SubagentPanel(facts: List<SubagentFacts>, onOpen: (SubagentFacts) -> Unit, onCollapse: () -> Unit) {
+  Column(
+    modifier = Modifier
+      .clip(RoundedCornerShape(FangTokens.Radius.lg))
+      .background(fangColors.surface2)
+      .pointerInput(Unit) { foldOnFling(onCollapse) }
+      .padding(FangTokens.Spacing.s8)
+      .widthIn(max = 260.dp),
+    verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s4),
+  ) {
+    PanelHeader(count = facts.size, onCollapse = onCollapse)
+    for (fact in facts) PanelRow(fact = fact, onOpen = { onOpen(fact) })
+  }
+}
+
+/** The panel's header: the same count as the capsule, with a chevron that folds the panel back. */
+@Composable
+private fun PanelHeader(count: Int, onCollapse: () -> Unit) {
+  Row(
+    modifier = Modifier
+      .clip(RoundedCornerShape(50))
+      .clickable(onClickLabel = stringResource(R.string.capsule_collapse), onClick = onCollapse)
+      .padding(vertical = FangTokens.Spacing.s4),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
+  ) {
+    SubagentStatusText(label = pluralStringResource(R.plurals.capsule_count, count, count))
+    LucideIcon(
+      icon = R.drawable.ic_lucide_chevron_up,
+      contentDescription = null,
+      size = FangTokens.IconSize.sm,
+      tint = fangColors.foregroundMuted,
+    )
+  }
+}
+
+/** One subagent in the panel: its own glyph, name and activity word; a tap opens it and folds the panel. */
+@Composable
+private fun PanelRow(fact: SubagentFacts, onOpen: () -> Unit) {
+  val activity = fact.subagentActivity().activity()
+  val derive = { fact.subagentActivity().activity() }
+  val name = fact.agent.ifBlank { fact.description.ifBlank { stringResource(R.string.capsule_unnamed) } }
+  // The task stays available to TalkBack without widening the row's one-line label.
+  val details = fact.description.ifBlank { name }
+  Row(
+    modifier = Modifier
+      .clip(RoundedCornerShape(FangTokens.Radius.md))
+      .semantics { contentDescription = details }
+      .clickable(onClickLabel = stringResource(R.string.capsule_open, name), onClick = onOpen)
+      .padding(horizontal = FangTokens.Spacing.s6, vertical = FangTokens.Spacing.s4),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
+  ) {
+    ActivityGlyph(activity = activity, size = FangTokens.IconSize.sm, derive = derive)
+    SubagentText(label = name, modifier = Modifier.weight(1f, fill = false))
+    SubagentStatusText(label = stringResource(activity.statusLabel()))
+  }
+}
+
+/** The compact activity word beside a row's name, one per derived glyph state. */
 private fun AgentActivity.statusLabel(): Int = when (this) {
   AgentActivity.IDLE -> R.string.capsule_activity_idle
 
@@ -124,7 +191,7 @@ private fun AgentActivity.statusLabel(): Int = when (this) {
   AgentActivity.FAILED -> R.string.capsule_activity_failed
 }
 
-/** Folds on a fling the parent didn't consume, so scrolling the chat never folds a pill. */
+/** Folds on a fling the parent didn't consume, so scrolling the chat never folds a panel. */
 private suspend fun PointerInputScope.foldOnFling(onFling: () -> Unit) {
   awaitEachGesture {
     val down = awaitFirstDown(requireUnconsumed = false)
