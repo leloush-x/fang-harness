@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Accessibility pane title announced when the full-screen media viewer opens. -->
+    <string name="oc_media_viewer_title">Media viewer</string>
+    <!-- Close button in the viewer's top bar and in the drawing editor. -->
+    <string name="oc_media_close">Close</string>
+    <!-- Page counter in the viewer's top bar. %1$d is the 1-based page number, %2$d the number of pages. -->
+    <string name="oc_media_page_count">%1$d of %2$d</string>
+    <!-- TalkBack label for an image page. %1$d is its 1-based page number. -->
+    <string name="oc_media_image_label">Image %1$d</string>
+    <!-- TalkBack label for a text or file page. %1$d is its 1-based page number. -->
+    <string name="oc_media_document_label">Document %1$d</string>
+    <!-- TalkBack state announced when an image is zoomed in. -->
+    <string name="oc_media_zoomed_in">Zoomed in</string>
+    <!-- Shown when an image item holds a kind of data the viewer cannot draw. -->
+    <string name="oc_media_image_unavailable">Image preview unavailable</string>
+    <!-- Shown when a file item has neither bytes nor a URI to present. -->
+    <string name="oc_media_file_unavailable">File preview unavailable</string>
+    <!-- Shown when the viewer is opened with no items. -->
+    <string name="oc_media_empty">Nothing to show</string>
+    <!-- Top-bar action that opens the draw-on-image editor. -->
+    <string name="oc_media_draw">Draw on image</string>
+    <!-- Toggle that switches a document from rendered markdown to its raw text. -->
+    <string name="oc_media_view_source">View source</string>
+    <!-- Toggle that switches a document from raw text back to rendered markdown. -->
+    <string name="oc_media_view_rendered">View rendered</string>
+    <!-- Accessibility label for the link preview card. -->
+    <string name="oc_media_link_card">Link preview</string>
+    <!-- Copies the link's URL. -->
+    <string name="oc_media_link_copy">Copy</string>
+    <!-- Shares the link's URL through the system share sheet. -->
+    <string name="oc_media_link_share">Share</string>
+    <!-- Opens the link in a browser. -->
+    <string name="oc_media_link_open">Open</string>
+    <!-- TalkBack label for the black ink swatch. -->
+    <string name="oc_media_ink_black">Black ink</string>
+    <!-- TalkBack label for the white ink swatch. -->
+    <string name="oc_media_ink_white">White ink</string>
+    <!-- TalkBack label for the red ink swatch. -->
+    <string name="oc_media_ink_red">Red ink</string>
+    <!-- TalkBack label for the green ink swatch. -->
+    <string name="oc_media_ink_green">Green ink</string>
+    <!-- TalkBack label for the blue ink swatch. -->
+    <string name="oc_media_ink_blue">Blue ink</string>
+    <!-- Removes the most recent stroke in the drawing editor. -->
+    <string name="oc_media_undo">Undo</string>
+    <!-- Removes every stroke in the drawing editor. -->
+    <string name="oc_media_clear">Clear</string>
+    <!-- Hands the annotated bitmap back to whoever opened the drawing editor. -->
+    <string name="oc_media_add_to_prompt">Add to prompt</string>
+</resources>

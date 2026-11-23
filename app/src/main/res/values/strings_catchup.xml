@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Catch Up deck: how many sessions are still in the stack. %1$d is the count. -->
+    <plurals name="catch_up_left">
+        <item quantity="one">%1$d left</item>
+        <item quantity="other">%1$d left</item>
+    </plurals>
+
+    <!-- Chrome buttons. -->
+    <string name="catch_up_leave">Leave</string>
+    <string name="catch_up_undo">Undo</string>
+    <string name="catch_up_mark_all">Mark all</string>
+    <string name="catch_up_mark_read">Mark as read</string>
+    <string name="catch_up_keep_unread">Keep unread</string>
+
+    <!-- TalkBack: the default action when the front card is tapped. -->
+    <string name="catch_up_open">Open chat</string>
+    <!-- TalkBack description of a card with no subtitle; %1$s is the session title. -->
+    <string name="catch_up_card">%1$s</string>
+    <!-- TalkBack description of a card with a subtitle; %1$s is the title, %2$s the subtitle. -->
+    <string name="catch_up_card_with_subtitle">%1$s, %2$s</string>
+    <!-- TalkBack badge on a card that is waiting for the user's input. -->
+    <string name="catch_up_needs_input">Needs you</string>
+
+    <!-- The finish celebration, shown once every card is handled. -->
+    <string name="catch_up_all_caught_up">All caught up</string>
+</resources>
