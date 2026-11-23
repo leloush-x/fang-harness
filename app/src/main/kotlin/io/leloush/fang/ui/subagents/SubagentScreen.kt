@@ -23,9 +23,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
@@ -73,7 +70,7 @@ internal fun SubagentChatScreen(
 private fun SubagentPage(
   process: AgentProcess,
   fact: SubagentFacts,
-  stack: SubagentStackState,
+  stack: SubagentStack,
   isTop: Boolean,
   openIds: Set<String>,
   onClose: () -> Unit,
@@ -108,7 +105,7 @@ private fun SubagentPage(
   )
   Box(
     Modifier.fillMaxSize().offset(x = if (reduceMotion) 0.dp else slide).alpha(if (isTop) fade else 0f)
-      .then(if (isTop) Modifier else inert()),
+      .then(if (isTop) Modifier else Modifier.clearAndSetSemantics {}),
   ) {
     Column(Modifier.fillMaxSize()) {
       SubagentHeader(name, fact.description, active, backLabel) { if (!stack.pop()) onClose() }
@@ -135,10 +132,6 @@ private fun FollowRun(process: AgentProcess, runId: String) {
   LaunchedEffect(process, runId) { process.liveSubagents.follow(runId) }
   DisposableEffect(process, runId) { onDispose { process.liveSubagents.unfollow(runId) } }
 }
-
-/** Keeps a covered page mounted and laid out, but takes its touches and hides it from TalkBack. */
-private fun Modifier.inert(): Modifier = clearAndSetSemantics {}
-  .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
 
 /** The transcript's header: the run's name and task, a Back button and, while it runs, a status word. */
 @Composable

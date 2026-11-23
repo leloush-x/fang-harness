@@ -15,7 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Event
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 
 /** What a notification setting needs: the current grant, a prompt, and the system screen once prompts run out. */
@@ -38,7 +38,7 @@ internal fun rememberNotificationPermissionState(): NotificationPermissionState 
   val prompt = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
     granted = result
   }
-  LifecycleEventEffect(Event.ON_RESUME) { granted = notificationsGranted(context) }
+  LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { granted = notificationsGranted(context) }
   return NotificationPermissionState(
     granted = granted,
     request = {

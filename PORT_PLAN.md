@@ -20,4 +20,7 @@
 - Orb/glyph polish (glyph cache, shell glyph, rolling numbers, divider glow)
 
 ## Verify: 2 reviews per worker + CI gate per stage. Ask before main/release.
+- [x] Pushed ed0cd13 to debug (rebased over grouping fix a8c4ba4). CI 45210480975 failed with 13 compile/detekt errors from concurrent workers.
+- [ ] 3 parallel fix agents dispatched (chat/theme, subagents, markdown/notifications). Re-run ktlint + push after they land.
+- [ ] Catch Up + Media viewer bundles still not started.
 Voice/call, shell output sheet, devtools/What's New, drawer polish, link previews stack = NOT selected.

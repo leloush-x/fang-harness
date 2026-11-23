@@ -135,15 +135,7 @@ internal fun Composer(
         // An open panel is weighted like the field, so it shrinks to the room left once the toolbar is measured. A
         // closed one isn't: a column doesn't pass on a weighted child's unused share, so it would cap the draft.
         val panelWeight = Modifier.weight(1f, fill = false)
-        UpperPanelSlot(
-          above,
-          tabs,
-          tight,
-          openWidget,
-          if (above.shown != null) panelWeight else Modifier,
-          edges.askFailed,
-          controller::sendAskAnswer,
-        )
+        OcUpperPanel(edges, tabs, tight, openWidget, panelWeight, controller)
         if (controller.attachments.isNotEmpty()) {
           AttachmentTray(controller.attachments, onRemove = { controller.attachments.remove(it) })
         }

@@ -106,7 +106,7 @@ internal fun UserMessage(
             overflow = TextOverflow.Ellipsis,
           )
         }
-        if (foldsText) FoldLabel(textExpanded) { textExpanded = !textExpanded }
+        if (foldsText) FoldLabel(textExpanded, { textExpanded = !textExpanded })
       }
     }
     Row(

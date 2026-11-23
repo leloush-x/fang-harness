@@ -45,14 +45,16 @@ internal class OcAutocompleteState {
   private var dismissedKey by mutableStateOf<String?>(null)
 
   fun trigger(text: CharSequence, selection: TextRange, focused: Boolean): OcMentionTrigger? {
-    if (!focused || !selection.collapsed || selection.end != text.length) return null
     val start = text.lastIndexOf('@', startIndex = (text.length - 1).coerceAtLeast(0))
-    if (start < 0 || (start > 0 && !text[start - 1].isWhitespace())) return null
-    val key = text.subSequence(start, text.length).toString()
-    if (dismissedKey == key) return null
-    val query = key.substring(1)
-    if (query.any { it.isWhitespace() || it == '@' }) return null
-    return OcMentionTrigger(start, text.length, query, key)
+    val key = if (start < 0) "" else text.subSequence(start, text.length).toString()
+    val query = key.removePrefix("@")
+    return when {
+      !focused || !selection.collapsed || selection.end != text.length -> null
+      start < 0 || (start > 0 && !text[start - 1].isWhitespace()) -> null
+      dismissedKey == key -> null
+      query.any { it.isWhitespace() || it == '@' } -> null
+      else -> OcMentionTrigger(start, text.length, query, key)
+    }
   }
 
   fun onKey(event: KeyEvent, controller: ChatController): Boolean {

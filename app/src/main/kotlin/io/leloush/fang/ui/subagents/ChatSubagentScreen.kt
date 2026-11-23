@@ -14,14 +14,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcess
 import io.leloush.fang.agent.AgentProcessState
-import io.leloush.fang.agent.ChatSubagents
 import io.leloush.fang.agent.LiveSubagent
 import io.leloush.fang.agent.SUBAGENT_TOOL
 import io.leloush.fang.agent.SubagentAsker
 import io.leloush.fang.agent.SubagentRun
 import io.leloush.fang.agent.TimelineItem
 import io.leloush.fang.agent.TimelineState
-import io.leloush.fang.agent.subagentFacts
 import io.leloush.fang.ui.chat.ChatStream
 import io.leloush.fang.ui.chat.ChatView
 import io.leloush.fang.ui.chat.SubagentCapsules

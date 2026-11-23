@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
  * stay composed, so a parent's transcript and scroll keep their state while a child is on top.
  */
 @Stable
-internal class SubagentStackState {
+internal class SubagentStack {
   var pushed by mutableStateOf<List<SubagentFacts>>(emptyList())
     private set
 
@@ -39,7 +39,7 @@ internal class SubagentStackState {
 
 /** The stack and drafts for one open subagent overlay. */
 @Composable
-internal fun rememberSubagentStack(): SubagentStackState = remember { SubagentStackState() }
+internal fun rememberSubagentStack(): SubagentStack = remember { SubagentStack() }
 
 /** Android's Reduce Motion (animator duration scale 0), read once per context. */
 @Composable

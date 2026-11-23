@@ -21,9 +21,8 @@ enum class CuratedTheme(val rawValue: String) {
   GitHub("github"),
   ;
 
-  @StringRes
   val titleRes: Int
-    get() = when (this) {
+    @StringRes get() = when (this) {
       Fang -> R.string.oc_theme_fang
       TokyoNight -> R.string.oc_theme_tokyo_night
       Catppuccin -> R.string.oc_theme_catppuccin
