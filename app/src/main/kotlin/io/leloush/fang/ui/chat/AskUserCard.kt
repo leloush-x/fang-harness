@@ -53,9 +53,6 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** How tall the scrollable question body grows before it scrolls, so a long question leaves room for the composer. */
-private val ASK_PANEL_MAX_HEIGHT = 280.dp
-
 /**
  * Fold tuning from the upstream request dock (RequestCollapse.kt): a downward drag folds once it passes 0.3 of the
  * panel's height, or on a 700 dp/s flick. Fang folds without a mid-drag spring, so these just gate the same drag.
