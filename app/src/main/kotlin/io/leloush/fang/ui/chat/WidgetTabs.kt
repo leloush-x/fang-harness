@@ -67,7 +67,6 @@ import io.leloush.fang.ui.theme.fangColors
 import org.json.JSONObject
 
 private val TAB_HEIGHT = 28.dp
-private val TAB_CORNER = 10.dp
 private val TAB_LABEL_MAX_WIDTH = 150.dp
 
 /** Reserved upper-edge tab key for the extension's ask request, so it shares the widgets' strip and panel slot. */
