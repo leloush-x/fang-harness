@@ -1,6 +1,5 @@
 package io.leloush.fang.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -19,15 +18,29 @@ val fangColors: FangColors
   @ReadOnlyComposable
   get() = LocalFangColors.current
 
+/** Keeps the existing callers: the mode comes from Preferences and the palette family starts at Fang. */
 @Composable
 fun FangTheme(mode: ThemeMode, content: @Composable () -> Unit) {
-  val colors =
-    when (mode) {
-      ThemeMode.System -> if (isSystemInDarkTheme()) DarkFangColors else LightFangColors
-      ThemeMode.Light -> LightFangColors
-      ThemeMode.Dark -> DarkFangColors
-      ThemeMode.AMOLED -> AmoledFangColors
-    }
+  val selected = rememberThemeState()
+  selected.setMode(mode)
+  FangTheme(mode, selected, content)
+}
+
+/** Convenience for callers with only a palette family; the mode follows the system. */
+@Composable
+fun FangTheme(selectedTheme: CuratedTheme, content: @Composable () -> Unit) {
+  FangTheme(rememberThemeState(selectedTheme = selectedTheme), content)
+}
+
+/** Callers that own a [ThemeState] (for persistence) can drive both the mode and the palette family. */
+@Composable
+fun FangTheme(themeState: ThemeState, content: @Composable () -> Unit) {
+  FangTheme(themeState.mode, themeState, content)
+}
+
+@Composable
+fun FangTheme(mode: ThemeMode, themeState: ThemeState, content: @Composable () -> Unit) {
+  val colors = resolvedFangColors(mode, themeState.selectedTheme)
   val dark = colors.isDark
   val base = if (dark) darkColorScheme() else lightColorScheme()
   val scheme =
@@ -54,7 +67,7 @@ fun FangTheme(mode: ThemeMode, content: @Composable () -> Unit) {
   // No colour here: MaterialTheme's LocalTextStyle is bodyLarge and buttons merge into it, so a colour would
   // override their content colour. Text colour comes from LocalContentColor instead.
   val bodyStyle = TextStyle(fontSize = FangTokens.FontSize.base)
-  CompositionLocalProvider(LocalFangColors provides colors) {
+  CompositionLocalProvider(LocalFangColors provides colors, LocalThemeState provides themeState) {
     MaterialTheme(
       colorScheme = scheme,
       typography =

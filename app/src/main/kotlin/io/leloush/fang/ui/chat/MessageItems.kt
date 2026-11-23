@@ -1,6 +1,10 @@
 package io.leloush.fang.ui.chat
 
+import android.provider.Settings
 import android.text.format.DateFormat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -49,6 +54,14 @@ import java.util.Date
 import kotlinx.coroutines.delay
 
 private val ImageMaxEdge = 160.dp
+private val BubbleLiftSpring = spring<Float>(dampingRatio = 0.8f, stiffness = 700f)
+
+/** Past this many lines a user message folds; [BUBBLE_FOLD_SHOW_LINES] stay visible while it is folded. */
+private const val BUBBLE_FOLD_OVER_LINES = 12
+private const val BUBBLE_FOLD_SHOW_LINES = 8
+
+/** A folded tool detail shows this many lines once expanded, so the row never takes over the stream. */
+private const val DETAIL_EXPANDED_LINES = 6
 
 @Composable
 internal fun UserMessage(
@@ -61,10 +74,19 @@ internal fun UserMessage(
 ) {
   val colors = fangColors
   var menuOpen by remember { mutableStateOf(false) }
+  var textExpanded by remember(item.key, item.text) { mutableStateOf(false) }
+  val foldsText = remember(item.text) { item.text.lineSequence().count() > BUBBLE_FOLD_OVER_LINES }
+  val context = LocalContext.current
+  val reduceMotion =
+    remember(context) {
+      Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) ==
+        0f
+    }
+  val lift by animateFloatAsState(if (menuOpen) 1.03f else 1f, if (reduceMotion) snap() else BubbleLiftSpring)
   Column(
     modifier = modifier
-      .fillMaxWidth()
-      .bubbleEntrance(item.key, entrance, onEntranceConsumed),
+      .fillMaxWidth().bubbleEntrance(item.key, entrance, onEntranceConsumed)
+      .graphicsLayer(scaleX = lift, scaleY = lift),
     horizontalAlignment = Alignment.End,
   ) {
     Column(
@@ -80,8 +102,11 @@ internal fun UserMessage(
             color = colors.foreground,
             fontSize = FangTokens.FontSize.content,
             lineHeight = FangTokens.LineHeight.markdown,
+            maxLines = if (textExpanded) Int.MAX_VALUE else BUBBLE_FOLD_SHOW_LINES,
+            overflow = TextOverflow.Ellipsis,
           )
         }
+        if (foldsText) FoldLabel(textExpanded) { textExpanded = !textExpanded }
       }
     }
     Row(
@@ -91,20 +116,10 @@ internal fun UserMessage(
     ) {
       MessageTime(item.timestamp)
       if (item.text.isNotEmpty()) {
-        CopyButton(
-          text = item.text,
-          contentDescription = stringResource(R.string.chat_copy_message),
-          tint = colors.foregroundMuted,
-          iconSize = FangTokens.IconSize.sm,
-        )
+        val copyLabel = stringResource(R.string.chat_copy_message)
+        CopyButton(item.text, copyLabel, colors.foregroundMuted, FangTokens.IconSize.sm)
       }
-      UserMessageMenu(
-        text = item.text,
-        menuOpen = menuOpen,
-        onOpen = { menuOpen = true },
-        onDismiss = { menuOpen = false },
-        onAction = onAction,
-      )
+      UserMessageMenu(item.text, menuOpen, { menuOpen = true }, { menuOpen = false }, onAction)
     }
   }
 }
@@ -188,61 +203,53 @@ internal fun MessageTime(timestamp: Long) {
   Text(text = time, color = fangColors.foregroundMuted, fontSize = FangTokens.FontSize.meta)
 }
 
-/** Paseo's compact tool-call row: icon badge, title, muted one-line summary. */
+/** Paseo's compact tool-call row: icon badge, title, muted one-line summary and a fold for long details. */
 @Composable
 internal fun ToolRow(presentation: ToolPresentation, onClick: () -> Unit, modifier: Modifier = Modifier) {
   val colors = fangColors
-  Row(
-    modifier =
-      modifier
-        .fillMaxWidth()
-        .clip(RoundedCornerShape(FangTokens.Radius.lg))
-        .background(colors.surface1)
-        .clickable(onClick = onClick)
-        .padding(horizontal = FangTokens.Spacing.s8, vertical = FangTokens.Spacing.s6),
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
+  var expanded by remember { mutableStateOf(false) }
+  val detail = presentation.foldedDetail()
+  Column(
+    modifier = modifier
+      .fillMaxWidth().clip(RoundedCornerShape(FangTokens.Radius.lg)).background(colors.surface1)
+      .clickable(onClick = onClick).padding(horizontal = FangTokens.Spacing.s8, vertical = FangTokens.Spacing.s6),
   ) {
-    Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-      if (presentation.isError) {
-        LucideIcon(
-          icon = presentation.icon,
-          contentDescription = null,
-          size = FangTokens.IconSize.sm,
-          tint = colors.destructive,
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
+    ) {
+      ToolStatusGlyph(presentation)
+      Column(modifier = Modifier.weight(1f)) {
+        Text(
+          text = presentation.title,
+          color = if (presentation.isError) colors.destructive else colors.foreground,
+          fontSize = FangTokens.FontSize.base,
+          maxLines = 1,
         )
-      } else {
-        // A finished tool hands its result to a copy button; without output it settles back to the tool's own icon.
-        val copyText = presentation.output
-        val glyphLabel = stringResource(
-          if (copyText == null) R.string.morph_complete else R.string.morph_copy_output,
-        )
-        val settledIcon = if (copyText == null) presentation.icon else null
-        val working = WorkingActivity(running = presentation.running, finished = !presentation.running)
-        WorkingToCopyGlyph(
-          activity = working.activity(),
-          copyText = copyText,
-          size = FangTokens.IconSize.sm,
-          contentDescription = glyphLabel,
-          doneIcon = settledIcon,
-          derive = { working.activity() },
-        )
+        // The detail line carries the same text, so the one-line copy only stays when it is short or is the output.
+        if (detail == null || detail != presentation.summary?.trim()) {
+          Text(
+            text = presentation.summary.orEmpty(),
+            color = colors.foregroundMuted,
+            fontSize = FangTokens.FontSize.base,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
       }
     }
-    Text(
-      text = presentation.title,
-      color = if (presentation.isError) colors.destructive else colors.foreground,
-      fontSize = FangTokens.FontSize.base,
-      maxLines = 1,
-    )
-    Text(
-      text = presentation.summary.orEmpty(),
-      modifier = Modifier.weight(1f),
-      color = colors.foregroundMuted,
-      fontSize = FangTokens.FontSize.base,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-    )
+    if (detail == null) return@Column
+    SelectionContainer {
+      Text(
+        text = detail,
+        color = colors.foregroundMuted,
+        fontSize = FangTokens.FontSize.sm,
+        lineHeight = FangTokens.LineHeight.code,
+        maxLines = if (expanded) DETAIL_EXPANDED_LINES else 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+    FoldLabel(expanded, { expanded = !expanded }, Modifier.padding(top = FangTokens.Spacing.s2))
   }
 }
 

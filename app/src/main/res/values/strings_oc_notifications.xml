@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- After the chat's title in the in-app notice capsule: why the chat is showing. -->
+    <string name="oc_notifications_capsule_needs_input">Needs your input</string>
+    <!-- What tapping the capsule does, read out by screen readers. -->
+    <string name="oc_notifications_capsule_open">Open chat</string>
+</resources>

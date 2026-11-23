@@ -105,6 +105,7 @@ internal fun Composer(
   val hideKeyboard = rememberHideKeyboard()
   val shape = RoundedCornerShape(FangTokens.Radius.xxl)
   val edges = rememberComposerEdges(controller)
+  val autocomplete = rememberOcAutocomplete()
   val tabs = controller.view.widgetTabs
   val above = edges.above
   val below = edges.below
@@ -146,8 +147,9 @@ internal fun Composer(
         if (controller.attachments.isNotEmpty()) {
           AttachmentTray(controller.attachments, onRemove = { controller.attachments.remove(it) })
         }
+        OcMentionAutocomplete(controller, autocomplete, Modifier.padding(bottom = FangTokens.Spacing.s4))
         // Weighted, so the tray and toolbar are measured first and long drafts scroll instead of pushing them off.
-        ComposerField(controller, acceptsImages(model), onRan = hideKeyboard, Modifier.weight(1f, fill = false))
+        ComposerField(controller, acceptsImages(model), autocomplete, hideKeyboard, Modifier.weight(1f, fill = false))
         Spacer(modifier = Modifier.height(FangTokens.Spacing.s12))
         ComposerToolbar(
           controller = controller,
@@ -332,11 +334,18 @@ internal fun BoxScope.RemoveBadge(onRemove: () -> Unit) {
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ComposerField(controller: ChatController, acceptsImages: Boolean, onRan: () -> Unit, modifier: Modifier) {
+private fun ComposerField(
+  controller: ChatController,
+  acceptsImages: Boolean,
+  autocomplete: OcAutocompleteState,
+  onRan: () -> Unit,
+  modifier: Modifier,
+) {
   val colors = fangColors
   val style = TextStyle(color = colors.foreground, fontSize = FangTokens.FontSize.content)
   val currentOnRan by rememberUpdatedState(onRan)
   val enterPicks = remember(controller) { controller.slash.enterPicks { currentOnRan() } }
+  val swipe = rememberOcSwipeModifier(controller, onRan)
   BasicTextField(
     state = controller.draft,
     modifier = modifier
@@ -344,8 +353,11 @@ private fun ComposerField(controller: ChatController, acceptsImages: Boolean, on
       .atMostHalfTall()
       .heightIn(min = 30.dp)
       .onFocusChanged { controller.composerFocused = it.isFocused }
-      .onPreviewKeyEvent { controller.slash.onKey(it, onRan) }
-      .contentReceiver { content -> receiveContent(controller, content, acceptsImages) },
+      .onPreviewKeyEvent { event ->
+        if (autocomplete.onKey(event, controller)) true else controller.slash.onKey(event, onRan)
+      }
+      .contentReceiver { content -> receiveContent(controller, content, acceptsImages) }
+      .then(swipe),
     inputTransformation = enterPicks,
     textStyle = style,
     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),

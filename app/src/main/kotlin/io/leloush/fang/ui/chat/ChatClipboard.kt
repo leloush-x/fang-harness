@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,6 +25,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.leloush.fang.R
 import io.leloush.fang.ui.components.LucideIcon
+import io.leloush.fang.ui.theme.FangTokens
+import io.leloush.fang.ui.theme.fangColors
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -71,6 +74,17 @@ internal fun CopyButton(text: String, contentDescription: String, tint: Color, i
       tint = tint,
     )
   }
+}
+
+/** The Show more/less control shared by a folded tool detail and a folded user message. */
+@Composable
+internal fun FoldLabel(expanded: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+  Text(
+    text = stringResource(if (expanded) R.string.tool_bubble_show_less else R.string.tool_bubble_show_more),
+    modifier = modifier.clickable(onClick = onToggle),
+    color = fangColors.foregroundMuted,
+    fontSize = FangTokens.FontSize.meta,
+  )
 }
 
 private val COPIED = 1.5.seconds

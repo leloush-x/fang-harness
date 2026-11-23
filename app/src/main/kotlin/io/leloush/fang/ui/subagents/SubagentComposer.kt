@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldDecorator
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,10 +26,17 @@ import io.leloush.fang.ui.components.IconButton28
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 
-/** The box under a live subagent's transcript: one steering line and a send button. */
+/**
+ * The box under a live subagent's transcript: one steering line and a send button. [state] is owned by the
+ * stack, so a draft survives covering the page with a nested subagent and returning to it.
+ */
 @Composable
-internal fun SubagentComposer(agentName: String, onSend: (String) -> Unit, modifier: Modifier = Modifier) {
-  val state = rememberTextFieldState()
+internal fun SubagentComposer(
+  state: TextFieldState,
+  agentName: String,
+  onSend: (String) -> Unit,
+  modifier: Modifier = Modifier,
+) {
   val placeholder = stringResource(R.string.subagent_steer_placeholder, agentName)
   val sendLabel = stringResource(R.string.subagent_steer_send, agentName)
   val colors = fangColors

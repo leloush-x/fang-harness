@@ -45,7 +45,10 @@ import io.leloush.fang.ui.components.SnackbarStack
 import io.leloush.fang.ui.components.SnackbarStackState
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.ThemeMode
+import io.leloush.fang.ui.theme.ThemePreview
+import io.leloush.fang.ui.theme.ThemeSwatchRow
 import io.leloush.fang.ui.theme.fangColors
+import io.leloush.fang.ui.theme.themeState
 import java.security.MessageDigest
 import kotlinx.coroutines.launch
 
@@ -273,7 +276,20 @@ private fun ExtensionsSection(graph: AppGraph, snackbar: SnackbarStackState) {
 @Composable
 private fun AppearanceSection(preferences: Preferences) {
   val theme by preferences.theme.collectAsStateWithLifecycle()
+  val selection = themeState
   SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
+    ThemePreview(
+      mode = theme,
+      modifier = Modifier.padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s12),
+    )
+    SettingsDivider()
+    ThemeSwatchRow(
+      mode = theme,
+      selected = selection.selectedTheme,
+      onSelect = selection::selectTheme,
+      modifier = Modifier.padding(horizontal = FangTokens.Spacing.s12),
+    )
+    SettingsDivider()
     SettingsRow(title = stringResource(R.string.settings_theme)) {
       SegmentedControl(
         options = listOf(ThemeMode.Light, ThemeMode.Dark, ThemeMode.AMOLED, ThemeMode.System),

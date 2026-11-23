@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shown under a long tool detail or a long user message; expands the folded text in place. -->
+    <string name="tool_bubble_show_more">Show more</string>
+    <!-- Shown under an expanded long tool detail or user message; folds the text back. -->
+    <string name="tool_bubble_show_less">Show less</string>
+    <!-- The row title of a tool call that starts a subagent, in place of the raw tool name. -->
+    <string name="tool_bubble_subagent">Subagent</string>
+</resources>

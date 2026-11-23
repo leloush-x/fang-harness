@@ -164,7 +164,7 @@ private fun easeOutCubic(x: Float): Float {
 
 /** Android's Reduce Motion (animator duration scale 0), read once per context. */
 @Composable
-private fun rememberReduceMotion(): Boolean {
+internal fun rememberReduceMotion(): Boolean {
   val context = LocalContext.current
   return remember(context) {
     Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f

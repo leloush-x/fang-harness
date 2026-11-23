@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palette family names in Settings → Appearance. Brand names stay in English, like the themes themselves. -->
+    <string name="oc_theme_fang" translatable="false">Fang</string>
+    <string name="oc_theme_tokyo_night" translatable="false">Tokyo Night</string>
+    <string name="oc_theme_catppuccin" translatable="false">Catppuccin</string>
+    <string name="oc_theme_dracula" translatable="false">Dracula</string>
+    <string name="oc_theme_rose_pine" translatable="false">Rosé Pine</string>
+    <string name="oc_theme_github" translatable="false">GitHub</string>
+    <!-- %1$s: the palette's brand name, announced as a swatch's accessibility label when it is selected. -->
+    <string name="oc_theme_selected">%1$s, selected</string>
+
+    <!-- Sample messages in the Appearance preview; they are not from a real chat. -->
+    <string name="oc_theme_preview_user">Show the diff before we ship</string>
+    <!-- %1$s: the sample file name shown as inline code in the preview reply. -->
+    <string name="oc_theme_preview_reply">Summarize %1$s and call out anything risky.</string>
+    <string name="oc_theme_preview_file" translatable="false">Session.kt</string>
+    <!-- Sample code tokens in the preview; code stays in English. -->
+    <string name="oc_theme_preview_code_keyword" translatable="false">fun</string>
+    <string name="oc_theme_preview_code_type" translatable="false">Summary</string>
+    <string name="oc_theme_preview_code_comment" translatable="false">// preview</string>
+    <string name="oc_theme_preview_code_string" translatable="false">"Ready to ship"</string>
+</resources>

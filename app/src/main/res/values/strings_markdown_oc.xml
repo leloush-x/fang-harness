@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Markdown presentation extras -->
+    <!-- Content description of the button that copies a code block's source. -->
+    <string name="markdown_oc_copy_code">Copy code</string>
+    <!-- Content description shown in place of markdown_oc_copy_code for two seconds after a copy. -->
+    <string name="markdown_oc_copied">Copied</string>
+    <!-- TalkBack state of a finished task's checkbox. -->
+    <string name="markdown_oc_task_done">Completed task</string>
+    <!-- TalkBack state of an unfinished task's checkbox. -->
+    <string name="markdown_oc_task_todo">Uncompleted task</string>
+    <!-- Label of a mermaid source card; the model's diagram text is shown below it unchanged. -->
+    <string name="markdown_oc_diagram">Diagram</string>
+    <!-- Content description of a tappable mermaid source card, which copies its source. -->
+    <string name="markdown_oc_diagram_copy">Copy diagram source</string>
+</resources>

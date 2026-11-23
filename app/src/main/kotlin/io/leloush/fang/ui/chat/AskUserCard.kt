@@ -28,6 +28,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,12 +49,37 @@ import io.leloush.fang.agent.AskRequest
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
 /** How tall the scrollable question body grows before it scrolls, so a long question leaves room for the composer. */
 private val ASK_PANEL_MAX_HEIGHT = 280.dp
+
+/**
+ * Fold tuning from the upstream request dock (RequestCollapse.kt): a downward drag folds once it passes 0.3 of the
+ * panel's height, or on a 700 dp/s flick. Fang folds without a mid-drag spring, so these just gate the same drag.
+ */
+private const val FOLD_THRESHOLD_FRACTION = 0.3f
+private const val FOLD_FLICK_DP_PER_SEC = 700f
+
+/** Folds once a downward drag passes the threshold fraction of the panel or the upstream flick speed. */
+private fun Modifier.foldOnDrag(onFold: () -> Unit): Modifier = pointerInput(Unit) {
+  var down = 0f
+  detectVerticalDragGestures(onVerticalDrag = { change, drag ->
+    if (drag <= 0f) {
+      down = 0f
+      return@detectVerticalDragGestures
+    }
+    down += drag
+    val elapsed = (change.uptimeMillis - change.previousUptimeMillis).toFloat().coerceAtLeast(1f)
+    if (down >= FOLD_THRESHOLD_FRACTION * size.height || drag * 1000f / elapsed >= FOLD_FLICK_DP_PER_SEC * density) {
+      onFold()
+    }
+  })
+}
 
 /**
  * The pending `ask` request as the panel of the composer's Ask tab: a fixed heading with a fold chevron, and a capped,
@@ -69,6 +96,8 @@ internal fun AskPanel(
   modifier: Modifier = Modifier,
 ) {
   val colors = fangColors
+  val scope = rememberCoroutineScope()
+  val reduceMotion = rememberReduceMotion()
   val expiresAt = session.expiresAt
   // Pi's own timeout aborts its wait; tell it the panel is gone when that deadline passes too.
   LaunchedEffect(expiresAt) {
@@ -84,9 +113,7 @@ internal fun AskPanel(
       .clip(shape)
       .background(colors.surface1)
       .border(1.dp, colors.borderAccent, shape)
-      .pointerInput(Unit) {
-        detectVerticalDragGestures(onVerticalDrag = { _, drag -> if (drag > 0) onFold() })
-      },
+      .foldOnDrag(onFold),
   ) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(
@@ -113,7 +140,9 @@ internal fun AskPanel(
         .verticalScroll(rememberScrollState()),
       verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
     ) {
-      QuestionSection(request.questions[session.index], request.allowComment, session.answers[session.index])
+      QuestionSection(request.questions[session.index], request.allowComment, session.answers[session.index]) { title ->
+        scheduleAutoAdvance(session, title, scope, reduceMotion)
+      }
       if (failed) AskFailure(session)
     }
     AskActions(session, Modifier.padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8))
@@ -156,7 +185,7 @@ private fun RowScope.AskHeader(heading: String?, index: Int, count: Int) {
       fontSize = FangTokens.FontSize.base,
     )
     Text(
-      text = stringResource(R.string.chat_ask_counter, index + 1, count),
+      text = stringResource(R.string.ask_page_progress, index + 1, count),
       color = fangColors.foregroundMuted,
       fontSize = FangTokens.FontSize.sm,
     )
@@ -165,13 +194,25 @@ private fun RowScope.AskHeader(heading: String?, index: Int, count: Int) {
 
 /** One question's text, its optional context, its options and its optional freeform and comment fields. */
 @Composable
-private fun QuestionSection(question: AskQuestion, allowComment: Boolean, state: AnswerState) {
+private fun QuestionSection(
+  question: AskQuestion,
+  allowComment: Boolean,
+  state: AnswerState,
+  onPick: (String) -> Unit,
+) {
   Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8)) {
     Text(text = question.question, color = fangColors.foreground, fontSize = FangTokens.FontSize.base)
     question.context?.let {
       Text(text = it, color = fangColors.foregroundMuted, fontSize = FangTokens.FontSize.sm)
     }
-    question.options.forEach { OptionRow(it, question.allowMultiple, state) }
+    question.options.forEach { OptionRow(it, question.allowMultiple, state, onPick) }
+    if (question.allowMultiple && question.options.isNotEmpty()) {
+      Text(
+        text = stringResource(R.string.ask_choose_multiple),
+        color = fangColors.foregroundMuted,
+        fontSize = FangTokens.FontSize.sm,
+      )
+    }
     // A question with no options has only the text field, even if the model left allowFreeform false.
     if (question.allowFreeform || question.options.isEmpty()) {
       Text(
@@ -187,7 +228,7 @@ private fun QuestionSection(question: AskQuestion, allowComment: Boolean, state:
 
 /** One option as a checkbox or radio row, with its title and, below it, its optional description. */
 @Composable
-private fun OptionRow(option: AskOption, multiple: Boolean, state: AnswerState) {
+private fun OptionRow(option: AskOption, multiple: Boolean, state: AnswerState, onPick: (String) -> Unit) {
   val colors = fangColors
   val shape = RoundedCornerShape(FangTokens.Radius.md)
   val picked = option.title in state.selected
@@ -198,6 +239,7 @@ private fun OptionRow(option: AskOption, multiple: Boolean, state: AnswerState) 
       .background(if (picked) colors.surface2 else Color.Transparent)
       .selectable(selected = picked, role = if (multiple) Role.Checkbox else Role.RadioButton) {
         state.pick(option.title, multiple)
+        onPick(option.title)
       }
       .heightIn(min = 40.dp)
       .padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
@@ -322,6 +364,10 @@ internal class AskSession(internal val request: AskRequest, private val onSubmit
   /** The last submitted payload, so a failed send can be retried without changing any answer. */
   private var submitted: JSONObject? = null
 
+  /** Set once answered or cancelled, so a pending auto-advance beat can't revive a request that is already gone. */
+  var finished = false
+    private set
+
   val isLast: Boolean get() = index == request.questions.lastIndex
 
   fun canContinue(): Boolean = with(answers[index]) {
@@ -347,6 +393,7 @@ internal class AskSession(internal val request: AskRequest, private val onSubmit
 
   /** Pi's deadline passed: cancel with empty answers, exactly as before the tab existed. */
   fun cancel() {
+    finished = true
     val data = JSONObject().put("id", request.id).put("answers", JSONArray()).put("cancelled", true)
     submitted = data
     onSubmit(data)
@@ -362,6 +409,7 @@ internal class AskSession(internal val request: AskRequest, private val onSubmit
   }
 
   private fun submit(cancelled: Boolean) {
+    finished = true
     val all = JSONArray()
     answers.forEach { all.put(answer(it)) }
     val data = JSONObject().put("id", request.id).put("answers", all)
@@ -379,6 +427,22 @@ internal class AskSession(internal val request: AskRequest, private val onSubmit
     val response = JSONObject().put("kind", "selection").put("selections", JSONArray(state.selected.toList()))
     state.comment.text.toString().trim().takeIf { it.isNotEmpty() }?.let { response.put("comment", it) }
     return JSONObject().put("status", "answered").put("response", response)
+  }
+}
+
+/**
+ * A single choice on an earlier question moves on after a beat, as the upstream request dock does: 280 ms, or 120 ms
+ * under Reduce Motion. The guards drop a stale beat when the pick changed, the page moved or the request ended.
+ */
+private fun scheduleAutoAdvance(session: AskSession, title: String, scope: CoroutineScope, reduceMotion: Boolean) {
+  if (session.isLast || session.request.questions[session.index].allowMultiple) return
+  val page = session.index
+  scope.launch {
+    delay(if (reduceMotion) 120L else 280L)
+    if (session.finished || session.index != page) return@launch
+    val answer = session.answers[page]
+    if (answer.selected.size != 1 || title !in answer.selected) return@launch
+    session.next()
   }
 }
 

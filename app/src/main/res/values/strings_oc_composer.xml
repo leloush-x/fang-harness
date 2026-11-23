@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Announced when a recent-session suggestion in the @ mention row is picked. %1$s is the session title. -->
+    <string name="oc_mention_session">Mention %1$s</string>
+</resources>

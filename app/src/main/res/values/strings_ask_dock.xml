@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Panel header page indicator. %1$d is the current question number, %2$d the total questions in the batch. -->
+  <string name="ask_page_progress">Question %1$d of %2$d</string>
+  <!-- Caption under the options of a question that allows more than one selection. -->
+  <string name="ask_choose_multiple">Choose one or more</string>
+  <!-- Accessibility label on the folded ask tab when the answer failed to reach the extension. -->
+  <string name="ask_failed_tab">Answer not sent</string>
+</resources>

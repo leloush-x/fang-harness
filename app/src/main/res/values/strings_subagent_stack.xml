@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Content description of the header's Back button when a subagent was opened from another subagent's transcript;
+         it returns to that parent subagent, not to the chat. On the first subagent the existing "Back to the chat" is used. -->
+    <string name="subagent_stack_back_to_parent">Back to the parent subagent</string>
+</resources>

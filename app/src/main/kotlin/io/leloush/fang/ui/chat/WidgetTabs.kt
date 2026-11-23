@@ -102,6 +102,12 @@ internal class WidgetTabs {
   private var askOpen by mutableStateOf(false)
   private var askSession: AskSession? = null
 
+  /**
+   * Mirrors the ask send failure so the folded tab can tint itself. The panel that receives the failure state sets this,
+   * since the tab strip is drawn by the composer, which does not hold that state.
+   */
+  var askFailed by mutableStateOf(false)
+
   /** The key of the tab open on the editor's [belowEditor] edge; the ask tab owns the upper edge when open. */
   fun open(belowEditor: Boolean): String? = when {
     belowEditor -> openBelow
@@ -219,6 +225,7 @@ internal fun WidgetTabStrip(edge: WidgetEdge, tabs: WidgetTabs, belowEditor: Boo
         },
         open = open,
         changed = ask == null && tabs.changed(item.key, item.widget),
+        failed = ask != null && tabs.askFailed,
         belowEditor = belowEditor,
         onClick = { tabs.toggle(item.key, belowEditor) },
         modifier = Modifier,
@@ -246,16 +253,13 @@ private fun WidgetTab(
   belowEditor: Boolean,
   onClick: () -> Unit,
   modifier: Modifier,
+  failed: Boolean = false,
   actionLabel: String? = null,
 ) {
   val colors = fangColors
-  val shape = if (belowEditor) {
-    RoundedCornerShape(bottomStart = TAB_CORNER, bottomEnd = TAB_CORNER)
-  } else {
-    RoundedCornerShape(topStart = TAB_CORNER, topEnd = TAB_CORNER)
-  }
+  val shape = widgetTabShape(belowEditor)
   val fill = if (open) colors.surface1 else colors.surface0
-  val description = if (changed) stringResource(R.string.chat_widget_changed, label) else label
+  val description = widgetTabDescription(label, failed, changed)
   val action = actionLabel ?: stringResource(if (open) R.string.chat_widget_close else R.string.chat_widget_open)
   Row(
     modifier = modifier
@@ -263,16 +267,10 @@ private fun WidgetTab(
       .clip(shape)
       .drawWithContent {
         drawContent()
-        if (!open) return@drawWithContent
-        val line = 1.dp.toPx()
-        drawRect(
-          color = fill,
-          topLeft = Offset(line, if (belowEditor) 0f else size.height - line),
-          size = Size(size.width - 2 * line, line),
-        )
+        drawTabEdge(fill, open, belowEditor)
       }
       .background(fill)
-      .border(1.dp, colors.borderAccent, shape)
+      .border(1.dp, if (failed) colors.destructive else colors.borderAccent, shape)
       .clickable(onClickLabel = action, role = Role.Tab, onClick = onClick)
       .semantics {
         contentDescription = description
@@ -286,12 +284,12 @@ private fun WidgetTab(
       icon = icon,
       contentDescription = null,
       size = FangTokens.IconSize.sm,
-      tint = if (open) colors.accent else colors.foregroundMuted,
+      tint = widgetTabIconTint(failed, open),
     )
     Text(
       text = label,
       modifier = Modifier.widthIn(max = TAB_LABEL_MAX_WIDTH),
-      color = if (open) colors.foreground else colors.foregroundMuted,
+      color = widgetTabLabelColor(failed, open),
       fontSize = FangTokens.FontSize.sm,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
@@ -304,7 +302,9 @@ private fun WidgetTab(
         tint = colors.foregroundMuted,
       )
 
-      changed -> Box(modifier = Modifier.size(6.dp).background(colors.accent, CircleShape))
+      failed || changed -> Box(
+        Modifier.size(6.dp).background(if (failed) colors.destructive else colors.accent, CircleShape),
+      )
     }
   }
 }
@@ -352,6 +352,8 @@ internal fun WidgetPanelSlot(
   onSubmit: (JSONObject) -> Unit = {},
 ) {
   val ask = shown?.ask
+  // Only the upper edge owns the ask tab; the lower slot's default false must not clear this.
+  LaunchedEffect(belowEditor, askFailed) { if (!belowEditor) tabs.askFailed = askFailed }
   LaunchedEffect(shown?.key, shown?.widget) { if (ask == null) shown?.let { tabs.see(it.key, it.widget) } }
   if (shown == null) return
   Box(modifier) {
