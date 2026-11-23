@@ -98,15 +98,15 @@ internal fun ChatScreen(
     LaunchedEffect(controller) { controller.collectEffects() }
     LaunchedEffect(controller) { controller.steering.collectQueue() }
     ChatContent(
-      controller,
-      snackbar,
-      controls,
-      onOpenProviders,
-      onOpenOnboarding,
+      controller = controller,
+      snackbar = snackbar,
+      controls = controls,
+      onOpenChat = { cwd, path -> actions.openChat(controls.pane, cwd, path) },
+      onOpenProviders = onOpenProviders,
+      onOpenOnboarding = onOpenOnboarding,
       timeline = timeline,
       onSheet = { sheet = it },
-      onOpenChat = { cwd, path -> actions.openChat(controls.pane, cwd, path) },
-      modifier,
+      modifier = modifier,
     )
     ChatSheets(
       controller,
