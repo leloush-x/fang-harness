@@ -48,6 +48,8 @@ import io.leloush.fang.ui.components.FangMarkdown
 import io.leloush.fang.ui.components.LucideIcon
 import io.leloush.fang.ui.components.MarkdownCache
 import io.leloush.fang.ui.components.activityglyph.WorkingActivity
+import io.leloush.fang.ui.media.OcMediaItem
+import io.leloush.fang.ui.media.OcMediaViewer
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 import java.util.Date
@@ -128,21 +130,30 @@ internal enum class UserMessageAction { Edit, Delete, Resend, Copy, Quote }
 
 @Composable
 private fun UserImages(images: List<ImagePart>) {
+  var viewerIndex by remember { mutableStateOf<Int?>(null) }
+  val viewerItems by produceState<List<OcMediaItem>>(emptyList(), images) {
+    value = images.map { OcMediaItem.Image(ChatImages.thumbnail(it) ?: it) }
+  }
   FlowRow(
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8, Alignment.End),
     verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
   ) {
-    images.forEach { ImageThumbnail(it) }
+    images.forEachIndexed { index, part -> ImageThumbnail(part) { viewerIndex = index } }
+  }
+  viewerIndex?.let { index ->
+    OcMediaViewer(items = viewerItems, initialIndex = index, onDismiss = { viewerIndex = null })
   }
 }
 
 @Composable
-internal fun ImageThumbnail(part: ImagePart) {
+internal fun ImageThumbnail(part: ImagePart, onClick: (() -> Unit)? = null) {
   val bitmap by produceState<ImageBitmap?>(null, part) { value = ChatImages.thumbnail(part) }
   val shape = RoundedCornerShape(FangTokens.Radius.md)
+  val openLabel = stringResource(R.string.wiring_open_image)
+  val openable = if (onClick != null) Modifier.clickable(onClickLabel = openLabel, onClick = onClick) else Modifier
   val image = bitmap
   if (image == null) {
-    Box(modifier = Modifier.size(ImageMaxEdge).clip(shape).background(fangColors.surface2))
+    Box(modifier = Modifier.size(ImageMaxEdge).clip(shape).background(fangColors.surface2).then(openable))
     return
   }
   val aspect = image.width.toFloat() / image.height.coerceAtLeast(1)
@@ -154,7 +165,7 @@ internal fun ImageThumbnail(part: ImagePart) {
   Image(
     bitmap = image,
     contentDescription = stringResource(R.string.chat_image),
-    modifier = Modifier.size(size).clip(shape),
+    modifier = Modifier.size(size).clip(shape).then(openable),
     contentScale = ContentScale.Crop,
   )
 }
@@ -331,7 +342,7 @@ private fun RunningElapsed(startedAt: Long) {
   }
   val seconds = ((now - startedAt) / 1_000L).coerceAtLeast(0)
   Text(
-    text = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}",
+    text = stringResource(R.string.wiring_elapsed, seconds / 60, seconds % 60),
     color = fangColors.foregroundMuted,
     fontSize = FangTokens.FontSize.meta,
   )

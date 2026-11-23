@@ -8,6 +8,7 @@ import io.leloush.fang.host.GitDiffMode
 import io.leloush.fang.ui.files.ExplorerSort
 import io.leloush.fang.ui.files.SortKey
 import io.leloush.fang.ui.git.ExplorerTab
+import io.leloush.fang.ui.theme.CuratedTheme
 import io.leloush.fang.ui.theme.ThemeMode
 import io.leloush.fang.workspace.SavedLayout
 import io.leloush.fang.workspace.savedLayoutOf
@@ -28,6 +29,8 @@ internal class Preferences(context: Context) {
   private val themeState = prefs.getString(THEME, null).let { name ->
     MutableStateFlow(ThemeMode.entries.firstOrNull { it.name == name } ?: ThemeMode.System)
   }
+  private val curatedThemeState =
+    MutableStateFlow(prefs.getString(CURATED_THEME, null) ?: CuratedTheme.Fang.rawValue)
   private val lastProjectCwdState = MutableStateFlow(prefs.getString(LAST_PROJECT_CWD, null))
   private val workspacesState = MutableStateFlow(readWorkspaces())
   private val archivedState = MutableStateFlow(readArchived())
@@ -55,6 +58,9 @@ internal class Preferences(context: Context) {
   val setupPagesPassed: StateFlow<Set<String>> = setupPagesPassedState.asStateFlow()
 
   val theme: StateFlow<ThemeMode> = themeState.asStateFlow()
+
+  /** The curated palette family's raw value, persisted across restarts. */
+  val curatedTheme: StateFlow<String> = curatedThemeState.asStateFlow()
 
   /** The workspace folder last opened, or last started a chat in, from the sidebar. */
   val lastProjectCwd: StateFlow<String?> = lastProjectCwdState.asStateFlow()
@@ -116,6 +122,11 @@ internal class Preferences(context: Context) {
   fun setTheme(theme: ThemeMode) {
     prefs.edit { putString(THEME, theme.name) }
     themeState.value = theme
+  }
+
+  fun setCuratedTheme(raw: String) {
+    prefs.edit { putString(CURATED_THEME, raw) }
+    curatedThemeState.value = raw
   }
 
   fun setLastProjectCwd(cwd: String?) {
@@ -293,6 +304,7 @@ internal class Preferences(context: Context) {
     const val SETUP_COMPLETE = "setupComplete"
     const val SETUP_PAGES_PASSED = "setupPagesPassed"
     const val THEME = "theme"
+    const val CURATED_THEME = "curatedTheme"
     const val LAST_PROJECT_CWD = "lastProjectCwd"
     const val WORKSPACES = "workspaces"
     const val ARCHIVED_SESSIONS = "archivedSessions"

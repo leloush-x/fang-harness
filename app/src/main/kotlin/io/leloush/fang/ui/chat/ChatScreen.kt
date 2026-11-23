@@ -34,6 +34,7 @@ import io.leloush.fang.R
 import io.leloush.fang.agent.AgentProcess
 import io.leloush.fang.agent.AgentProcessState
 import io.leloush.fang.agent.AskAnswered
+import io.leloush.fang.agent.InboxReason
 import io.leloush.fang.agent.TimelineState
 import io.leloush.fang.appGraph
 import io.leloush.fang.ui.ShellActions
@@ -104,6 +105,7 @@ internal fun ChatScreen(
       onOpenOnboarding,
       timeline = timeline,
       onSheet = { sheet = it },
+      onOpenChat = { cwd, path -> actions.openChat(controls.pane, cwd, path) },
       modifier,
     )
     ChatSheets(
@@ -150,11 +152,12 @@ private fun ChatContent(
   controller: ChatController,
   snackbar: SnackbarStackState,
   controls: PaneControls,
+  onOpenChat: (cwd: String, sessionPath: String) -> Unit,
   onOpenProviders: () -> Unit,
   onOpenOnboarding: () -> Unit,
   timeline: TimelineState,
   onSheet: (ChatSheet) -> Unit,
-  modifier: Modifier,
+  modifier: Modifier = Modifier,
 ) {
   val process = controller.process
   val working by process.working.collectAsStateWithLifecycle()
@@ -165,6 +168,14 @@ private fun ChatContent(
   LaunchedEffect(selectedId, facts) { if (selectedId != null && openFact == null) selectedId = null }
   val askRequest by process.ask.request.collectAsStateWithLifecycle()
   val answered by process.ask.answered.collectAsStateWithLifecycle()
+  val inbox = LocalContext.current.appGraph.chatInbox
+  val entries by inbox.entries.collectAsStateWithLifecycle()
+  val notice = entries.firstOrNull { it.reason == InboxReason.Waiting }?.let { entry ->
+    ChatNotice(entry.title ?: stringResource(R.string.chat_new_chat)) {
+      inbox.remove(entry.location.sessionPath)
+      onOpenChat(entry.location.cwd, entry.location.sessionPath)
+    }
+  }
   val keyboard = LocalSoftwareKeyboardController.current
   val focus = LocalFocusManager.current
   val dismissKeyboard = remember(keyboard, focus) {
@@ -176,7 +187,8 @@ private fun ChatContent(
   // The keyboard and a dialog both take the room the steering box and widget panels would use, so then the steering
   // box keeps to one line and a panel to a few.
   val tight = WindowInsets.isImeVisible || timeline.pendingUi != null || askRequest != null || answered != null
-  val bodyState = ChatMainState(working, tight, answered, facts, { selectedId = it }, dismissKeyboard)
+  val bodyState =
+    ChatMainState(working, tight, answered, facts, notice, onOpenChat, { selectedId = it }, dismissKeyboard)
   Box(modifier = modifier.fillMaxSize()) {
     ChatMainBody(controller, snackbar, controls, timeline, bodyState, onOpenProviders, onOpenOnboarding, onSheet)
     openFact?.let { SubagentChatScreen(process, it, { selectedId = null }, controller::show) }
@@ -289,7 +301,13 @@ private fun SlashMenuHost(controller: ChatController, ready: Boolean, modifier: 
  * button, and the file explorer's toggle ends the row, before the second pane's button that closes split screen.
  */
 @Composable
-internal fun ChatHeader(process: AgentProcess, controls: PaneControls, onActions: () -> Unit, modifier: Modifier) {
+internal fun ChatHeader(
+  process: AgentProcess,
+  controls: PaneControls,
+  onActions: () -> Unit,
+  onCatchUp: (() -> Unit)?,
+  modifier: Modifier,
+) {
   val graph = LocalContext.current.appGraph
   val sessionName by process.sessionName.collectAsStateWithLifecycle()
   val extensionTitle by process.extensionTitle.collectAsStateWithLifecycle()
@@ -312,6 +330,13 @@ internal fun ChatHeader(process: AgentProcess, controls: PaneControls, onActions
     leading = { MenuButton(controls.onToggleSidebar) },
     trailing = {
       TabCountButton(count = tabs.count, onClick = controls.onOpenTabs)
+      if (onCatchUp != null) {
+        IconButton28(
+          icon = R.drawable.ic_lucide_list_checks,
+          contentDescription = stringResource(R.string.wiring_catch_up),
+          onClick = onCatchUp,
+        )
+      }
       IconButton28(
         icon = R.drawable.ic_lucide_ellipsis,
         contentDescription = stringResource(R.string.chat_actions),

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TalkBack label for tapping an attached image to open the full-screen viewer. -->
+    <string name="wiring_open_image">Open image</string>
+    <!-- The chat header button that opens the Catch Up deck of chats needing attention. -->
+    <string name="wiring_catch_up">Catch Up</string>
+    <!-- A run's live elapsed time. %1$d is whole minutes, %2$02d is seconds zero-padded in the device locale. -->
+    <string name="wiring_elapsed">%1$d:%2$02d</string>
+</resources>

@@ -40,6 +40,7 @@ import io.leloush.fang.ui.MainScreen
 import io.leloush.fang.ui.ShellActions
 import io.leloush.fang.ui.archive.ArchiveScreen
 import io.leloush.fang.ui.archive.ArchivedChatScreen
+import io.leloush.fang.ui.notifications.rememberNotificationPermissionState
 import io.leloush.fang.ui.onboarding.OnboardingScreen
 import io.leloush.fang.ui.onboarding.PermissionsScreen
 import io.leloush.fang.ui.settings.AccountsScreen
@@ -56,9 +57,11 @@ import io.leloush.fang.ui.settings.ProvidersScreen
 import io.leloush.fang.ui.settings.SettingsScreen
 import io.leloush.fang.ui.settings.SubscriptionScreen
 import io.leloush.fang.ui.settings.ownsDraft
+import io.leloush.fang.ui.theme.CuratedTheme
 import io.leloush.fang.ui.theme.FangTheme
 import io.leloush.fang.ui.theme.ThemeMode
 import io.leloush.fang.ui.theme.fangColors
+import io.leloush.fang.ui.theme.rememberThemeState
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
@@ -76,7 +79,9 @@ class MainActivity : ComponentActivity() {
     if (amoled) window.setBackgroundDrawable(amoledBackground())
     setContent {
       val theme by graph.preferences.theme.collectAsStateWithLifecycle()
-      FangTheme(theme) {
+      val curated by graph.preferences.curatedTheme.collectAsStateWithLifecycle()
+      val selection = rememberThemeState(mode = theme, selectedTheme = CuratedTheme.fromRawValue(curated))
+      FangTheme(theme, selection) {
         Surface(modifier = Modifier.fillMaxSize(), color = fangColors.surface0) {
           FangApp(graph, requestedChat)
         }
@@ -109,6 +114,17 @@ private fun FangApp(graph: AppGraph, requestedChat: MutableStateFlow<ChatLocatio
   val holder = rememberSaveableStateHolder()
   val drafts = remember { ProviderDrafts() }
   val chat by requestedChat.collectAsStateWithLifecycle()
+  // Chats still notify when in-app notices are on; ask once the shell is set up if permission was skipped in onboarding.
+  val notificationPermission = rememberNotificationPermissionState()
+  var notificationAsked by rememberSaveable { mutableStateOf(false) }
+  val setupComplete by graph.preferences.setupComplete.collectAsStateWithLifecycle()
+  val inAppNotifications by graph.preferences.inAppNotifications.collectAsStateWithLifecycle()
+  LaunchedEffect(setupComplete, inAppNotifications) {
+    if (!notificationAsked && setupComplete && inAppNotifications && !notificationPermission.granted) {
+      notificationAsked = true
+      notificationPermission.request()
+    }
+  }
   ForgetPopped(stack, holder)
   LaunchedEffect(stack) { if (stack.none(::ownsDraft)) drafts.release() }
   // The main screen opens the requested chat once it is on top; before setup there is no main screen yet.

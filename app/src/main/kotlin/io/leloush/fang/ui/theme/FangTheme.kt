@@ -7,6 +7,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
 
@@ -21,8 +22,7 @@ val fangColors: FangColors
 /** Keeps the existing callers: the mode comes from Preferences and the palette family starts at Fang. */
 @Composable
 fun FangTheme(mode: ThemeMode, content: @Composable () -> Unit) {
-  val selected = rememberThemeState()
-  selected.mode = mode
+  val selected = remember(mode) { ThemeState(mode = mode) }
   FangTheme(mode, selected, content)
 }
 

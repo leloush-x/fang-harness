@@ -286,7 +286,10 @@ private fun AppearanceSection(preferences: Preferences) {
     ThemeSwatchRow(
       mode = theme,
       selected = selection.selectedTheme,
-      onSelect = { selection.selectedTheme = it },
+      onSelect = { curated ->
+        selection.selectedTheme = curated
+        preferences.setCuratedTheme(curated.rawValue)
+      },
       modifier = Modifier.padding(horizontal = FangTokens.Spacing.s12),
     )
     SettingsDivider()

@@ -47,7 +47,12 @@ class ThemeState(mode: ThemeMode = ThemeMode.System, selectedTheme: CuratedTheme
   var selectedTheme by mutableStateOf(selectedTheme)
 }
 
-/** A state holder callers keep across recompositions and pass to [FangTheme]. */
+/**
+ * Seeds a [ThemeState] with [mode] and [selectedTheme] on first composition, then keeps that one instance across
+ * recompositions. Callers mutate the returned state to change either value; passing a new [mode] or [selectedTheme]
+ * later does not replace it. Seed [selectedTheme] from the persisted `Preferences.curatedTheme` via
+ * [CuratedTheme.fromRawValue] so a chosen palette survives a restart, and persist each change in the setter.
+ */
 @Composable
 fun rememberThemeState(
   mode: ThemeMode = ThemeMode.System,

@@ -1,0 +1,16 @@
+OpenCode Android (github.com/anomalyco/opencode-android, commit fc35d8f), license not supplied with the repository; Fang Harness adapts its UI design and behavior patterns across the chat, composer and session surfaces.
+
+Source: github.com/anomalyco/opencode-android at commit fc35d8f (no tag; pinned commit).
+
+What was adapted (design/presentation patterns and values, reimplemented in Compose):
+- Curated theme palettes and RGB color values (theme definitions and preview).
+- Ask dock behaviors: paging, auto-advance, multiselect, inline validation, fold-to-bar, review/diff presentation.
+- Markdown presentation patterns: code blocks/copy, tables, task lists, math and streaming-tail handling.
+- Tool-row and message-bubble presentation: tool grouping/folding, running state, result cards, bubble lift/fold and selection.
+- Composer gestures and autocomplete: keyboard swipe/steer, double-tap word selection, context meter, @//file/session autocomplete chips.
+- Subagent stack: grouped subagent capsule with a leading-activity glyph and expandable panel.
+- Notification capsule, notification permission flow and Live Update presentation.
+- Catch Up deck (session catch-up cards).
+- Media viewer and draw editor presentation.
+
+License status: the upstream repository at this commit contains no LICENSE file and no per-file license notice, so the copyright holder and terms are unknown. This adaptation is included in Fang Harness on the user's explicit instruction; confirm the upstream license before any wider redistribution.
