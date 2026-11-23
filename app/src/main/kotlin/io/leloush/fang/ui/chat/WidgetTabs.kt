@@ -279,16 +279,11 @@ private fun WidgetTab(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
   ) {
-    LucideIcon(
-      icon = icon,
-      contentDescription = null,
-      size = FangTokens.IconSize.sm,
-      tint = widgetTabIconTint(failed, open),
-    )
+    LucideIcon(icon, null, size = FangTokens.IconSize.sm, tint = widgetTabIconTint(failed, open))
     Text(
-      text = label,
-      modifier = Modifier.widthIn(max = TAB_LABEL_MAX_WIDTH),
-      color = widgetTabLabelColor(failed, open),
+      label,
+      Modifier.widthIn(max = TAB_LABEL_MAX_WIDTH),
+      widgetTabLabelColor(failed, open),
       fontSize = FangTokens.FontSize.sm,
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,
@@ -357,7 +352,7 @@ internal fun WidgetPanelSlot(
   if (shown == null) return
   Box(modifier) {
     if (ask != null) {
-      AskPanel(tabs.askSessionFor(ask, onSubmit), askFailed, tight, onFold = tabs::closeAsk)
+      AskPanel(tabs.askSessionFor(ask, onSubmit), askFailed, onFold = tabs::closeAsk)
     } else {
       WidgetPanel(shown, belowEditor, tight, onExpand = { onExpand(shown.key) })
     }

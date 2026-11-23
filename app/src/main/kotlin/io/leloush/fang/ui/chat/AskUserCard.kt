@@ -7,13 +7,13 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,16 +21,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -88,13 +84,7 @@ private fun Modifier.foldOnDrag(onFold: () -> Unit): Modifier = pointerInput(Uni
  * through [onSubmit] via [AskSession]. A failed send keeps the panel with Retry. A drag down folds the tab.
  */
 @Composable
-internal fun AskPanel(
-  session: AskSession,
-  failed: Boolean,
-  tight: Boolean,
-  onFold: () -> Unit,
-  modifier: Modifier = Modifier,
-) {
+internal fun AskPanel(session: AskSession, failed: Boolean, onFold: () -> Unit, modifier: Modifier = Modifier) {
   val colors = fangColors
   val scope = rememberCoroutineScope()
   val reduceMotion = rememberReduceMotion()
@@ -133,12 +123,11 @@ internal fun AskPanel(
         tint = colors.foregroundMuted,
       )
     }
+    // The question body flows without a nested scroll: options stay compact and all visible, and only an unusually
+    // long freeform answer scrolls in its own field. This panel lives in the composer's intrinsic-measured slot.
     Column(
-      modifier = Modifier
-        .padding(FangTokens.Spacing.s12)
-        .heightIn(max = if (tight) PANEL_TIGHT_MAX_HEIGHT else ASK_PANEL_MAX_HEIGHT)
-        .verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12),
+      modifier = Modifier.padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
+      verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
     ) {
       QuestionSection(request.questions[session.index], request.allowComment, session.answers[session.index]) { title ->
         scheduleAutoAdvance(session, title, scope, reduceMotion)
@@ -200,12 +189,23 @@ private fun QuestionSection(
   state: AnswerState,
   onPick: (String) -> Unit,
 ) {
-  Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8)) {
+  Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
     Text(text = question.question, color = fangColors.foreground, fontSize = FangTokens.FontSize.base)
     question.context?.let {
       Text(text = it, color = fangColors.foregroundMuted, fontSize = FangTokens.FontSize.sm)
     }
-    question.options.forEach { OptionRow(it, question.allowMultiple, state, onPick) }
+    // Two aligned columns keep several short options fully visible; long descriptions stay one per row.
+    val columns = if (question.options.size > 3 && question.options.none { it.description != null }) 2 else 1
+    FlowRow(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
+      verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s4),
+      maxItemsInEachRow = columns,
+    ) {
+      question.options.forEach { option ->
+        Box(Modifier.weight(1f, fill = true)) { OptionRow(option, question.allowMultiple, state, onPick) }
+      }
+    }
     if (question.allowMultiple && question.options.isNotEmpty()) {
       Text(
         text = stringResource(R.string.ask_choose_multiple),
@@ -241,9 +241,9 @@ private fun OptionRow(option: AskOption, multiple: Boolean, state: AnswerState, 
         state.pick(option.title, multiple)
         onPick(option.title)
       }
-      .heightIn(min = 40.dp)
-      .padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
-    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
+      .heightIn(min = 34.dp)
+      .padding(horizontal = FangTokens.Spacing.s8, vertical = FangTokens.Spacing.s6),
+    horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     SelectionMark(picked, multiple)
@@ -251,9 +251,12 @@ private fun OptionRow(option: AskOption, multiple: Boolean, state: AnswerState, 
       Text(
         text = option.title,
         color = if (picked) colors.foreground else colors.foregroundMuted,
-        fontSize = FangTokens.FontSize.base,
+        fontSize = FangTokens.FontSize.sm,
+        maxLines = 2,
       )
-      option.description?.let { Text(it, color = colors.foregroundMuted, fontSize = FangTokens.FontSize.sm) }
+      option.description?.let {
+        Text(it, color = colors.foregroundMuted, fontSize = FangTokens.FontSize.sm, maxLines = 1)
+      }
     }
   }
 }

@@ -224,6 +224,8 @@
   <!-- The answer could not be sent, and the answered summary that replaces the card. -->
   <string name="chat_ask_failed">Couldn\'t send your answer</string>
   <string name="chat_ask_answered">Answered</string>
+  <!-- The answered summary line above the composer: %1$s is the chosen options or the freeform answer. -->
+  <string name="chat_ask_answered_line">Answered: %1$s</string>
   <string name="chat_ask_skipped">Skipped</string>
   <!-- Accessibility: number of pending questions on the folded square bulge. %1$d is the question count. -->
   <plurals name="chat_ask_bulge_count">

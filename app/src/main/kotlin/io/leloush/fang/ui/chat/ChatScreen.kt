@@ -166,7 +166,6 @@ private fun ChatContent(
   var selectedId by remember { mutableStateOf<String?>(null) }
   val openFact = selectedId?.let { id -> facts.firstOrNull { it.toolCallId == id } }
   LaunchedEffect(selectedId, facts) { if (selectedId != null && openFact == null) selectedId = null }
-  val askRequest by process.ask.request.collectAsStateWithLifecycle()
   val answered by process.ask.answered.collectAsStateWithLifecycle()
   val inbox = LocalContext.current.appGraph.chatInbox
   val entries by inbox.entries.collectAsStateWithLifecycle()
@@ -186,7 +185,8 @@ private fun ChatContent(
   }
   // The keyboard and a dialog both take the room the steering box and widget panels would use, so then the steering
   // box keeps to one line and a panel to a few.
-  val tight = WindowInsets.isImeVisible || timeline.pendingUi != null || askRequest != null || answered != null
+  // The ask panel is now a compact inline strip and the answered state a single line, so neither squeezes the screen.
+  val tight = WindowInsets.isImeVisible || timeline.pendingUi != null
   val bodyState =
     ChatMainState(working, tight, answered, facts, notice, onOpenChat, { selectedId = it }, dismissKeyboard)
   Box(modifier = modifier.fillMaxSize()) {
