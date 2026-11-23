@@ -210,22 +210,15 @@ private fun Modifier.ocDragToDismiss(
       }
       if (!claimed) return@awaitEachGesture
       val threshold = if (reduceMotion) distance / 2f else distance
-      settleDismiss(progress, dy > threshold || tracker.calculateVelocity().y > speed, onProgress, onDismiss)
+      val closing = dy > threshold || tracker.calculateVelocity().y > speed
+      // `animate` is a restricted suspension and must run inside this gesture's scope.
+      if (closing) {
+        animate(progress, 1f, animationSpec = tween(180)) { value, _ -> onProgress(value) }
+        onDismiss()
+      } else {
+        animate(progress, 0f, animationSpec = spring()) { value, _ -> onProgress(value) }
+        onProgress(0f)
+      }
     }
-  }
-}
-
-private suspend fun settleDismiss(
-  progress: Float,
-  closing: Boolean,
-  onProgress: (Float) -> Unit,
-  onDismiss: () -> Unit,
-) {
-  if (closing) {
-    animate(progress, 1f, animationSpec = tween(180)) { value, _ -> onProgress(value) }
-    onDismiss()
-  } else {
-    animate(progress, 0f, animationSpec = spring()) { value, _ -> onProgress(value) }
-    onProgress(0f)
   }
 }
