@@ -22,7 +22,7 @@ val fangColors: FangColors
 @Composable
 fun FangTheme(mode: ThemeMode, content: @Composable () -> Unit) {
   val selected = rememberThemeState()
-  selected.setMode(mode)
+  selected.mode = mode
   FangTheme(mode, selected, content)
 }
 

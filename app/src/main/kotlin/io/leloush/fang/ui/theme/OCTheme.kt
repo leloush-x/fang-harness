@@ -43,18 +43,8 @@ enum class CuratedTheme(val rawValue: String) {
  */
 class ThemeState(mode: ThemeMode = ThemeMode.System, selectedTheme: CuratedTheme = CuratedTheme.Fang) {
   var mode by mutableStateOf(mode)
-    private set
 
   var selectedTheme by mutableStateOf(selectedTheme)
-    private set
-
-  fun setMode(value: ThemeMode) {
-    mode = value
-  }
-
-  fun selectTheme(value: CuratedTheme) {
-    selectedTheme = value
-  }
 }
 
 /** A state holder callers keep across recompositions and pass to [FangTheme]. */
