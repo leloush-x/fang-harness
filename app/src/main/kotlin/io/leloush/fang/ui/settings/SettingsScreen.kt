@@ -286,7 +286,7 @@ private fun AppearanceSection(preferences: Preferences) {
     ThemeSwatchRow(
       mode = theme,
       selected = selection.selectedTheme,
-      onSelect = selection::selectTheme,
+      onSelect = { selection.selectedTheme = it },
       modifier = Modifier.padding(horizontal = FangTokens.Spacing.s12),
     )
     SettingsDivider()
