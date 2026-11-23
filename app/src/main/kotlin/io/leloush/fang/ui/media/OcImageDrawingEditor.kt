@@ -33,11 +33,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -168,16 +168,14 @@ private suspend fun PointerInputScope.collectStroke(
     var points = listOf(toImage(down.position))
     onLive(points)
     while (true) {
-      val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
-      if (!change.pressed) {
-        if (points.size > 1) onCommit(OcStroke(ink, points))
-        break
-      }
+      val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
+      if (change == null || !change.pressed) break
       val point = toImage(change.position)
       if (points.last() != point) points = points + point
       onLive(points)
       change.consume()
     }
+    if (points.size > 1) onCommit(OcStroke(ink, points))
     onLive(emptyList())
   }
 }

@@ -2,10 +2,10 @@ package io.leloush.fang.ui.catchup
 
 import android.provider.Settings
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateDpAsState
-import androidx.compose.animation.animateFloatAsState
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -204,6 +204,8 @@ private fun CatchUpCard(
     } else {
       stringResource(R.string.catch_up_card, session.title)
     }
+  val markReadLabel = stringResource(R.string.catch_up_mark_read)
+  val keepUnreadLabel = stringResource(R.string.catch_up_keep_unread)
   Column(
     modifier
       .fillMaxWidth()
@@ -221,11 +223,11 @@ private fun CatchUpCard(
         contentDescription = description
         customActions =
           listOf(
-            CustomAccessibilityAction(stringResource(R.string.catch_up_mark_read)) {
+            CustomAccessibilityAction(markReadLabel) {
               onMarkRead()
               true
             },
-            CustomAccessibilityAction(stringResource(R.string.catch_up_keep_unread)) {
+            CustomAccessibilityAction(keepUnreadLabel) {
               onKeepUnread()
               true
             },

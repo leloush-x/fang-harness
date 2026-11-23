@@ -7,10 +7,13 @@ import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -193,19 +196,17 @@ private fun Modifier.ocDragToDismiss(
       var claimed = false
       var progress = 0f
       while (true) {
-        val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+        val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }
+        if (change == null || !change.pressed) break
         tracker.addPosition(change.uptimeMillis, change.position)
         val dx = change.position.x - down.position.x
         dy = change.position.y - down.position.y
         if (!claimed && dy > 0f && dy > abs(dx)) claimed = true
-        if (!claimed) {
-          if (!change.pressed) break
-          continue
+        if (claimed) {
+          change.consume()
+          progress = (dy / (size.height * 0.5f)).coerceIn(0f, 1f)
+          onProgress(progress)
         }
-        change.consume()
-        progress = (dy / (size.height * 0.5f)).coerceIn(0f, 1f)
-        onProgress(progress)
-        if (!change.pressed) break
       }
       if (!claimed) return@awaitEachGesture
       val threshold = if (reduceMotion) distance / 2f else distance
