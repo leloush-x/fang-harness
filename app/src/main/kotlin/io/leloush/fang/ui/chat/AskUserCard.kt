@@ -300,22 +300,61 @@ private fun InlineField(state: TextFieldState, hint: String) {
   )
 }
 
-/** Skip and Dismiss on one row, Back and the answer action on the next; Continue is off until something is picked. */
+/** Skip/Dismiss above a `<` back arrow and a `>` forward arrow; the forward arrow becomes Submit on the last page. */
 @Composable
 private fun AskActions(session: AskSession, modifier: Modifier = Modifier) {
+  val colors = fangColors
+  val shape = RoundedCornerShape(FangTokens.Radius.md)
   Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
     Row(horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
       AskButton(stringResource(R.string.chat_ask_skip), onClick = session::skip)
       AskButton(stringResource(R.string.chat_dismiss), onClick = session::dismiss)
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6)) {
-      if (session.index > 0) AskButton(stringResource(R.string.chat_ask_back), onClick = session::back)
-      AskButton(
-        label = stringResource(if (session.isLast) R.string.chat_submit else R.string.chat_ask_continue),
-        filled = true,
-        enabled = session.canContinue(),
-        onClick = session::next,
-      )
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s6),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      // < backward — one question back, disabled on the first.
+      Box(
+        modifier = Modifier.size(40.dp).clip(shape).background(colors.surface2)
+          .clickable(enabled = session.index > 0, onClick = session::back),
+        contentAlignment = Alignment.Center,
+      ) {
+        LucideIcon(
+          R.drawable.ic_lucide_chevron_left,
+          stringResource(R.string.chat_ask_back),
+          size = FangTokens.IconSize.sm,
+          tint = if (session.index > 0) colors.foreground else colors.foregroundExtraMuted,
+        )
+      }
+      if (session.isLast) {
+        AskButton(
+          label = stringResource(R.string.chat_submit),
+          filled = true,
+          enabled = session.canContinue(),
+          onClick = session::next,
+        )
+      } else {
+        // > forward — enabled once something is picked.
+        val canGo = session.canContinue()
+        Box(
+          modifier = Modifier
+            .weight(1f)
+            .heightIn(min = 40.dp)
+            .clip(shape)
+            .background(if (canGo) colors.accent else colors.surface2)
+            .clickable(enabled = canGo, onClick = session::next),
+          contentAlignment = Alignment.Center,
+        ) {
+          LucideIcon(
+            R.drawable.ic_lucide_chevron_right,
+            stringResource(R.string.chat_ask_continue),
+            size = FangTokens.IconSize.md,
+            tint = if (canGo) colors.accentForeground else colors.foregroundExtraMuted,
+          )
+        }
+      }
     }
   }
 }
