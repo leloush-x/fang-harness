@@ -21,8 +21,8 @@ internal fun rememberComposerEdges(controller: ChatController): ComposerEdges {
   val askRequest by controller.process.ask.request.collectAsStateWithLifecycle()
   val askFailed by controller.process.ask.failed.collectAsStateWithLifecycle()
   LaunchedEffect(widgets) { tabs.track(widgets) }
-  // A new request starts folded, and the tab goes away with the one it answered.
-  LaunchedEffect(askRequest?.id) { tabs.closeAsk() }
+  // A new request opens its panel so Skip and the answer buttons are visible at once; it folds when answered.
+  LaunchedEffect(askRequest?.id) { if (askRequest != null) tabs.openAsk() else tabs.closeAsk() }
   // The open tab is part of the key: without it, tapping a tab never invalidates the remembered panel.
   val above = remember(widgets, askRequest, tabs, tabs.open(belowEditor = false)) {
     widgetEdge(widgets, tabs, belowEditor = false, ask = askRequest)

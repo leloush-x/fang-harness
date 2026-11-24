@@ -126,10 +126,15 @@ internal class WidgetTabs {
     }
   }
 
+  /** Opens the ask tab, folding whichever widget tab was open above the editor. */
+  fun openAsk() {
+    askOpen = true
+    openAbove = null
+  }
+
   /** Opens or folds the ask tab; opening it folds whichever widget tab was open above the editor. */
   fun toggleAsk() {
-    askOpen = !askOpen
-    if (askOpen) openAbove = null
+    if (askOpen) closeAsk() else openAsk()
   }
 
   /** Folds the ask tab, e.g. after a drag down on its panel. */

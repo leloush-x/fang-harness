@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -122,10 +124,14 @@ internal fun AskPanel(session: AskSession, failed: Boolean, onFold: () -> Unit, 
         tint = colors.foregroundMuted,
       )
     }
-    // The question body flows without a nested scroll: options stay compact and all visible, and only an unusually
-    // long freeform answer scrolls in its own field. This panel lives in the composer's intrinsic-measured slot.
+    // The body takes only the room left after the heading and the actions, and scrolls when the keyboard squeezes the
+    // composer: Skip, the arrows and Submit must never be pushed off the bottom of the panel.
     Column(
-      modifier = Modifier.padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
+      modifier = Modifier
+        .weight(1f, fill = false)
+        .fillMaxWidth()
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = FangTokens.Spacing.s12, vertical = FangTokens.Spacing.s8),
       verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8),
     ) {
       QuestionSection(request.questions[session.index], request.allowComment, session.answers[session.index]) { title ->
