@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import io.leloush.fang.R
 import io.leloush.fang.host.ModelConfig
 import io.leloush.fang.ui.components.LucideIcon
+import io.leloush.fang.ui.components.SearchField
 import io.leloush.fang.ui.theme.FangTokens
 import io.leloush.fang.ui.theme.fangColors
 
@@ -30,10 +31,21 @@ import io.leloush.fang.ui.theme.fangColors
  */
 @Composable
 internal fun ModelPickList(models: List<ModelConfig>, draft: ModelDraft) {
-  val free = remember(models) { models.filter { it.isFree() } }
-  val rest = remember(models) { models.filterNot { it.isFree() } }
+  var query by rememberSaveable { mutableStateOf("") }
+  val shown = remember(models, query) { models.matching(query) }
+  val free = remember(shown) { shown.filter { it.isFree() } }
+  val rest = remember(shown) { shown.filterNot { it.isFree() } }
   var freeOpen by rememberSaveable { mutableStateOf(true) }
-  var restOpen by rememberSaveable { mutableStateOf(false) }
+  var restOpen by rememberSaveable { mutableStateOf(true) }
+  SearchField(
+    query = query,
+    onQueryChange = { query = it },
+    placeholder = stringResource(R.string.chat_model_search),
+    modifier = Modifier.padding(vertical = FangTokens.Spacing.s8),
+  )
+  if (shown.isEmpty()) {
+    SettingsCaption(text = stringResource(R.string.chat_model_search_empty))
+  }
   if (free.isNotEmpty()) {
     ModelSection(
       title = stringResource(R.string.models_free),
@@ -88,6 +100,15 @@ private fun ModelSection(
       SettingsDivider()
       content()
     }
+  }
+}
+
+/** Models whose id or name contains the query, case-insensitively, in either group. */
+private fun List<ModelConfig>.matching(query: String): List<ModelConfig> {
+  val needle = query.trim()
+  if (needle.isEmpty()) return this
+  return filter { config ->
+    listOfNotNull(config.id, config.name).any { it.contains(needle, ignoreCase = true) }
   }
 }
 

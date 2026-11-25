@@ -80,6 +80,21 @@ describe("provider_models and model_defaults", () => {
         response.write('{"data":[', () => request.socket.destroy());
         return;
       }
+      if (request.url === "/paged/models") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ object: "list", data: [{ id: "m1" }], has_more: true, last_id: "m2" }));
+        return;
+      }
+      if (request.url === "/paged/models?after=m2") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ object: "list", data: [{ id: "m2" }] }));
+        return;
+      }
+      if (request.url === "/ollama/models") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ models: [{ name: "ollama-a" }] }));
+        return;
+      }
       const failure = FAILURES[request.url ?? ""];
       if (failure !== undefined) {
         response.writeHead(failure.status, { "content-type": failure.type });
@@ -150,6 +165,24 @@ describe("provider_models and model_defaults", () => {
       { id: "no-levels", reasoning: false },
       { id: "text-only", reasoning: false, input: ["text"] },
     ]));
+  });
+
+  it("follows a cursor so later pages of models are not missing", async () => {
+    const result = await runMode("provider_models", dirs, {
+      baseUrl: `${origin}/paged`,
+      apiKey: "sk-test",
+      api: "openai-responses",
+    });
+    expect(result).toEqual(success([{ id: "m1" }, { id: "m2" }]));
+  });
+
+  it("reads Ollama's models envelope and its name ids", async () => {
+    const result = await runMode("provider_models", dirs, {
+      baseUrl: `${origin}/ollama`,
+      apiKey: "sk-test",
+      api: "openai-responses",
+    });
+    expect(result).toEqual(success([{ id: "ollama-a", name: "ollama-a" }]));
   });
 
   it("keeps endpoint values over the catalogue, field by field", async () => {
