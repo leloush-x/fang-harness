@@ -11,11 +11,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,15 +25,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leloush.fang.AppGraph
 import io.leloush.fang.R
-import io.leloush.fang.data.BundledExtension
 import io.leloush.fang.host.HostRejected
 import io.leloush.fang.ui.chat.ConfirmDialog
 import io.leloush.fang.ui.components.IconButton28
@@ -49,12 +44,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * A centred panel listing every extension Fang Harness knows: bundled ones switch on and off like Quick Settings tiles,
- * and Pi packages installed into the agent can be removed. [onDismiss] closes it without changing anything.
+ * A centred panel listing the Pi packages installed into the agent, each removable after confirmation. Bundled
+ * extensions stay in the settings list. [onDismiss] closes it without changing anything.
  */
 @Composable
 internal fun MoreExtensionsPanel(graph: AppGraph, snackbar: SnackbarStackState, onDismiss: () -> Unit) {
-  val disabled by graph.preferences.disabledExtensions.collectAsStateWithLifecycle()
   var sources by remember { mutableStateOf<List<String>?>(null) }
   var readFailed by remember { mutableStateOf(false) }
   var removing by remember { mutableStateOf<String?>(null) }
@@ -82,14 +76,6 @@ internal fun MoreExtensionsPanel(graph: AppGraph, snackbar: SnackbarStackState, 
         PanelHeader(onDismiss)
         HorizontalDivider(color = fangColors.border)
         LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-          section(R.string.settings_more_extensions_bundled)
-          items(BundledExtension.entries, key = { it.id }) { extension ->
-            BundledRow(extension, extension.id !in disabled) { on ->
-              graph.preferences.setExtensionEnabled(extension, on)
-              graph.sessionRepository.forgetExtensionUi()
-              graph.registry.reloadIdle()
-            }
-          }
           section(R.string.settings_more_extensions_installed)
           item {
             SettingsCaption(
@@ -130,7 +116,7 @@ private fun PanelHeader(onDismiss: () -> Unit) {
   }
 }
 
-/** A muted label between the panel's two groups. */
+/** A muted label for the panel's group. */
 private fun LazyListScope.section(@StringRes label: Int) {
   item {
     Text(
@@ -139,18 +125,6 @@ private fun LazyListScope.section(@StringRes label: Int) {
       color = fangColors.foregroundMuted,
       fontSize = FangTokens.FontSize.sm,
     )
-  }
-}
-
-/** A bundled extension's switch, with the same reload chain the settings list uses. */
-@Composable
-private fun BundledRow(extension: BundledExtension, enabled: Boolean, onToggle: (Boolean) -> Unit) {
-  SettingsRow(
-    title = stringResource(extension.title),
-    subtitle = stringResource(extension.summary),
-    modifier = Modifier.toggleable(value = enabled, role = Role.Switch, onValueChange = onToggle),
-  ) {
-    Switch(checked = enabled, onCheckedChange = null)
   }
 }
 
@@ -252,6 +226,6 @@ private fun confirmRemoval(
   )
 }
 
-private val PANEL_MAX_WIDTH = 480.dp
+private val PANEL_MAX_WIDTH = 560.dp
 private val PANEL_MAX_HEIGHT = 560.dp
 private val PANEL_ELEVATION = 8.dp

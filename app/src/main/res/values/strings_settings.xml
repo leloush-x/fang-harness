@@ -79,9 +79,8 @@
     <string name="settings_more_extensions">More extensions</string>
     <string name="settings_more_extensions_title">Extensions</string>
     <string name="settings_more_extensions_close">Close extensions</string>
-    <string name="settings_more_extensions_bundled">Bundled</string>
     <string name="settings_more_extensions_installed">Installed packages</string>
-    <string name="settings_more_extensions_installed_caption">Packages installed into the agent. Bundled extensions are part of the app and can only be switched off.</string>
+    <string name="settings_more_extensions_installed_caption">Packages installed into the agent. Removing one stops idle chats from loading it; bundled extensions stay in the settings list.</string>
     <string name="settings_more_extensions_empty">No packages installed</string>
     <string name="settings_more_extensions_loading">Reading the installed packages…</string>
     <string name="settings_more_extensions_failed">Couldn\'t read the installed packages.</string>
