@@ -1,5 +1,6 @@
 package io.leloush.fang.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -81,7 +82,7 @@ internal fun MoreExtensionsPanel(graph: AppGraph, snackbar: SnackbarStackState, 
         PanelHeader(onDismiss)
         HorizontalDivider(color = fangColors.border)
         LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-          section(stringResource(R.string.settings_more_extensions_bundled))
+          section(R.string.settings_more_extensions_bundled)
           items(BundledExtension.entries, key = { it.id }) { extension ->
             BundledRow(extension, extension.id !in disabled) { on ->
               graph.preferences.setExtensionEnabled(extension, on)
@@ -89,7 +90,7 @@ internal fun MoreExtensionsPanel(graph: AppGraph, snackbar: SnackbarStackState, 
               graph.registry.reloadIdle()
             }
           }
-          section(stringResource(R.string.settings_more_extensions_installed))
+          section(R.string.settings_more_extensions_installed)
           item {
             SettingsCaption(
               text = stringResource(R.string.settings_more_extensions_installed_caption),
@@ -103,7 +104,7 @@ internal fun MoreExtensionsPanel(graph: AppGraph, snackbar: SnackbarStackState, 
     }
   }
 
-  confirmRemoval(graph, snackbar, scope, confirming, removing, { confirming = null }, { removing = it }) { sources = it }
+  confirmRemoval(graph, snackbar, scope, confirming, { confirming = null }, { removing = it }) { sources = it }
 }
 
 /** The panel's title and close button. */
@@ -130,10 +131,10 @@ private fun PanelHeader(onDismiss: () -> Unit) {
 }
 
 /** A muted label between the panel's two groups. */
-private fun LazyListScope.section(label: String) {
+private fun LazyListScope.section(@StringRes label: Int) {
   item {
     Text(
-      text = label,
+      text = stringResource(label),
       modifier = Modifier.padding(horizontal = FangTokens.Spacing.s16, vertical = FangTokens.Spacing.s8),
       color = fangColors.foregroundMuted,
       fontSize = FangTokens.FontSize.sm,
@@ -207,7 +208,6 @@ private fun confirmRemoval(
   snackbar: SnackbarStackState,
   scope: CoroutineScope,
   confirming: String?,
-  removing: String?,
   onConfirming: (String?) -> Unit,
   onRemoving: (String?) -> Unit,
   onSources: (List<String>) -> Unit,
