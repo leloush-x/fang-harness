@@ -30,6 +30,12 @@ class ModelConfigTest {
   }
 
   @Test
+  fun aModelWhoseNameSaysFreeIsFree() {
+    assertTrue(ModelConfig(id = "some-model", name = "vibes: free edition").isFree())
+    assertTrue(ModelConfig(id = "some-model", name = "Some FREE model").isFree())
+  }
+
+  @Test
   fun aFreeIdIsFreeWhateverThePriceSays() {
     val price = ModelCost(input = 0.15, output = 0.6, cacheRead = 0.0, cacheWrite = 0.0)
     assertTrue(ModelConfig(id = "a-model:free", cost = price).isFree())

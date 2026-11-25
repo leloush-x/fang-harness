@@ -85,6 +85,12 @@ internal fun AddModelsScreen(draft: ModelDraft, onBack: () -> Unit) {
       SettingsCaption(text = stringResource(R.string.models_none))
     } else {
       ModelPickList(models = available, draft = draft)
+      val form = draft as? ProviderForm
+      if (form != null) {
+        Row(horizontalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s8)) {
+          RefreshOrb(form) { scope.launch { form.checkConnection(accounts, failed) } }
+        }
+      }
     }
     FieldLabel(stringResource(R.string.models_custom))
     val custom = draft.added.filter { it.id !in availableIds }.map(ModelForm::preview)

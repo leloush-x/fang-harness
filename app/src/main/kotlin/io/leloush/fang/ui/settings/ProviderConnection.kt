@@ -107,7 +107,7 @@ private fun ConnectionStatusRow(form: ProviderForm, onCheck: () -> Unit) {
 
 /** A round refresh control that spins while checking, turns green on success, then rests. */
 @Composable
-private fun RefreshOrb(form: ProviderForm, onCheck: () -> Unit) {
+internal fun RefreshOrb(form: ProviderForm, onCheck: () -> Unit) {
   val colors = fangColors
   val checking = form.check is ConnectionCheck.Checking
   val rotation by animateFloatAsState(

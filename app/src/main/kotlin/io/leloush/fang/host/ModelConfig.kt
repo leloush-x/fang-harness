@@ -19,12 +19,14 @@ internal data class ModelConfig(
   val cost: ModelCost? = null,
 ) {
   /**
-   * Whether the model costs nothing: an id the provider marks free, or a price of zero.
+   * Whether the model costs nothing: an id the provider marks free, one that says so in its id or name, or a
+   * price of zero.
    *
-   * An id marked free is the provider's own word for it; a price of zero says the same thing. A model with no price
-   * at all is not called free, because nothing is known about it.
+   * A price of zero is what the provider says the model costs, and a name that says "free" is the provider's
+   * own word. A model with no price at all is not called free, because nothing is known about it.
    */
-  fun isFree(): Boolean = id.endsWith(":free") || cost?.isZero() == true
+  fun isFree(): Boolean = id.endsWith(":free") || id.contains("free", ignoreCase = true) ||
+    name?.contains("free", ignoreCase = true) == true || cost?.isZero() == true
 
   fun toJson(): JSONObject {
     val json = JSONObject().put("id", id)
