@@ -72,10 +72,7 @@ internal fun ProviderEditorScreen(
     ApiKeyField(form = form)
     ApiTypeField(form = form)
     ConnectionSection(form = form, onCheck = { scope.launch { form.checkConnection(accounts, failed) } })
-    if (form.connected) {
-      FieldLabel(stringResource(R.string.provider_models_found))
-      ModelPickList(models = form.fetched, draft = form)
-    }
+    if (form.connected) ProviderModels(form)
     ModelsSection(
       draft = form,
       emptyText = stringResource(
@@ -239,6 +236,13 @@ private fun ProviderActions(form: ProviderForm, onSave: () -> Unit, onRemove: ()
       Text(stringResource(R.string.provider_remove))
     }
   }
+}
+
+/** Every model the endpoint listed, grouped into free and paid sections, read straight from the draft. */
+@Composable
+private fun ProviderModels(form: ProviderForm) {
+  FieldLabel(stringResource(R.string.provider_models_found))
+  ModelPickList(models = form.fetched, draft = form)
 }
 
 @Composable
