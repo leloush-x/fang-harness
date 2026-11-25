@@ -249,6 +249,7 @@ private fun UpdateExtensionsRow(update: PiExtensionUpdate, snackbar: SnackbarSta
 @Composable
 private fun ExtensionsSection(graph: AppGraph, snackbar: SnackbarStackState) {
   val disabled by graph.preferences.disabledExtensions.collectAsStateWithLifecycle()
+  var panelOpen by rememberSaveable { mutableStateOf(false) }
   Column(verticalArrangement = Arrangement.spacedBy(FangTokens.Spacing.s12)) {
     SettingsSection(title = stringResource(R.string.settings_section_extensions)) {
       BundledExtension.entries.forEachIndexed { index, extension ->
@@ -268,8 +269,16 @@ private fun ExtensionsSection(graph: AppGraph, snackbar: SnackbarStackState) {
         }
       }
     }
+    DashedActionRow(
+      label = stringResource(R.string.settings_more_extensions),
+      icon = R.drawable.ic_lucide_settings,
+      onClick = { panelOpen = true },
+    )
     InstallPackageRow(graph = graph, snackbar = snackbar)
     SettingsCaption(text = stringResource(R.string.settings_extensions_caption))
+  }
+  if (panelOpen) {
+    MoreExtensionsPanel(graph = graph, snackbar = snackbar, onDismiss = { panelOpen = false })
   }
 }
 

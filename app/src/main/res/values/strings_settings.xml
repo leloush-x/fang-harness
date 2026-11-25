@@ -76,6 +76,22 @@
     <string name="settings_extension_web_access">Fang Harness web access</string>
     <string name="settings_extension_web_access_summary">Web search and page fetching</string>
     <string name="settings_extensions_caption">Idle chats reload to pick up a change. A working chat picks it up the next time its agent starts.</string>
+    <string name="settings_more_extensions">More extensions</string>
+    <string name="settings_more_extensions_title">Extensions</string>
+    <string name="settings_more_extensions_close">Close extensions</string>
+    <string name="settings_more_extensions_bundled">Bundled</string>
+    <string name="settings_more_extensions_installed">Installed packages</string>
+    <string name="settings_more_extensions_installed_caption">Packages installed into the agent. Bundled extensions are part of the app and can only be switched off.</string>
+    <string name="settings_more_extensions_empty">No packages installed</string>
+    <string name="settings_more_extensions_loading">Reading the installed packages…</string>
+    <string name="settings_more_extensions_failed">Couldn\'t read the installed packages.</string>
+    <string name="settings_more_extensions_remove_failed">Couldn\'t remove the extension.</string>
+    <string name="settings_more_extensions_removed">Extension removed</string>
+    <string name="settings_more_extensions_remove_confirm">Remove</string>
+    <!-- %1$s in the title and the button is the Pi package source being removed. -->
+    <string name="settings_more_extensions_remove_title">Remove %1$s?</string>
+    <string name="settings_more_extensions_remove_text">Pi uninstalls the package. Idle chats reload to stop loading it; your chats stay.</string>
+    <string name="settings_more_extensions_remove">Remove %1$s</string>
 
     <string name="settings_advanced">Advanced</string>
     <string name="settings_running_chats">Running chats</string>

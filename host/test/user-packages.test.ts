@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gitRepository, userNpmPackages, userPackages } from "../src/settings.js";
+import { gitRepository, packageSources, userNpmPackages, userPackages } from "../src/settings.js";
 
 describe("userPackages", () => {
   it("reads npm names without versions, from strings and { source } entries", () => {
@@ -39,6 +39,25 @@ describe("userPackages", () => {
   it("keeps userNpmPackages to the npm names", () => {
     const settings = { packages: ["npm:pi-web-access", "git:github.com/edlsh/pi-ask-user"] };
     expect(userNpmPackages(settings)).toEqual(new Set(["pi-web-access"]));
+  });
+});
+
+describe("packageSources", () => {
+  it("keeps the exact sources Pi stored, from strings and { source } entries", () => {
+    const settings = {
+      packages: ["npm:pi-web-access@1.2.3", { source: "git:github.com/edlsh/pi-ask-user#v1" }],
+    };
+    expect(packageSources(settings)).toEqual(["npm:pi-web-access@1.2.3", "git:github.com/edlsh/pi-ask-user#v1"]);
+  });
+
+  it("leaves out entries that are not sources", () => {
+    expect(packageSources({ packages: [42, { source: 7 }, "  ", "./local"] })).toEqual(["./local"]);
+  });
+
+  it("reads no sources when settings have no package list", () => {
+    expect(packageSources(undefined)).toEqual([]);
+    expect(packageSources({})).toEqual([]);
+    expect(packageSources({ packages: "npm:pi-web-access" })).toEqual([]);
   });
 });
 

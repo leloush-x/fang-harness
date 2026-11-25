@@ -87,6 +87,14 @@ export function userPackages(settings: unknown): UserPackages {
   return packages;
 }
 
+/** The raw sources in the user's global Pi settings, as `pi remove` expects them. */
+export function packageSources(settings: unknown): string[] {
+  if (!isObject(settings) || !Array.isArray(settings.packages)) return [];
+  return (settings.packages as unknown[])
+    .map((entry) => (isObject(entry) ? entry.source : entry))
+    .filter((source): source is string => typeof source === "string" && source.trim().length > 0);
+}
+
 /**
  * npm package names the user's global Pi settings install. Pi parses `npm:<name>[@version]` sources with this same
  * pattern and identifies npm packages by name.

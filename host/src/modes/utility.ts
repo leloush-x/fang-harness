@@ -5,6 +5,7 @@ import { authStatus } from "./auth-status.js";
 import { deleteBackup, listBackups } from "./backups.js";
 import { defaultModel } from "./default-model.js";
 import { deleteSessions } from "./delete-sessions.js";
+import { extensionPackages, packageRemove } from "./extension-packages.js";
 import { logout } from "./logout.js";
 import { modelDefaults } from "./model-defaults.js";
 import { providerModels } from "./provider-models.js";
@@ -43,6 +44,8 @@ const OPERATIONS: Record<string, (ctx: ModeContext) => Promise<JsonObject>> = {
   provider_remove: providerRemove,
   subscription_save: subscriptionSave,
   default_model: defaultModel,
+  extension_packages: extensionPackages,
+  package_remove: packageRemove,
   backups: listBackups,
   backup_delete: deleteBackup,
 };

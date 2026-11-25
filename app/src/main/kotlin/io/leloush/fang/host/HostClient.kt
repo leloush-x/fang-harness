@@ -237,6 +237,17 @@ internal class HostClient(context: Context, private val foreground: Flow<Boolean
     call("package_install", JSONObject().put("source", source), PACKAGE_INSTALL_TIMEOUT_MILLIS, progress(onProgress))
   }
 
+  /** The raw sources of the Pi packages installed in Fang Harness's config, as `pi remove` expects them. */
+  suspend fun installedPackages(): List<String> {
+    val data = utilityData("extension_packages", JSONObject(), UTILITY_TIMEOUT_MILLIS)
+    return data.optJSONArray("packages").strings()
+  }
+
+  /** Runs `pi remove [source]`, uninstalling a package that idle chats will stop loading when they reload. */
+  suspend fun removePackage(source: String) {
+    utilityData("package_remove", JSONObject().put("source", source), UTILITY_TIMEOUT_MILLIS)
+  }
+
   /** Makes new Pi sessions start with this model while it stays available and in scope. */
   suspend fun setDefaultModel(provider: String, modelId: String) {
     val params = JSONObject().put("provider", provider).put("modelId", modelId)
