@@ -162,9 +162,18 @@ private fun LazyListScope.installedRows(
   onRemove: (String) -> Unit,
 ) {
   when {
-    sources == null && !readFailed -> item { PaddingLine(stringResource(R.string.settings_more_extensions_loading), true) }
-    readFailed -> item { PaddingLine(stringResource(R.string.settings_more_extensions_failed), false) }
-    sources.isNullOrEmpty() -> item { PaddingLine(stringResource(R.string.settings_more_extensions_empty), false) }
+    sources == null && !readFailed -> item {
+      PaddingLine(stringResource(R.string.settings_more_extensions_loading), true)
+    }
+
+    readFailed -> item {
+      PaddingLine(stringResource(R.string.settings_more_extensions_failed), false)
+    }
+
+    sources.isNullOrEmpty() -> item {
+      PaddingLine(stringResource(R.string.settings_more_extensions_empty), false)
+    }
+
     else -> items(sources, key = { it }) { source ->
       SettingsRow(
         title = source,
