@@ -72,6 +72,10 @@ internal fun ProviderEditorScreen(
     ApiKeyField(form = form)
     ApiTypeField(form = form)
     ConnectionSection(form = form, onCheck = { scope.launch { form.checkConnection(accounts, failed) } })
+    if (form.connected) {
+      FieldLabel(stringResource(R.string.provider_models_found))
+      ModelPickList(models = form.fetched, draft = form)
+    }
     ModelsSection(
       draft = form,
       emptyText = stringResource(

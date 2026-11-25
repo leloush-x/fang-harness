@@ -2,6 +2,12 @@ package io.leloush.fang.ui.settings
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,10 +18,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -93,7 +101,45 @@ private fun ConnectionStatusRow(form: ProviderForm, onCheck: () -> Unit) {
         overflow = TextOverflow.Ellipsis,
       )
     }
-    SmallButton(label = stringResource(R.string.provider_check), onClick = onCheck, enabled = form.canCheck)
+    RefreshOrb(form, onCheck)
+  }
+}
+
+/** A round refresh control that spins while checking, turns green on success, then rests. */
+@Composable
+private fun RefreshOrb(form: ProviderForm, onCheck: () -> Unit) {
+  val colors = fangColors
+  val checking = form.check is ConnectionCheck.Checking
+  val rotation by animateFloatAsState(
+    if (checking) 360f else 0f,
+    if (checking) {
+      infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart)
+    } else {
+      tween(200)
+    },
+  )
+  val tint = when (form.check) {
+    is ConnectionCheck.Ok -> colors.dotSuccess
+    is ConnectionCheck.Failed -> colors.destructive
+    else -> colors.foregroundMuted
+  }
+  Box(
+    modifier = Modifier
+      .size(40.dp)
+      .alpha(if (form.canCheck) 1f else DISABLED_ALPHA)
+      .graphicsLayer { rotationZ = rotation }
+      .clickable(enabled = form.canCheck, onClick = onCheck),
+    contentAlignment = Alignment.Center,
+  ) {
+    LucideIcon(
+      icon = if (form.check is ConnectionCheck.Ok) {
+        R.drawable.ic_lucide_circle_check
+      } else {
+        R.drawable.ic_lucide_refresh_cw
+      },
+      contentDescription = stringResource(R.string.provider_check),
+      tint = tint,
+    )
   }
 }
 
@@ -161,3 +207,4 @@ private fun failureExplanation(code: String?): FailureExplanation = when (code) 
 private fun hostOf(url: String): String = url.trim().toUri().host?.takeIf { it.isNotEmpty() } ?: url.trim()
 
 private const val OUTDATED_ALPHA = 0.5f
+private const val DISABLED_ALPHA = 0.5f
