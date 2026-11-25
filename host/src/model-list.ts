@@ -103,7 +103,7 @@ async function fetchPage(
   if (!Array.isArray(list)) {
     throw new HostError("bad_response", "The server's /models response has no data list", { key: "provider_no_data_list" });
   }
-  return { list, next: nextPage(parsed, url) };
+  return { list, next: nextPage(envelope, url) };
 }
 
 /** A next URL the server named, or a cursor it said to continue from; null at the last page. */
